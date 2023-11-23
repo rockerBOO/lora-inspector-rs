@@ -5,7 +5,8 @@
   --color: #9ddfab;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -119,7 +120,7 @@ main {
 }
 
 #results {
-  margin: 1em 0;
+  margin: 1em;
 }
 
 .row div {
@@ -152,6 +153,9 @@ main {
 .args {
   overflow: scroll;
   max-height: 10em;
+  word-break: break-all;
+	max-width: 100%;
+	/* max-width: 50vw; */
 }
 
 .part3 {
@@ -163,4 +167,9 @@ main {
   font-style: italic;
   opacity: 0.8;
   font-size: 0.8em;
+}
+
+.subsets {
+	display: grid;
+	grid-auto-flow: column;
 }

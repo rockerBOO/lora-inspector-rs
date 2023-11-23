@@ -124,54 +124,53 @@ function Network({ metadata }) {
   // const trainingStart = new Date(Number.parseInt(metadata.get("ss_training_started_at"))).toLocaleString()
   // const trainingEnded = new Date(Number.parseInt(metadata.get("ss_training_ended_at"))).toLocaleString()
 
-  return h(
-    "div",
-    { className: "row space-apart" }, //
-
-    h(MetaAttribute, {
-      name: "Network module",
-      value: metadata.get("ss_network_module"),
-    }),
-    h(MetaAttribute, {
-      name: "Network Rank/Dimension",
-      valueClassName: "rank",
-      value: metadata.get("ss_network_dim"),
-    }),
-    h(MetaAttribute, {
-      name: "Network Alpha",
-      valueClassName: "alpha",
-      value: metadata.get("ss_network_alpha"),
-    }),
-    // h("div", {}, [
-    // h("div", { title: "seed" }, metadata.get("ss_seed")),
-    //    h(
-    //      "div",
-    //      { title: "Training started at" },
-    //      trainingStart,
-    //    ),
-    //    h(
-    //      "div",
-    //      { title: "Training ended at" },
-    // trainingEnded
-    //    ),
-    // ]),
+  return [
     h(
       "div",
-      {},
-      h("div", {}, [
-        h(MetaAttribute, {
-          name: "Network args",
-          valueClassName: "args",
-          value: networkArgs,
-        }),
-        h(MetaAttribute, {
-          name: "Network dropout",
-          valueClassName: "number",
-          value: metadata.get("ss_network_dropout"),
-        }),
-      ]),
+      { className: "row space-apart" }, //
+      h(MetaAttribute, {
+        name: "Network module",
+        value: metadata.get("ss_network_module"),
+      }),
+      h(MetaAttribute, {
+        name: "Network Rank/Dimension",
+        valueClassName: "rank",
+        value: metadata.get("ss_network_dim"),
+      }),
+      h(MetaAttribute, {
+        name: "Network Alpha",
+        valueClassName: "alpha",
+        value: metadata.get("ss_network_alpha"),
+      }),
+      h(MetaAttribute, {
+        name: "Network dropout",
+        valueClassName: "number",
+        value: metadata.get("ss_network_dropout"),
+      }),
     ),
-  );
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Network args",
+        valueClassName: "args",
+        value: networkArgs,
+      }),
+    ),
+  ];
+  // h("div", {}, [
+  // h("div", { title: "seed" }, metadata.get("ss_seed")),
+  //    h(
+  //      "div",
+  //      { title: "Training started at" },
+  //      trainingStart,
+  //    ),
+  //    h(
+  //      "div",
+  //      { title: "Training ended at" },
+  // trainingEnded
+  //    ),
+  // ]),
 }
 
 function LRScheduler({ metadata }) {
@@ -352,13 +351,13 @@ function Dataset({ metadata }) {
   let datasets;
   if (metadata.has("ss_datasets")) {
     datasets = JSON.parse(metadata.get("ss_datasets"));
-	} else {
-		datasets = []
-	}
+  } else {
+    datasets = [];
+  }
   return h(
     "div",
     null,
-    "Dataset",
+    h("h2", null, "Dataset"),
     datasets.map((dataset) => {
       return h(Buckets, { dataset, metadata });
     }),
@@ -367,38 +366,58 @@ function Dataset({ metadata }) {
 
 function Buckets({ dataset, metadata }) {
   return [
-    h(MetaAttribute, {
-      name: "Buckets",
-      value: dataset["enable_bucket"] ? "True" : "False",
-    }),
-    h(MetaAttribute, {
-      name: "Min bucket resolution",
-      valueClassName: "number",
-      value: dataset["min_bucket_reso"],
-    }),
-    h(MetaAttribute, {
-      name: "Max bucket resolution",
-      valueClassName: "number",
-      value: dataset["max_bucket_reso"],
-    }),
-    h(MetaAttribute, {
-      name: "Resolution",
-      valueClassName: "number",
-      value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
-    }),
-    h("div", {}, "Buckets:", h(BucketInfo, { metadata, dataset })),
     h(
       "div",
-      {},
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Buckets",
+        value: dataset["enable_bucket"] ? "True" : "False",
+      }),
+      h(MetaAttribute, {
+        name: "Min bucket resolution",
+        valueClassName: "number",
+        value: dataset["min_bucket_reso"],
+      }),
+      h(MetaAttribute, {
+        name: "Max bucket resolution",
+        valueClassName: "number",
+        value: dataset["max_bucket_reso"],
+      }),
+      h(MetaAttribute, {
+        name: "Resolution",
+        valueClassName: "number",
+        value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
+      }),
+    ),
+    h("div", {}, "Buckets:"),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(BucketInfo, { metadata, dataset }),
+    ),
+    h(
+      "div",
+      { className: "row space-apart" },
+
       "Subsets:",
+    ),
+    h(
+      "div",
+      { className: "subsets" },
+
       dataset["subsets"].map((subset) => h(Subset, { metadata, subset })),
     ),
-    Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
-      h(
-        "div",
-        {},
-        h("h3", {}, dir),
-        h(TagFrequency, { tagFrequency: frequency, metadata }),
+
+    h(
+      "div",
+      { className: "row space-apart" },
+      Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
+        h(
+          "div",
+          {},
+          h("h3", {}, dir),
+          h(TagFrequency, { tagFrequency: frequency, metadata }),
+        ),
       ),
     ),
   ];
@@ -416,7 +435,7 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-  return [
+  return h("div", { className: "subset" }, [
     h(MetaAttribute, { name: "Class Token", value: subset["class_tokens"] }),
     h(MetaAttribute, { name: "Color aug", value: subset["color_aug"] }),
     h(MetaAttribute, { name: "Flip aug", value: subset["flip_aug"] }),
@@ -429,7 +448,7 @@ function Subset({ subset, metadata }) {
       name: "shuffle caption",
       value: subset["shuffle_caption"],
     }),
-  ];
+  ]);
 }
 
 function TagFrequency({ tagFrequency, metadata }) {
@@ -556,8 +575,8 @@ init().then(() => {
 
     dropbox.classList.remove("box__open");
     dropbox.classList.add("box__closed");
-    document.querySelector("#jumbo").classList.remove("jumbo__intro")
-    document.querySelector("#note").classList.add("hidden")
+    document.querySelector("#jumbo").classList.remove("jumbo__intro");
+    document.querySelector("#note").classList.add("hidden");
     metadatas.forEach((metadata) => {
       const root = ReactDOM.createRoot(document.getElementById("results"));
       root.render(h(Metadata, { metadata }));
