@@ -1,0 +1,26 @@
+# fly.toml file generated for lora-inspector on 2023-11-21T01:57:26-05:00
+
+app = "lora-inspector"
+kill_signal = "SIGINT"
+kill_timeout = 5
+mounts = []
+primary_region = "bos"
+processes = []
+
+[[services]]
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

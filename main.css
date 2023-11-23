@@ -1,0 +1,166 @@
+:root {
+  --bg-color: #020f0f;
+  --accent-bg-color: #021e19;
+  --accent-color: #2aaa93;
+  --color: #9ddfab;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--color);
+  font-family: monospace;
+  font-size: 1.6em;
+}
+
+main {
+  display: grid;
+  grid-gap: 1em;
+  max-width: 100vw;
+}
+
+.note {
+  font-size: 0.8em;
+}
+
+.box {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  background-image: url("/logo.png");
+  background-repeat: no-repeat;
+  background-blend-mode: overlay;
+  background-position: center;
+  background-size: 50vw;
+}
+
+.box__open {
+  width: 95vw;
+  height: 95vh;
+}
+.box__closed {
+  width: 95vw;
+  height: 5vh;
+  min-height: 3em;
+}
+.box__intro {
+  margin-bottom: 1em;
+}
+
+@media (min-height: 480px) {
+  .box__intro {
+    margin-bottom: 25vh;
+  }
+}
+
+.box__closed .box__intro {
+  display: none;
+}
+
+#jumbo {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  min-height: 5em;
+}
+
+.jumbo__intro {
+  height: 100%;
+}
+
+.hidden {
+  display: none;
+}
+
+.box__dragndrop,
+.box__uploading,
+.box__success,
+.box__error {
+  display: none;
+}
+
+.box.has-advanced-upload {
+  background-color: var(--accent-bg-color);
+  outline: 2px dashed var(--accent-color);
+  outline-offset: -10px;
+}
+.box.has-advanced-upload .box__dragndrop {
+  display: inline;
+}
+.box.has-advanced-upload .box__file {
+  display: none;
+}
+.box.is-dragover {
+  background-color: grey;
+}
+
+.box__input label {
+  cursor: pointer;
+  padding: 5em;
+  user-select: none;
+}
+.box__input label strong {
+  text-decoration: underline;
+}
+
+.row {
+  display: grid;
+  grid-auto-flow: column;
+  /* border-top: 10px solid red; */
+  /* border-bottom: 10px solid red; */
+  grid-gap: 1em;
+}
+
+#results {
+  margin: 1em 0;
+}
+
+.row div {
+  text-overflow: ellipsis;
+}
+
+.space-apart {
+  justify-content: space-between;
+}
+
+.rank,
+.alpha {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.hash {
+  max-width: 10em;
+  overflow: hidden;
+}
+
+.lr {
+  font-size: 1.5em;
+}
+
+.number {
+  font-size: 1.5em;
+}
+
+.args {
+  overflow: scroll;
+  max-height: 10em;
+}
+
+.part3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.caption {
+  font-style: italic;
+  opacity: 0.8;
+  font-size: 0.8em;
+}

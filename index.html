@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,shrink-to-fit=no"
+    />
+    <title>LoRA Inspector</title>
+    <meta
+      name="description"
+      content="Inspect Kohya-SS LoRA files locally on your computer without any dependenceies"
+    />
+    <link rel="stylesheet" href="main.css" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="shortcut icon" href="/favicon-32.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  </head>
+  <body>
+    <div id="jumbo" class="jumbo__intro">
+      <form class="box box__open" id="dropbox" enctype="multipart/form-data">
+        <div style="text-align: center">
+          <div class="box__intro">
+            <h1>LoRA Inspector</h1>
+            <p>View metadata of your LoRA files, supporting Kohya-ss LoRAs</p>
+          </div>
+          <div class="box__input">
+            <input
+              class="box__file"
+              type="file"
+              name="files[]"
+              id="file"
+              data-multiple-caption="{count} files selected"
+              multiple
+            />
+            <label for="file"
+              ><strong>Choose a file</strong
+              ><span class="box__dragndrop"> or drag it here</span>.</label
+            >
+          </div>
+          <div id="note" class="note"><p><em>Metadata is parsed directly in the browser, locally.</em></p></div>
+        </div>
+      </form>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script type="module" src="main.js"></script>
+    <div id="results"></div>
+  </body>
+</html>
