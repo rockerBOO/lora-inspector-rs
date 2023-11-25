@@ -1,5 +1,5 @@
 import init, {
-  get_metadata_from_buffer,
+  get_metadata,
   get_average_magnitude,
   get_average_strength,
 } from "./pkg/lora_inspector_rs.js";
@@ -222,7 +222,7 @@ function Optimizer({ metadata }) {
   ]);
 }
 
-function Weight({ metadata }) {
+function Weight({ metadata, averageStrength, averageMagnitude }) {
   return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
       name: "Max Grad Norm",
@@ -233,6 +233,17 @@ function Weight({ metadata }) {
       name: "Scale Weight Norms",
       valueClassName: "number",
       value: metadata.get("ss_scale_weight_norms"),
+    }),
+
+    h(MetaAttribute, {
+      name: "Average vector strength, UNet + TE",
+      valueClassName: "number",
+      value: averageStrength,
+    }),
+    h(MetaAttribute, {
+      name: "Average vector magnitude, UNet + TE",
+      valueClassName: "number",
+      value: averageMagnitude,
     }),
   ]);
 }
@@ -458,13 +469,13 @@ function TagFrequency({ tagFrequency, metadata }) {
   });
 }
 
-function Main({ metadata }) {
+function Main({ metadata, averageStrength, averageMagnitude }) {
   return h("main", null, [
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
     h(LRScheduler, { metadata }),
     h(Optimizer, { metadata }),
-    h(Weight, { metadata }),
+    h(Weight, { metadata, averageStrength, averageMagnitude }),
     h(EpochStep, { metadata }),
     h(Batch, { metadata }),
     h(Noise, { metadata }),
@@ -473,11 +484,10 @@ function Main({ metadata }) {
   ]);
 }
 
-function Metadata({ metadata }) {
+function Metadata({ metadata, averageStrength, averageMagnitude }) {
   return [
     h(Header, { metadata }),
-    //
-    h(Main, { metadata }),
+    h(Main, { metadata, averageStrength, averageMagnitude }),
   ];
 }
 
@@ -486,9 +496,9 @@ async function readMetadata(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
       const buffer = new Uint8Array(e.target.result);
-      const map = get_metadata_from_buffer(buffer);
+      const [map, mag, str] = get_metadata(buffer);
 
-      resolve(map);
+      resolve([map, mag, str]);
     };
     reader.readAsArrayBuffer(file);
   });
@@ -614,9 +624,11 @@ init().then(() => {
     dropbox.classList.add("box__closed");
     document.querySelector("#jumbo").classList.remove("jumbo__intro");
     document.querySelector("#note").classList.add("hidden");
-    metadatas.forEach((metadata) => {
+    metadatas.forEach(([metadata, mag, str]) => {
       const root = ReactDOM.createRoot(document.getElementById("results"));
-      root.render(h(Metadata, { metadata }));
+      root.render(
+        h(Metadata, { metadata, averageMagnitude: mag, averageStrength: str }),
+      );
     });
   }
 });
