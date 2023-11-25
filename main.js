@@ -1,6 +1,7 @@
 import init, {
   get_metadata_from_buffer,
-  // get_average_magnitude,
+  get_average_magnitude,
+  get_average_strength,
 } from "./pkg/lora_inspector_rs.js";
 
 const h = React.createElement;
@@ -492,6 +493,30 @@ async function readMetadata(file) {
     reader.readAsArrayBuffer(file);
   });
 }
+async function getAverageMagnitude(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const buffer = new Uint8Array(e.target.result);
+      const map = get_average_magnitude(buffer);
+
+      resolve(map);
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+async function getAverageStrength(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const buffer = new Uint8Array(e.target.result);
+      const map = get_average_strength(buffer);
+
+      resolve(map);
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
 
 const isAdvancedUpload = (function () {
   var div = document.createElement("div");
@@ -552,6 +577,12 @@ init().then(() => {
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
         results.push(readMetadata(droppedFiles.item(i)));
+        getAverageMagnitude(droppedFiles.item(i)).then((v) => {
+          console.log("average_magnitude", v);
+        });
+        getAverageStrength(droppedFiles.item(i)).then((v) => {
+          console.log("average_strength", v);
+        });
       }
       handleFile(results);
     });
@@ -566,6 +597,12 @@ init().then(() => {
     const results = [];
     for (let i = 0; i < files.length; i++) {
       results.push(readMetadata(files.item(i)));
+      getAverageMagnitude(files.item(i)).then((v) => {
+        console.log("average_magnitude", v);
+      });
+      getAverageStrength(files.item(i)).then((v) => {
+        console.log("average_strength", v);
+      });
     }
     handleFile(results);
   });
