@@ -260,12 +260,20 @@ function Weight({ metadata, buffer }) {
   ];
 }
 
+// CHART.JS DEFAULTS
+// Chart.defaults.font.size = 16;
+// Chart.defaults.font.family = "monospace";
+
 function Blocks({ metadata, buffer }) {
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
   const [teStrBlocks, setTEStrBlocks] = React.useState(new Map());
   const [unetStrBlocks, setUnetStrBlocks] = React.useState(new Map());
+
+  const teChartRef = React.useRef(null);
+  const unetChartRef = React.useRef(null);
+
   React.useEffect(() => {
     if (!hasBlockWeights) {
       return;
@@ -282,6 +290,134 @@ function Blocks({ metadata, buffer }) {
     return function cleanup() {};
   }, [hasBlockWeights]);
 
+  React.useEffect(() => {
+    if (!teChartRef.current) {
+      return;
+    }
+    // const ctx = document.getElementById("myChart");
+    console.log(teChartRef.current);
+
+    // const chart = new Chart(teChartRef.current, {
+    //   type: "line",
+    //   data: {
+    //     labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+    //     datasets: [
+    //       {
+    //         label: "# of Votes",
+    //         data: [12, 19, 3, 5, 2, 3],
+    //         borderWidth: 1,
+    //       },
+    //     ],
+    //   },
+    //   options: {
+    //     scales: {
+    //       y: {
+    //         beginAtZero: true,
+    //       },
+    //     },
+    //     // plugins: {
+    //     //   legend: {
+    //     //     labels: {
+    //     //       font: {
+    // 				// family: "monospace",
+    //     //         size: 16,
+    //     //       },
+    //     //     },
+    //     //   },
+    //     // },
+    //   },
+    // });
+    //
+
+    const makeChart = (dataset, chartRef, strBlocks) => {
+      const data = {
+        // A labels array that can contain any sort of values
+        labels: dataset.map(([k, _]) => k),
+        // Our series array that contains series objects or in this case series data arrays
+        series: [
+          dataset.map(([_k, v]) => v),
+          // dataset.map(([k, v]) => strBlocks.get(k)),
+        ],
+      };
+      const chart = new Chartist.Line(chartRef.current, data, {
+        chartPadding: {
+          right: 60,
+        },
+        fullWidth: true,
+        axisX: {
+          // offset: -60,
+          // position: "start",
+        },
+        axisY: {
+          offset: 60,
+          scaleMinSpace: 15,
+          // position: "end",
+        },
+        plugins: [
+          Chartist.plugins.ctPointLabels({
+            labelOffset: {
+              x: 10,
+              y: -10,
+            },
+            textAnchor: "middle",
+            labelInterpolationFnc: function (value) {
+              return value.toPrecision(4);
+            },
+          }),
+        ],
+      });
+
+      let seq = 0;
+
+      // Once the chart is fully created we reset the sequence
+      chart.on("created", function () {
+        seq = 0;
+      });
+      chart.on("draw", function (data) {
+        if (data.type === "point") {
+          // If the drawn element is a line we do a simple opacity fade in. This could also be achieved using CSS3 animations.
+          data.element.animate({
+            opacity: {
+              // The delay when we like to start the animation
+              begin: seq++ * 40,
+              // Duration of the animation
+              dur: 90,
+              // The value where the animation should start
+              from: 0,
+              // The value where it should end
+              to: 1,
+            },
+            x1: {
+              begin: seq++ * 20,
+              dur: 90,
+              from: data.x - 20,
+              to: data.x,
+              // You can specify an easing function name or use easing functions from Chartist.Svg.Easing directly
+              easing: Chartist.Svg.Easing.easeOutQuart,
+            },
+          });
+        }
+      });
+
+      console.log("added chart", chart);
+    };
+
+    if (teMagBlocks.size > 0) {
+      makeChart(
+        Array.from(teMagBlocks).sort(([a, _], [b, _v]) => a > b),
+        teChartRef,
+        teStrBlocks,
+      );
+    }
+    if (unetMagBlocks.size > 0) {
+      makeChart(
+        Array.from(unetMagBlocks).sort(([a, _], [b, _v]) => a > b),
+        unetChartRef,
+        unetStrBlocks,
+      );
+    }
+  }, [teMagBlocks, teStrBlocks, unetMagBlocks, unetStrBlocks]);
+
   if (!hasBlockWeights) {
     return h(
       "button",
@@ -297,58 +433,72 @@ function Blocks({ metadata, buffer }) {
     );
   }
 
-  return [
-    h("h3", {}, "Text Encoder Block Weights"),
-    h(
-      "div",
-      { className: "block-weights text-encoder" },
-      Array.from(teMagBlocks)
-        .sort(([a, _], [b, _v]) => a > b)
-        .map(([k, v]) => {
-          // console.log("te-block", k, v);
-          return h(
-            "div",
-            null,
-            h(MetaAttribute, {
-              name: `${k} average strength`,
-              value: teStrBlocks.get(k).toPrecision(4),
-              valueClassName: "number",
-            }),
-            h(MetaAttribute, {
-              className: "te-block",
-              name: `${k} average magnitude`,
-              value: v.toPrecision(4),
-              valueClassName: "number",
-            }),
-          );
-        }),
-    ),
-    h("h3", {}, "UNet Block Weights"),
-    h(
-      "div",
-      { className: "block-weights unet" },
-      Array.from(unetMagBlocks)
-        .sort(([a, _], [b, _v]) => a > b)
-        .map(([k, v]) => {
-          // console.log("unet-block", k, v, unetStrBlocks.get(k));
-          return h(
-            "div",
-            null,
-            h(MetaAttribute, {
-              className: "unet-block",
-              name: `${k} average magnitude`,
-              value: v.toPrecision(4),
-              valueClassName: "number",
-            }),
-            h(MetaAttribute, {
-              name: `${k} average strength`,
-              value: unetStrBlocks.get(k).toPrecision(4),
-              valueClassName: "number",
-            }),
-          );
-        }),
-    ),
-  ];
+  let teBlockWeights = [];
+
+  if (teMagBlocks.size > 0) {
+    teBlockWeights = [
+      h("h3", {}, "Text Encoder Block Weights"),
+      h("div", { ref: teChartRef, className: "chart" }),
+      h(
+        "div",
+        { className: "block-weights text-encoder" },
+        Array.from(teMagBlocks)
+          .sort(([a, _], [b, _v]) => a > b)
+          .map(([k, v]) => {
+            // console.log("te-block", k, v);
+            return h(
+              "div",
+              null,
+              h(MetaAttribute, {
+                name: `${k} average strength`,
+                value: teStrBlocks.get(k).toPrecision(4),
+                valueClassName: "number",
+              }),
+              h(MetaAttribute, {
+                className: "te-block",
+                name: `${k} average magnitude`,
+                value: v.toPrecision(4),
+                valueClassName: "number",
+              }),
+            );
+          }),
+      ),
+    ];
+  }
+
+  let unetBlockWeights = [];
+  if (unetMagBlocks.size > 0) {
+    unetBlockWeights = [
+      h("h3", {}, "UNet Block Weights"),
+      h("div", { ref: unetChartRef, className: "chart" }),
+      h(
+        "div",
+        { className: "block-weights unet" },
+        Array.from(unetMagBlocks)
+          .sort(([a, _], [b, _v]) => a > b)
+          .map(([k, v]) => {
+            // console.log("unet-block", k, v, unetStrBlocks.get(k));
+            return h(
+              "div",
+              null,
+              h(MetaAttribute, {
+                name: `${k} average strength`,
+                value: unetStrBlocks.get(k).toPrecision(4),
+                valueClassName: "number",
+              }),
+              h(MetaAttribute, {
+                className: "unet-block",
+                name: `${k} average magnitude`,
+                value: v.toPrecision(4),
+                valueClassName: "number",
+              }),
+            );
+          }),
+      ),
+    ];
+  }
+
+  return [teBlockWeights, unetBlockWeights];
 }
 
 function EpochStep({ metadata }) {
@@ -439,6 +589,7 @@ function Noise({ metadata }) {
     }),
   ]);
 }
+
 function Loss({ metadata }) {
   return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
@@ -607,30 +758,30 @@ async function readMetadata(file) {
     reader.readAsArrayBuffer(file);
   });
 }
-async function getAverageMagnitude(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const buffer = new Uint8Array(e.target.result);
-      const map = get_average_magnitude(buffer);
-
-      resolve(map);
-    };
-    reader.readAsArrayBuffer(file);
-  });
-}
-async function getAverageStrength(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const buffer = new Uint8Array(e.target.result);
-      const map = get_average_strength(buffer);
-
-      resolve(map);
-    };
-    reader.readAsArrayBuffer(file);
-  });
-}
+// async function getAverageMagnitude(file) {
+//   return new Promise((resolve, reject) => {
+//     const reader = new FileReader();
+//     reader.onload = function (e) {
+//       const buffer = new Uint8Array(e.target.result);
+//       const map = get_average_magnitude(buffer);
+//
+//       resolve(map);
+//     };
+//     reader.readAsArrayBuffer(file);
+//   });
+// }
+// async function getAverageStrength(file) {
+//   return new Promise((resolve, reject) => {
+//     const reader = new FileReader();
+//     reader.onload = function (e) {
+//       const buffer = new Uint8Array(e.target.result);
+//       const map = get_average_strength(buffer);
+//
+//       resolve(map);
+//     };
+//     reader.readAsArrayBuffer(file);
+//   });
+// }
 
 const isAdvancedUpload = (function () {
   var div = document.createElement("div");
