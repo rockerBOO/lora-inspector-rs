@@ -451,13 +451,13 @@ function Blocks({ metadata, buffer }) {
               null,
               h(MetaAttribute, {
                 name: `${k} average strength`,
-                value: teStrBlocks.get(k).toPrecision(4),
+                value: teStrBlocks.get(k).toPrecision(6),
                 valueClassName: "number",
               }),
               h(MetaAttribute, {
                 className: "te-block",
                 name: `${k} average magnitude`,
-                value: v.toPrecision(4),
+                value: v.toPrecision(6),
                 valueClassName: "number",
               }),
             );
@@ -483,13 +483,13 @@ function Blocks({ metadata, buffer }) {
               null,
               h(MetaAttribute, {
                 name: `${k} average strength`,
-                value: unetStrBlocks.get(k).toPrecision(4),
+                value: unetStrBlocks.get(k).toPrecision(6),
                 valueClassName: "number",
               }),
               h(MetaAttribute, {
                 className: "unet-block",
                 name: `${k} average magnitude`,
-                value: v.toPrecision(4),
+                value: v.toPrecision(6),
                 valueClassName: "number",
               }),
             );
