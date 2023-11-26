@@ -159,17 +159,18 @@ pub fn weights_by_block(
     // SD 1
     let sd_text_encoder_re = Regex::new(r".*layers_(?P<layer>\d+).*").unwrap();
     let sd_unet_re =
-        Regex::new(r".*(?P<block_type>up|down|mid)_blocks_.*(?P<block_id>\d+).*").unwrap();
+        Regex::new(r".*(?P<block_type>up|down|mid)_blocks?_.*(?P<block_id>\d+).*").unwrap();
 
     // SDXL
     let sdxl_text_encoder_re = Regex::new(r".*(?P<te>te\d).*layers_(?P<layer>\d+).*").unwrap();
     let sdxl_unet_re =
-        Regex::new(r".*(?P<block_type>input|output|middle)_blocks_.*(?P<block_id>\d+).*").unwrap();
+        Regex::new(r".*(?P<block_type>input|output|middle)_blocks?_.*(?P<block_id>\d+).*").unwrap();
 
     for (key, tensor) in tensors {
         let period_idx = key.find('.').unwrap();
 
         let name = &key[0..period_idx];
+        dbg!(name);
 
         let (te_re, unet_re) = if name.contains("input") || name.contains("middle") || name.contains("output") {
             (&sdxl_text_encoder_re, &sdxl_unet_re)
