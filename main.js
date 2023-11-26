@@ -294,7 +294,7 @@ function Blocks({ metadata, buffer }) {
   }, [hasBlockWeights]);
 
   React.useEffect(() => {
-    if (!teChartRef.current) {
+    if (!teChartRef.current && !unetChartRef.current) {
       return;
     }
 
@@ -637,7 +637,7 @@ function Buckets({ dataset, metadata }) {
       { className: "subsets" },
       dataset["subsets"].map((subset) => h(Subset, { metadata, subset })),
     ),
-		h("h3", {}, "Tag frequencies"),
+    h("h3", {}, "Tag frequencies"),
     h(
       "div",
       { className: "tag-frequencies row space-apart" },
@@ -703,7 +703,7 @@ function Subset({ subset, metadata }) {
       h(MetaAttribute, {
         name: "Image dir",
         value: subset["image_dir"],
-        valueClassName: "number",
+        valueClassName: "",
       }),
     ),
     h(
