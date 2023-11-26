@@ -11,6 +11,10 @@
       name="description"
       content="Inspect Kohya-SS LoRA files locally on your computer without any dependenceies"
     />
+    <link
+      rel="stylesheet"
+      href="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.css"
+    />
     <link rel="stylesheet" href="main.css" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
@@ -39,12 +43,16 @@
               ><span class="box__dragndrop"> or drag it here</span>.</label
             >
           </div>
-          <div id="note" class="note"><p><em>Metadata is parsed directly in the browser, locally.</em></p></div>
+          <div id="note" class="note">
+            <p><em>Metadata is parsed directly in the browser, locally.</em></p>
+          </div>
         </div>
       </form>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
+    <script src="chartist-plugin-pointlabels.min.js"></script>
     <script type="module" src="main.js"></script>
     <div id="results"></div>
   </body>

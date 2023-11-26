@@ -2,6 +2,7 @@
   --bg-color: #020f0f;
   --accent-bg-color: #021e19;
   --accent-color: #2aaa93;
+  --accent-color-b: #c9e836;
   --color: #9ddfab;
 }
 
@@ -114,6 +115,7 @@ main {
 .row {
   display: grid;
   grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   /* border-top: 10px solid red; */
   /* border-bottom: 10px solid red; */
   grid-gap: 1em;
@@ -203,7 +205,7 @@ button.primary {
   font-size: 1rem;
   max-width: 10em;
   cursor: pointer;
-	font-family: monospace;
+  font-family: monospace;
 }
 
 button.primary:hover,
@@ -217,3 +219,34 @@ button.primary:active {
   border: 3px solid var(--accent-color);
   color: var(--color);
 }
+
+.ct-series-a .ct-line,
+.ct-series-a .ct-point {
+  stroke: var(--accent-color);
+}
+
+.ct-series-b .ct-line,
+.ct-series-b .ct-point {
+  stroke: var(--accent-color-b);
+}
+
+.ct-label {
+  color: var(--color);
+  font-size: 0.8em;
+}
+
+text.ct-label {
+  z-index: 2;
+  position: relative;
+  fill: var(--color);
+}
+
+.ct-grid {
+	stroke: rgba(64, 155, 170, 0.2);
+}
+
+.ct-label.ct-vertical.ct-start  {
+	text-align: center;
+	justify-content: center;
+}
+
