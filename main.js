@@ -19,27 +19,32 @@ function ModelSpec({ metadata }) {
 
   return h(
     "div",
-    null,
-    "model spec",
+    { className: "model-spec" },
     h("div", { className: "row space-apart" }, [
-      h("div", { title: "Date" }, "Date: " + metadata.get("modelspec.date")),
-      h("div", { title: "Title" }, metadata.get("modelspec.title")),
-      h(
-        "div",
-        { title: "Prediction" },
-        metadata.get("modelspec.prediction_type"),
-      ),
+      h(MetaAttribute, {
+        name: "Date",
+        value: new Date(metadata.get("modelspec.date")).toLocaleString(),
+      }),
+      h(MetaAttribute, {
+        name: "Title",
+        value: metadata.get("modelspec.title"),
+      }),
+      h(MetaAttribute, {
+        name: "Prediction type",
+        value: metadata.get("modelspec.prediction_type"),
+      }),
     ]),
     h("div", { className: "row space-apart" }, [
-      h(
-        "div",
-        { title: "License" },
-        "License: " + metadata.get("modelspec.license"),
-      ),
-      h("div", { title: "Description" }, metadata.get("modelspec.description")),
-    ]),
-    h("div", { className: "row space-apart" }, [
-      h("div", { title: "Tags" }, metadata.get("modelspec.tags")),
+      h(MetaAttribute, {
+        name: "License",
+        value: metadata.get("modelspec.license"),
+      }),
+      h(MetaAttribute, {
+        name: "Description",
+        value: metadata.get("modelspec.description"),
+      }),
+
+      h(MetaAttribute, { name: "Tags", value: metadata.get("modelspec.tags") }),
     ]),
   );
 }
@@ -47,8 +52,8 @@ function ModelSpec({ metadata }) {
 function PretrainedModel({ metadata }) {
   return h(
     "div",
-    { className: "row space-apart" }, //
-    h(MetaAttribute, { className: "caption" }, "SD Model"),
+    { className: "pretrained-model row space-apart" }, //
+    // h(MetaAttribute, { className: "caption" }, "SD Model"),
     h(MetaAttribute, {
       name: "SD model name",
       value: metadata.get("ss_sd_model_name"),
@@ -65,7 +70,8 @@ function PretrainedModel({ metadata }) {
         value: metadata.get("sshs_legacy_hash"),
         metadata,
       }),
-
+    ]),
+    h("div", {}, [
       h(MetaAttribute, {
         name: "Session ID",
         value: metadata.get("ss_session_id"),
@@ -181,15 +187,12 @@ function LRScheduler({ metadata }) {
     ? metadata.get("ss_lr_scheduler_type")
     : metadata.get("ss_lr_scheduler");
 
-  return h(
-    "div",
-    null,
-    h(MetaAttribute, { name: "LR Scheduler", value: lrScheduler }),
-    h(MetaAttribute, {
-      name: "LR Scheduler arguments",
-      valueClassName: "args",
-      value: metadata.get("ss_lr_scheduler_args"),
-    }),
+  return [
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, { name: "LR Scheduler", value: lrScheduler }),
+    ),
     h("div", { className: "row space-apart" }, [
       h(MetaAttribute, {
         name: "Learning Rate",
@@ -207,11 +210,11 @@ function LRScheduler({ metadata }) {
         value: metadata.get("ss_text_encoder_lr"),
       }),
     ]),
-  );
+  ];
 }
 
 function Optimizer({ metadata }) {
-  return h("div", null, [
+  return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
       name: "Optimizer",
       value: metadata.get("ss_optimizer"),
@@ -294,40 +297,6 @@ function Blocks({ metadata, buffer }) {
     if (!teChartRef.current) {
       return;
     }
-    // const ctx = document.getElementById("myChart");
-    console.log(teChartRef.current);
-
-    // const chart = new Chart(teChartRef.current, {
-    //   type: "line",
-    //   data: {
-    //     labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-    //     datasets: [
-    //       {
-    //         label: "# of Votes",
-    //         data: [12, 19, 3, 5, 2, 3],
-    //         borderWidth: 1,
-    //       },
-    //     ],
-    //   },
-    //   options: {
-    //     scales: {
-    //       y: {
-    //         beginAtZero: true,
-    //       },
-    //     },
-    //     // plugins: {
-    //     //   legend: {
-    //     //     labels: {
-    //     //       font: {
-    // 				// family: "monospace",
-    //     //         size: 16,
-    //     //       },
-    //     //     },
-    //     //   },
-    //     // },
-    //   },
-    // });
-    //
 
     const makeChart = (dataset, chartRef, strBlocks) => {
       const data = {
@@ -342,15 +311,20 @@ function Blocks({ metadata, buffer }) {
       const chart = new Chartist.Line(chartRef.current, data, {
         chartPadding: {
           right: 60,
+          top: 30,
+          bottom: 30,
         },
+        // seriesBarDistance: 15,
         fullWidth: true,
         axisX: {
+          // showGrid: false,
+          // offset: 10,
           // offset: -60,
           // position: "start",
         },
         axisY: {
           offset: 60,
-          scaleMinSpace: 15,
+          // scaleMinSpace: 100,
           // position: "end",
         },
         plugins: [
@@ -398,8 +372,6 @@ function Blocks({ metadata, buffer }) {
           });
         }
       });
-
-      console.log("added chart", chart);
     };
 
     if (teMagBlocks.size > 0) {
@@ -425,7 +397,6 @@ function Blocks({ metadata, buffer }) {
         className: "primary",
         onClick: (e) => {
           e.preventDefault();
-          console.log("get block weights");
           setHasBlockWeights((state) => (state ? false : true));
         },
       },
@@ -445,7 +416,6 @@ function Blocks({ metadata, buffer }) {
         Array.from(teMagBlocks)
           .sort(([a, _], [b, _v]) => a > b)
           .map(([k, v]) => {
-            // console.log("te-block", k, v);
             return h(
               "div",
               null,
@@ -477,7 +447,6 @@ function Blocks({ metadata, buffer }) {
         Array.from(unetMagBlocks)
           .sort(([a, _], [b, _v]) => a > b)
           .map(([k, v]) => {
-            // console.log("unet-block", k, v, unetStrBlocks.get(k));
             return h(
               "div",
               null,
@@ -655,14 +624,10 @@ function Buckets({ dataset, metadata }) {
         value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
       }),
     ),
-    h("div", {}, "Buckets:"),
+
+    h("div", null, h(BucketInfo, { metadata, dataset })),
     h(
-      "div",
-      { className: "row space-apart" },
-      h(BucketInfo, { metadata, dataset }),
-    ),
-    h(
-      "div",
+      "h3",
       { className: "row space-apart" },
 
       "Subsets:",
@@ -672,10 +637,10 @@ function Buckets({ dataset, metadata }) {
       { className: "subsets" },
       dataset["subsets"].map((subset) => h(Subset, { metadata, subset })),
     ),
-
+		h("h3", {}, "Tag frequencies"),
     h(
       "div",
-      { className: "row space-apart" },
+      { className: "tag-frequencies row space-apart" },
       Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
         h(
           "div",
@@ -692,34 +657,113 @@ function BucketInfo({ metadata, dataset }) {
   return [
     Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
       return h(MetaAttribute, {
-        name: key,
-        value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${bucket["count"]}`,
+        name: `Bucket ${key}`,
+        value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
+          bucket["count"]
+        } image${bucket["count"] > 1 ? "s" : ""}`,
       });
     }),
   ];
 }
 
 function Subset({ subset, metadata }) {
-  return h("div", { className: "subset" }, [
-    h(MetaAttribute, { name: "Class Token", value: subset["class_tokens"] }),
-    h(MetaAttribute, { name: "Color aug", value: subset["color_aug"] }),
-    h(MetaAttribute, { name: "Flip aug", value: subset["flip_aug"] }),
-    h(MetaAttribute, { name: "image dir", value: subset["image_dir"] }),
-    h(MetaAttribute, { name: "image count", value: subset["img_count"] }),
-    h(MetaAttribute, { name: "is_reg", value: subset["is_reg"] }),
-    h(MetaAttribute, { name: "keep tokens", value: subset["keep_tokens"] }),
-    h(MetaAttribute, { name: "num repeats", value: subset["num_repeats"] }),
-    h(MetaAttribute, {
-      name: "shuffle caption",
-      value: subset["shuffle_caption"],
-    }),
-  ]);
+  console.log(subset);
+
+  const tf = (v, defaults = undefined, opts) => {
+    let className = "";
+    if (v === true) {
+      if (v !== defaults) {
+        className = "changed";
+      }
+      return {
+        valueClassName: opts?.valueClassName ?? "" + " option " + className,
+        value: "true",
+      };
+    }
+    if (v !== defaults) {
+      className = "changed";
+    }
+    return {
+      valueClassName: opts?.valueClassName ?? "" + " option " + className,
+      value: "false",
+    };
+  };
+
+  return h(
+    "div",
+    { className: "subset" },
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Image count",
+        value: subset["img_count"],
+        valueClassName: "number",
+      }),
+      h(MetaAttribute, {
+        name: "Image dir",
+        value: subset["image_dir"],
+        valueClassName: "number",
+      }),
+    ),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Flip aug",
+        ...tf(subset["flip_aug"], false),
+      }),
+      h(MetaAttribute, {
+        name: "Color aug",
+        ...tf(subset["color_aug"], false),
+      }),
+    ),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Num repeats",
+        value: subset["num_repeats"],
+        valueClassName: "number",
+      }),
+      h(MetaAttribute, {
+        name: "Is reg",
+        ...tf(subset["is_reg"], false),
+      }),
+    ),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "Keep tokens",
+        value: subset["keep_tokens"],
+        valueClassName: "number",
+      }),
+      h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
+    ),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(MetaAttribute, {
+        name: "shuffle caption",
+        ...tf(subset["shuffle_caption"], false),
+      }),
+    ),
+  );
 }
 
 function TagFrequency({ tagFrequency, metadata }) {
-  return Object.entries(tagFrequency).map(([tag, count]) => {
-    return h("div", {}, `${tag}: ${count}`);
-  });
+  return Object.entries(tagFrequency)
+    .sort((a, b) => a[1] < b[1])
+    .map(([tag, count], i) => {
+      const alt = i % 2 > 0 ? " alt-row" : "";
+      return h(
+        "div",
+        { className: "tag-frequency" + alt },
+        h("div", {}, count),
+        h("div", {}, tag),
+      );
+    });
 }
 
 function Main({ metadata, buffer }) {
@@ -842,12 +886,6 @@ init().then(() => {
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
         results.push(readMetadata(droppedFiles.item(i)));
-        // getAverageMagnitude(droppedFiles.item(i)).then((v) => {
-        //   console.log("average_magnitude", v);
-        // });
-        // getAverageStrength(droppedFiles.item(i)).then((v) => {
-        //   console.log("average_strength", v);
-        // });
       }
       handleFile(results);
     });
@@ -862,12 +900,6 @@ init().then(() => {
     const results = [];
     for (let i = 0; i < files.length; i++) {
       results.push(readMetadata(files.item(i)));
-      // getAverageMagnitude(files.item(i)).then((v) => {
-      //   console.log("average_magnitude", v);
-      // });
-      // getAverageStrength(files.item(i)).then((v) => {
-      //   console.log("average_strength", v);
-      // });
     }
     handleFile(results);
   });

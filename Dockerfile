@@ -8,4 +8,5 @@ COPY favicon-16.png /srv/http/favicon-16.png
 COPY favicon-32.ico /srv/http/favicon-32.ico
 COPY apple-touch-icon.png /srv/http/apple-touch-icon.png
 COPY logo.png /srv/http/logo.png
+COPY chartist-plugin-pointlabels.min.js /srv/http/chartist-plugin-pointlabels.min.js
 CMD ["-port","8080","-https-promote", "-enable-logging"]

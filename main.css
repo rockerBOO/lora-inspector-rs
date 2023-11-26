@@ -173,8 +173,55 @@ main {
 
 .subsets {
   display: grid;
-  grid-auto-flow: column;
+  grid-gap: 1em;
+
+  grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
 }
+
+.subset {
+	background-color: var(--accent-bg-color);
+	padding: 1em;
+}
+
+.subset > div {
+  min-height: 3em;
+}
+
+.option {
+	font-size: 1.25em;
+}
+
+/* .option.true { */
+/* } */
+
+.option.changed {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.model-spec {
+  margin-bottom: 1em;
+}
+
+.tag-frequencies {
+	grid-auto-flow: initial;
+	grid-gap: 1em;
+	grid-template-columns: repeat(auto-fit, minmax(25em, 1fr));
+}
+
+.tag-frequency {
+	display: grid;
+	grid-template-columns: 2em 12fr;
+	padding: 0.3em;
+}
+
+.alt-row {
+	background-color: var(--accent-bg-color);
+}
+
+/** 
+* BLOCK WEIGHTS
+**/
 
 .block-weights {
   display: grid;
@@ -195,6 +242,9 @@ main {
   grid-template-columns: repeat(auto-fit, minmax(6em, 1fr));
 }
 
+/** 
+* BUTTONS
+**/
 button.primary {
   background-color: var(--accent-bg-color);
   color: var(--color);
@@ -220,6 +270,9 @@ button.primary:active {
   color: var(--color);
 }
 
+/** 
+* CHARTS 
+**/
 .ct-series-a .ct-line,
 .ct-series-a .ct-point {
   stroke: var(--accent-color);
@@ -242,11 +295,10 @@ text.ct-label {
 }
 
 .ct-grid {
-	stroke: rgba(64, 155, 170, 0.2);
+  stroke: rgba(64, 155, 170, 0.2);
 }
 
-.ct-label.ct-vertical.ct-start  {
-	text-align: center;
-	justify-content: center;
+.ct-label.ct-vertical.ct-start {
+  text-align: center;
+  justify-content: center;
 }
-
