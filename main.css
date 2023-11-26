@@ -154,8 +154,8 @@ main {
   overflow: scroll;
   max-height: 10em;
   word-break: break-all;
-	max-width: 100%;
-	/* max-width: 50vw; */
+  max-width: 100%;
+  /* max-width: 50vw; */
 }
 
 .part3 {
@@ -170,6 +170,50 @@ main {
 }
 
 .subsets {
-	display: grid;
-	grid-auto-flow: column;
+  display: grid;
+  grid-auto-flow: column;
+}
+
+.block-weights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
+  grid-gap: 1em;
+}
+
+.block-weights > div {
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: clip;
+}
+.block-weights .number {
+  font-size: 1.25em;
+}
+
+.block-weights.text-encoder {
+  grid-template-columns: repeat(auto-fit, minmax(6em, 1fr));
+}
+
+button.primary {
+  background-color: var(--accent-bg-color);
+  color: var(--color);
+  min-height: 3em;
+  border: 3px solid var(--accent-color);
+  box-shadow: 3px 3px 5px black;
+  border-radius: 0.5em;
+  font-size: 1rem;
+  max-width: 10em;
+  cursor: pointer;
+	font-family: monospace;
+}
+
+button.primary:hover,
+button.primary:focus {
+  background-color: var(--accent-color);
+  color: var(--bg-color);
+  border: 3px solid var(--accent-bg-color);
+}
+button.primary:active {
+  background-color: var(--accent-bg-color);
+  border: 3px solid var(--accent-color);
+  color: var(--color);
 }

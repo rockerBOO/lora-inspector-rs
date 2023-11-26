@@ -2,6 +2,8 @@ import init, {
   get_metadata,
   get_average_magnitude,
   get_average_strength,
+  get_average_magnitude_by_block,
+  get_average_strength_by_block,
 } from "./pkg/lora_inspector_rs.js";
 
 const h = React.createElement;
@@ -222,30 +224,131 @@ function Optimizer({ metadata }) {
   ]);
 }
 
-function Weight({ metadata, averageStrength, averageMagnitude }) {
-  return h("div", { className: "row space-apart" }, [
-    h(MetaAttribute, {
-      name: "Max Grad Norm",
-      valueClassName: "number",
-      value: metadata.get("ss_max_grad_norm"),
-    }),
-    h(MetaAttribute, {
-      name: "Scale Weight Norms",
-      valueClassName: "number",
-      value: metadata.get("ss_scale_weight_norms"),
-    }),
+function Weight({ metadata, buffer }) {
+  const [averageStrength, setAverageStrength] = React.useState(undefined);
+  const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
-    h(MetaAttribute, {
-      name: "Average vector strength, UNet + TE",
-      valueClassName: "number",
-      value: averageStrength,
-    }),
-    h(MetaAttribute, {
-      name: "Average vector magnitude, UNet + TE",
-      valueClassName: "number",
-      value: averageMagnitude,
-    }),
-  ]);
+  React.useEffect(() => {
+    setAverageStrength(get_average_strength(buffer));
+    setAverageMagnitude(get_average_magnitude(buffer));
+  }, []);
+
+  return [
+    h("div", { className: "row space-apart" }, [
+      h(MetaAttribute, {
+        name: "Max Grad Norm",
+        valueClassName: "number",
+        value: metadata.get("ss_max_grad_norm"),
+      }),
+      h(MetaAttribute, {
+        name: "Scale Weight Norms",
+        valueClassName: "number",
+        value: metadata.get("ss_scale_weight_norms"),
+      }),
+      h(MetaAttribute, {
+        name: "Average vector strength, UNet + TE",
+        valueClassName: "number",
+        value: averageStrength?.toPrecision(4),
+      }),
+      h(MetaAttribute, {
+        name: "Average vector magnitude, UNet + TE",
+        valueClassName: "number",
+        value: averageMagnitude?.toPrecision(4),
+      }),
+    ]),
+    h(Blocks, { metadata, buffer }),
+  ];
+}
+
+function Blocks({ metadata, buffer }) {
+  const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
+  const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
+  const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
+  const [teStrBlocks, setTEStrBlocks] = React.useState(new Map());
+  const [unetStrBlocks, setUnetStrBlocks] = React.useState(new Map());
+  React.useEffect(() => {
+    if (!hasBlockWeights) {
+      return;
+    }
+
+    const averageMagnitudes = get_average_magnitude_by_block(buffer);
+    const averageStrength = get_average_strength_by_block(buffer);
+
+    setTEMagBlocks(averageMagnitudes.get("text_encoder"));
+    setUnetMagBlocks(averageMagnitudes.get("unet"));
+
+    setTEStrBlocks(averageStrength.get("text_encoder"));
+    setUnetStrBlocks(averageStrength.get("unet"));
+    return function cleanup() {};
+  }, [hasBlockWeights]);
+
+  if (!hasBlockWeights) {
+    return h(
+      "button",
+      {
+        className: "primary",
+        onClick: (e) => {
+          e.preventDefault();
+          console.log("get block weights");
+          setHasBlockWeights((state) => (state ? false : true));
+        },
+      },
+      "Get block weights",
+    );
+  }
+
+  return [
+    h("h3", {}, "Text Encoder Block Weights"),
+    h(
+      "div",
+      { className: "block-weights text-encoder" },
+      Array.from(teMagBlocks)
+        .sort(([a, _], [b, _v]) => a > b)
+        .map(([k, v]) => {
+          // console.log("te-block", k, v);
+          return h(
+            "div",
+            null,
+            h(MetaAttribute, {
+              name: `${k} average strength`,
+              value: teStrBlocks.get(k).toPrecision(4),
+              valueClassName: "number",
+            }),
+            h(MetaAttribute, {
+              className: "te-block",
+              name: `${k} average magnitude`,
+              value: v.toPrecision(4),
+              valueClassName: "number",
+            }),
+          );
+        }),
+    ),
+    h("h3", {}, "UNet Block Weights"),
+    h(
+      "div",
+      { className: "block-weights unet" },
+      Array.from(unetMagBlocks)
+        .sort(([a, _], [b, _v]) => a > b)
+        .map(([k, v]) => {
+          // console.log("unet-block", k, v, unetStrBlocks.get(k));
+          return h(
+            "div",
+            null,
+            h(MetaAttribute, {
+              className: "unet-block",
+              name: `${k} average magnitude`,
+              value: v.toPrecision(4),
+              valueClassName: "number",
+            }),
+            h(MetaAttribute, {
+              name: `${k} average strength`,
+              value: unetStrBlocks.get(k).toPrecision(4),
+              valueClassName: "number",
+            }),
+          );
+        }),
+    ),
+  ];
 }
 
 function EpochStep({ metadata }) {
@@ -416,7 +519,6 @@ function Buckets({ dataset, metadata }) {
     h(
       "div",
       { className: "subsets" },
-
       dataset["subsets"].map((subset) => h(Subset, { metadata, subset })),
     ),
 
@@ -469,13 +571,13 @@ function TagFrequency({ tagFrequency, metadata }) {
   });
 }
 
-function Main({ metadata, averageStrength, averageMagnitude }) {
+function Main({ metadata, buffer }) {
   return h("main", null, [
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
     h(LRScheduler, { metadata }),
     h(Optimizer, { metadata }),
-    h(Weight, { metadata, averageStrength, averageMagnitude }),
+    h(Weight, { metadata, buffer }),
     h(EpochStep, { metadata }),
     h(Batch, { metadata }),
     h(Noise, { metadata }),
@@ -484,10 +586,12 @@ function Main({ metadata, averageStrength, averageMagnitude }) {
   ]);
 }
 
-function Metadata({ metadata, averageStrength, averageMagnitude }) {
+function Metadata({ metadata, buffer }) {
   return [
     h(Header, { metadata }),
-    h(Main, { metadata, averageStrength, averageMagnitude }),
+    // h("div", {}, "wtf"),
+    // h(Blocks, { metadata, buffer }),
+    h(Main, { metadata, buffer }),
   ];
 }
 
@@ -496,9 +600,9 @@ async function readMetadata(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
       const buffer = new Uint8Array(e.target.result);
-      const [map, mag, str] = get_metadata(buffer);
+      const metadata = get_metadata(buffer);
 
-      resolve([map, mag, str]);
+      resolve([metadata, buffer]);
     };
     reader.readAsArrayBuffer(file);
   });
@@ -587,12 +691,12 @@ init().then(() => {
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
         results.push(readMetadata(droppedFiles.item(i)));
-        getAverageMagnitude(droppedFiles.item(i)).then((v) => {
-          console.log("average_magnitude", v);
-        });
-        getAverageStrength(droppedFiles.item(i)).then((v) => {
-          console.log("average_strength", v);
-        });
+        // getAverageMagnitude(droppedFiles.item(i)).then((v) => {
+        //   console.log("average_magnitude", v);
+        // });
+        // getAverageStrength(droppedFiles.item(i)).then((v) => {
+        //   console.log("average_strength", v);
+        // });
       }
       handleFile(results);
     });
@@ -607,12 +711,12 @@ init().then(() => {
     const results = [];
     for (let i = 0; i < files.length; i++) {
       results.push(readMetadata(files.item(i)));
-      getAverageMagnitude(files.item(i)).then((v) => {
-        console.log("average_magnitude", v);
-      });
-      getAverageStrength(files.item(i)).then((v) => {
-        console.log("average_strength", v);
-      });
+      // getAverageMagnitude(files.item(i)).then((v) => {
+      //   console.log("average_magnitude", v);
+      // });
+      // getAverageStrength(files.item(i)).then((v) => {
+      //   console.log("average_strength", v);
+      // });
     }
     handleFile(results);
   });
@@ -624,10 +728,13 @@ init().then(() => {
     dropbox.classList.add("box__closed");
     document.querySelector("#jumbo").classList.remove("jumbo__intro");
     document.querySelector("#note").classList.add("hidden");
-    metadatas.forEach(([metadata, mag, str]) => {
+    metadatas.forEach(([metadata, buffer]) => {
       const root = ReactDOM.createRoot(document.getElementById("results"));
       root.render(
-        h(Metadata, { metadata, averageMagnitude: mag, averageStrength: str }),
+        h(Metadata, {
+          metadata,
+          buffer,
+        }),
       );
     });
   }
