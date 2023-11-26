@@ -3,6 +3,10 @@ name = "lora-inspector-rs"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
+
 [lib]
 crate-type = ["cdylib"]
 
@@ -18,3 +22,6 @@ candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.
 getrandom = { version = "0.2", features = ["js"] }
 web-sys = { version = "0.3.65", features = ["console"] }
 regex = "1.10.2"
+
+[dev-dependencies]
+insta = { version = "1.34.0", features = ["json"] }

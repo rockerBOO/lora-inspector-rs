@@ -116,7 +116,9 @@ pub fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
 }
 
 pub fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
-    Ok(dbg!(t.to_dtype(DType::F64)?.abs()?.sum_all()?)
+    Ok(t.to_dtype(DType::F64)?
+        .abs()?
+        .sum_all()?
         .to_scalar()
         .unwrap_or(0.)
         / t.elem_count() as f64)
@@ -125,11 +127,11 @@ pub fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
 pub fn _get_average_magnitude(
     tensors: &HashMap<String, Tensor>,
 ) -> Result<f64, candle_core::Error> {
-    Ok(dbg!(tensors
+    Ok(tensors
         .iter()
         .filter(|(k, _t)| k.contains("weight"))
         .filter_map(|(_k, t)| to_tensor_magnitude(t).ok())
-        .sum::<f64>())
+        .sum::<f64>()
         / tensors.len() as f64)
 }
 
@@ -138,7 +140,7 @@ pub fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, c
     Ok(tensors
         .iter()
         .filter(|(k, _t)| k.contains("weight"))
-        .filter_map(|(_k, t)| dbg!(to_tensor_strength(t).ok()))
+        .filter_map(|(_k, t)| to_tensor_strength(t).ok())
         .sum::<f64>()
         / tensors.len() as f64)
 
@@ -154,22 +156,30 @@ pub fn weights_by_block(
     let mut unet: HashMap<String, Vec<Tensor>> = HashMap::new();
     let mut unet_alphas: HashMap<String, f64> = HashMap::new();
 
-    let text_encoder_re = Regex::new(r".*layers_(?P<layer>\d+).*").unwrap();
-    // let unet_re = Regex::new(
-    //     r".*(?P<block_type>up|down|mid)_blocks_.*(?P<block_id>\d+)_attentions_(?P<attn>\d+)_transformer_blocks_(?P<trans>\d+).*",
-    // )
-    // .unwrap();
-    let unet_re =
+    // SD 1
+    let sd_text_encoder_re = Regex::new(r".*layers_(?P<layer>\d+).*").unwrap();
+    let sd_unet_re =
         Regex::new(r".*(?P<block_type>up|down|mid)_blocks_.*(?P<block_id>\d+).*").unwrap();
+
+    // SDXL
+    let sdxl_text_encoder_re = Regex::new(r".*(?P<te>te\d).*layers_(?P<layer>\d+).*").unwrap();
+    let sdxl_unet_re =
+        Regex::new(r".*(?P<block_type>input|output|middle)_blocks_.*(?P<block_id>\d+).*").unwrap();
 
     for (key, tensor) in tensors {
         let period_idx = key.find('.').unwrap();
 
         let name = &key[0..period_idx];
 
+        let (te_re, unet_re) = if name.contains("input") || name.contains("middle") || name.contains("output") {
+            (&sdxl_text_encoder_re, &sdxl_unet_re)
+        } else {
+            (&sd_text_encoder_re, &sd_unet_re)
+        };
+
         if key.contains("text_model") {
             // let caps = text_encoder_re.captures(key).unwrap();
-            if let Some(caps) = text_encoder_re.captures(name) {
+            if let Some(caps) = te_re.captures(name) {
                 let block_name = format!(
                     "layer_{:02}",
                     caps[1].to_owned().to_string().parse().unwrap_or(0)
@@ -188,7 +198,7 @@ pub fn weights_by_block(
         } else if key.contains("unet") {
             if let Some(caps) = unet_re.captures(name) {
                 let block_name = format!(
-                    "{:}_{:}",
+                    "{:}_{:02}",
                     caps["block_type"].to_string(),
                     caps["block_id"].to_string().parse::<u8>().unwrap()
                 );
@@ -212,16 +222,10 @@ pub fn weights_by_block(
     (text_encoder, unet)
 }
 
-#[wasm_bindgen]
-pub fn get_average_magnitude_by_block(buffer: &[u8]) -> JsValue {
-    let (text_encoder, unet) = match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-        Ok(tensors) => weights_by_block(tensors),
-        Err(e) => {
-            console_log(&JsValue::from(format!("Error {e}").as_str()));
-            todo!()
-        }
-    };
-
+pub fn reduce_block_weights(
+    text_encoder: HashMap<String, Vec<Tensor>>,
+    unet: HashMap<String, Vec<Tensor>>,
+) -> HashMap<String, HashMap<String, f64>> {
     let mut unet_weights: HashMap<String, f64> = HashMap::new();
     for (block, weights) in unet {
         unet_weights.insert(
@@ -251,7 +255,20 @@ pub fn get_average_magnitude_by_block(buffer: &[u8]) -> JsValue {
     weights.insert("text_encoder".to_string(), text_encoder_weights);
     weights.insert("unet".to_string(), unet_weights);
 
-    match serde_wasm_bindgen::to_value(&weights) {
+    weights
+}
+
+#[wasm_bindgen]
+pub fn get_average_magnitude_by_block(buffer: &[u8]) -> JsValue {
+    let (text_encoder, unet) = match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
+        Ok(tensors) => weights_by_block(tensors),
+        Err(e) => {
+            console_log(&JsValue::from(format!("Error {e}").as_str()));
+            todo!()
+        }
+    };
+
+    match serde_wasm_bindgen::to_value(&reduce_block_weights(text_encoder, unet)) {
         Ok(v) => v,
         Err(e) => {
             console_log(&JsValue::from(format!("Error {e}").as_str()));
@@ -310,35 +327,29 @@ pub fn get_average_strength_by_block(buffer: &[u8]) -> JsValue {
 
 #[cfg(test)]
 mod tests {
-    // use std::fs::File;
-
     use super::*;
     use candle_core::Tensor;
-    // use memmap2::MmapOptions;
 
     #[test]
     fn test_weights_by_block() {
-        // let device = candle_core::Device::Cpu;
-        //
-        // let data: Vec<f32> = vec![
-        //     1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        // ];
-
         let filename = "/mnt/900/training/sets/pov-2023-11-25-025803-4cf6f9ce/pov-2023-11-25-025803-4cf6f9ce.safetensors";
-        // let file = File::open(filename).unwrap();
-        // let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
-        //
-        // // let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
-        // // let a = Tensor::from_raw_buffer(buffer, DType::F32, );
         let tensors = candle_core::safetensors::load(filename, &Device::Cpu).unwrap();
-        // let mut tensors: HashMap<String, Tensor> = HashMap::new();
-        // tensors.insert("one".to_string(), a.unwrap());
 
-        let _result = weights_by_block(tensors);
+        let (text_encoder, unet) = weights_by_block(tensors);
+        let result = reduce_block_weights(text_encoder, unet);
 
-        // dbg!(result);
+        insta::assert_json_snapshot!(result);
+    }
 
-        // assert_!(result.unwrap(), 1.);
+    #[test]
+    fn test_sdxl_weights_by_block() {
+        let filename = "/mnt/900/lora/sdxl/Bloodstained-XL-V1.safetensors";
+        let tensors = candle_core::safetensors::load(filename, &Device::Cpu).unwrap();
+
+        let (text_encoder, unet) = weights_by_block(tensors);
+        let result = reduce_block_weights(text_encoder, unet);
+
+        insta::assert_json_snapshot!(dbg!(result));
     }
 
     #[test]
