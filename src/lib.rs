@@ -1,7 +1,8 @@
 use candle_core::{DType, Device, Tensor};
 use regex::Regex;
 
-use safetensors::{tensor::TensorInfo, Dtype, SafeTensorError, SafeTensors};
+use safetensors::SafeTensorError;
+use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
@@ -15,11 +16,10 @@ struct HashMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "__metadata__")]
     metadata: Option<HashMap<String, String>>,
-    #[serde(flatten)]
-    tensors: HashMap<String, TensorInfo>,
 }
 
 pub fn get_metadata_from_buffer(buffer: &[u8]) -> Result<HashMap<String, String>, SafeTensorError> {
+    // let tensors = candle_core::safetensors::load_buffer(buffer, &Device::Cpu)?;
     let (_size, metadata) = SafeTensors::read_metadata(buffer)?;
 
     metadata.metadata().to_owned().ok_or_else(|| {
@@ -81,32 +81,13 @@ pub fn get_metadata(buffer: &[u8]) -> JsValue {
     // }
 }
 
-pub fn into_dtype(dtype: Dtype) -> DType {
-    match dtype {
-        Dtype::F32 => DType::F32,
-        // Dtype::F16 => DType::F16,
-        // Dtype::BOOL => DType::BOOL,
-        Dtype::U8 => DType::U8,
-        // Dtype::I8 => DType::I8,
-        // Dtype::I16 => DType::I16,
-        // Dtype::U16 => DType::U16,
-        // Dtype::BF16 => DType::,
-        Dtype::I32 => DType::I64,
-        Dtype::U32 => DType::U32,
-        Dtype::F64 => DType::F64,
-        Dtype::I64 => DType::I64,
-        // Dtype::U64 => DType::U64,
-        _ => todo!(),
-    }
-}
-
-pub fn console_log(s: &JsValue) {
+fn console_log(s: &JsValue) {
     let array = js_sys::Array::new();
     array.push(s);
     console::log(&array);
 }
 
-pub fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
+fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
     Ok(t.to_dtype(DType::F64)?
         .powf(2.)?
         .sum_all()?
@@ -115,7 +96,7 @@ pub fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
         .unwrap_or(0.))
 }
 
-pub fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
+fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
     Ok(t.to_dtype(DType::F64)?
         .abs()?
         .sum_all()?
@@ -124,9 +105,7 @@ pub fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
         / t.elem_count() as f64)
 }
 
-pub fn _get_average_magnitude(
-    tensors: &HashMap<String, Tensor>,
-) -> Result<f64, candle_core::Error> {
+fn _get_average_magnitude(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
     Ok(tensors
         .iter()
         .filter(|(k, _t)| k.contains("weight"))
@@ -136,7 +115,7 @@ pub fn _get_average_magnitude(
 }
 
 // pub fn _get_average_strength(buffer: &[u8]) -> Result<f64, candle_core::Error> {
-pub fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
+fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
     Ok(tensors
         .iter()
         .filter(|(k, _t)| k.contains("weight"))
@@ -148,7 +127,7 @@ pub fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, c
     // Ok(r.sum::<f64>() / count)
 }
 
-pub fn weights_by_block(
+fn weights_by_block(
     tensors: HashMap<String, Tensor>,
 ) -> (HashMap<String, Vec<Tensor>>, HashMap<String, Vec<Tensor>>) {
     let mut text_encoder: HashMap<String, Vec<Tensor>> = HashMap::new();
@@ -172,11 +151,12 @@ pub fn weights_by_block(
         let name = &key[0..period_idx];
         dbg!(name);
 
-        let (te_re, unet_re) = if name.contains("input") || name.contains("middle") || name.contains("output") {
-            (&sdxl_text_encoder_re, &sdxl_unet_re)
-        } else {
-            (&sd_text_encoder_re, &sd_unet_re)
-        };
+        let (te_re, unet_re) =
+            if name.contains("input") || name.contains("middle") || name.contains("output") {
+                (&sdxl_text_encoder_re, &sdxl_unet_re)
+            } else {
+                (&sd_text_encoder_re, &sd_unet_re)
+            };
 
         if key.contains("text_model") {
             // let caps = text_encoder_re.captures(key).unwrap();
@@ -223,7 +203,7 @@ pub fn weights_by_block(
     (text_encoder, unet)
 }
 
-pub fn reduce_block_weights(
+fn reduce_block_weights(
     text_encoder: HashMap<String, Vec<Tensor>>,
     unet: HashMap<String, Vec<Tensor>>,
 ) -> HashMap<String, HashMap<String, f64>> {
@@ -326,6 +306,44 @@ pub fn get_average_strength_by_block(buffer: &[u8]) -> JsValue {
     }
 }
 
+#[wasm_bindgen]
+pub fn get_average_magnitude(buffer: &[u8]) -> JsValue {
+    console_error_panic_hook::set_once();
+
+    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
+        Ok(tensors) => match _get_average_magnitude(&tensors) {
+            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
+                Ok(v) => v,
+                Err(_) => todo!(),
+            },
+            Err(e) => {
+                console_log(&JsValue::from(format!("Error {e}").as_str()));
+                todo!()
+            }
+        },
+        Err(_) => todo!(),
+    }
+}
+
+#[wasm_bindgen]
+pub fn get_average_strength(buffer: &[u8]) -> JsValue {
+    console_error_panic_hook::set_once();
+
+    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
+        Ok(tensors) => match _get_average_strength(&tensors) {
+            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
+                Ok(v) => v,
+                Err(_) => todo!(),
+            },
+            Err(e) => {
+                console_log(&JsValue::from(format!("Error {e}").as_str()));
+                todo!()
+            }
+        },
+        Err(_) => todo!(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,43 +420,5 @@ mod tests {
         let result = _get_average_strength(&tensors);
 
         assert_eq!(result.unwrap(), 0.875);
-    }
-}
-
-#[wasm_bindgen]
-pub fn get_average_magnitude(buffer: &[u8]) -> JsValue {
-    console_error_panic_hook::set_once();
-
-    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-        Ok(tensors) => match _get_average_magnitude(&tensors) {
-            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-                Ok(v) => v,
-                Err(_) => todo!(),
-            },
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error {e}").as_str()));
-                todo!()
-            }
-        },
-        Err(_) => todo!(),
-    }
-}
-
-#[wasm_bindgen]
-pub fn get_average_strength(buffer: &[u8]) -> JsValue {
-    console_error_panic_hook::set_once();
-
-    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-        Ok(tensors) => match _get_average_strength(&tensors) {
-            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-                Ok(v) => v,
-                Err(_) => todo!(),
-            },
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error {e}").as_str()));
-                todo!()
-            }
-        },
-        Err(_) => todo!(),
     }
 }
