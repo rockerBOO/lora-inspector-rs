@@ -4,7 +4,7 @@ import init, {
   get_average_strength,
   get_average_magnitude_by_block,
   get_average_strength_by_block,
-} from "./pkg/lora_inspector_rs.js";
+} from "/pkg/lora_inspector_rs.js";
 
 const h = React.createElement;
 
@@ -656,12 +656,16 @@ function Buckets({ dataset, metadata }) {
 function BucketInfo({ metadata, dataset }) {
   return [
     Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
-      return h(MetaAttribute, {
-        name: `Bucket ${key}`,
-        value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
-          bucket["count"]
-        } image${bucket["count"] > 1 ? "s" : ""}`,
-      });
+      return h(
+        "div",
+        { className: "bucket" },
+        h(MetaAttribute, {
+          name: `Bucket ${key}`,
+          value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
+            bucket["count"]
+          } image${bucket["count"] > 1 ? "s" : ""}`,
+        }),
+      );
     }),
   ];
 }
