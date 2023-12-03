@@ -141,7 +141,7 @@ main {
 
 .hash {
   max-width: 10em;
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .lr {

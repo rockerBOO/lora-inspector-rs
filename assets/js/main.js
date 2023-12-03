@@ -667,8 +667,6 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-  console.log(subset);
-
   const tf = (v, defaults = undefined, opts) => {
     let className = "";
     if (v === true) {
