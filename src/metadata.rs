@@ -1,12 +1,11 @@
-use std::{collections::HashMap, fs::File};
+use std::collections::HashMap;
 
-use memmap2::MmapOptions;
 use safetensors::{SafeTensorError, SafeTensors};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
-#[derive(Debug,Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Metadata {
     size: usize,
     metadata: HashMap<String, String>,
@@ -22,13 +21,6 @@ impl Metadata {
         }
     }
 
-    pub fn new_from_file(filename: &str) -> Result<Metadata, SafeTensorError> {
-        let file = File::open(filename).unwrap();
-        let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
-
-        Metadata::new_from_buffer(&buffer)
-    }
-
     pub fn get(self, key: &str) -> Option<String> {
         self.metadata.get(key).to_owned().cloned()
     }
@@ -40,7 +32,16 @@ impl Metadata {
 
 // #[cfg(test)]
 // mod tests {
+//     use std::fs::File;
+//
 //     use super::*;
+//     use memmap2::MmapOptions;
+//
+//     fn new_from_file(filename: &str) -> Result<Metadata, SafeTensorError> {
+//         let file = File::open(filename).unwrap();
+//         let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
+//         Metadata::new_from_buffer(&buffer)
+//     }
 //
 //     #[test]
 //     fn test_metadata() {
