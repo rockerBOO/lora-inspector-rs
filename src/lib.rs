@@ -1,51 +1,11 @@
-use candle_core::{DType, Device, Tensor};
 
-use safetensors::SafeTensorError;
-use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io;
-use wasm_bindgen::prelude::*;
-use web_sys::console;
-use web_sys::js_sys;
 
-#[wasm_bindgen]
-pub struct LoraWorker {
-    buffer: Vec<u8>,
-}
-
-#[wasm_bindgen]
-impl LoraWorker {
-    pub fn new() -> LoraWorker {
-        LoraWorker { buffer: vec![] }
-    }
-
-    pub fn set_buffer(mut self, buffer: &[u8]) {
-        self.buffer = buffer.to_owned();
-    }
-
-    pub fn read_metadata(self) -> JsValue {
-        match get_metadata_from_buffer(&self.buffer) {
-            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-                Ok(metadata) => metadata,
-                Err(e) => {
-                    console_log(&JsValue::from(format!("Error parsing {e}").as_str()));
-                    todo!()
-                }
-            },
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error parsing {e}").as_str()));
-                todo!()
-            }
-        }
-    }
-}
-
-impl Default for LoraWorker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+mod inspector;
+mod metadata;
+mod norms;
+mod worker;
 
 /// Helper struct used only for serialization deserialization
 #[derive(Serialize, Deserialize)]
@@ -55,180 +15,104 @@ struct HashMetadata {
     metadata: Option<HashMap<String, String>>,
 }
 
-pub fn get_metadata_from_buffer(buffer: &[u8]) -> Result<HashMap<String, String>, SafeTensorError> {
-    // let tensors = candle_core::safetensors::load_buffer(buffer, &Device::Cpu)?;
-    let (_size, metadata) = SafeTensors::read_metadata(buffer)?;
 
-    metadata.metadata().to_owned().ok_or_else(|| {
-        SafeTensorError::IoError(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "invalid metadata",
-        ))
-    })
+#[derive(Debug)]
+pub enum Error {
+    Candle(candle_core::Error),
+    SafeTensor(safetensors::SafeTensorError),
+    Load
 }
 
-pub fn compile_metadata(
-    buffer: &[u8],
-) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
-    let metadata = get_metadata_from_buffer(buffer)?;
-    // let tensors = candle_core::safetensors::load_buffer(buffer, &Device::Cpu)?;
+// pub fn compile_metadata(
+//     buffer: &[u8],
+// ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+//     let metadata = get_metadata_from_buffer(buffer)?;
+//     // let tensors = candle_core::safetensors::load_buffer(buffer, &Device::Cpu)?;
+//
+//     Ok(metadata)
+//     // let average_magnitude = _get_average_magnitude(&tensors)?;
+//     // let average_strength = _get_average_strength(&tensors)?;
+//     //
+//     // Ok((metadata, average_magnitude, average_strength))
+// }
 
-    Ok(metadata)
-    // let average_magnitude = _get_average_magnitude(&tensors)?;
-    // let average_strength = _get_average_strength(&tensors)?;
-    //
-    // Ok((metadata, average_magnitude, average_strength))
-}
+// #[wasm_bindgen]
+// pub fn get_metadata(buffer: &[u8]) -> JsValue {
+//     console_error_panic_hook::set_once();
+//
+//     match compile_metadata(buffer) {
+//         Ok(v) => match serde_wasm_bindgen::to_value(&v) {
+//             Ok(metadata) => metadata,
+//             Err(e) => {
+//                 console_log(&JsValue::from(format!("Error parsing {e}").as_str()));
+//                 todo!()
+//             }
+//         },
+//         Err(e) => {
+//             console_log(&JsValue::from(
+//                 format!("Error loading metadata {e}").as_str(),
+//             ));
+//             todo!()
+//         }
+//     }
+//
+//     // let mut result: HashMap<String, JsValue> = HashMap::new();
+//     //
+//     // result.insert("metadata".to_string(), metadata);
+//     // result.insert("average_strength".to_string(), average_strength);
+//     // result.insert("average_magnitude".to_string(), average_magnitude);
+//     //
+//     // match serde_wasm_bindgen::to_value(&result) {
+//     //     Ok(r) => r,
+//     //     Err(e) => {
+//     //         console_log(&JsValue::from(
+//     //             format!("Could not load result {e}").as_str(),
+//     //         ));
+//     //
+//     //         todo!()
+//     //     }
+//     // }
+// }
 
-#[wasm_bindgen]
-pub fn get_metadata(buffer: &[u8]) -> JsValue {
-    console_error_panic_hook::set_once();
-
-    match compile_metadata(buffer) {
-        Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-            Ok(metadata) => metadata,
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error parsing {e}").as_str()));
-                todo!()
-            }
-        },
-        Err(e) => {
-            console_log(&JsValue::from(
-                format!("Error loading metadata {e}").as_str(),
-            ));
-            todo!()
-        }
-    }
-
-    // let mut result: HashMap<String, JsValue> = HashMap::new();
-    //
-    // result.insert("metadata".to_string(), metadata);
-    // result.insert("average_strength".to_string(), average_strength);
-    // result.insert("average_magnitude".to_string(), average_magnitude);
-    //
-    // match serde_wasm_bindgen::to_value(&result) {
-    //     Ok(r) => r,
-    //     Err(e) => {
-    //         console_log(&JsValue::from(
-    //             format!("Could not load result {e}").as_str(),
-    //         ));
-    //
-    //         todo!()
-    //     }
-    // }
-}
-
-fn console_log(s: &JsValue) {
-    let array = js_sys::Array::new();
-    array.push(s);
-    console::log(&array);
-}
-
-fn matrix_norm(t: &Tensor) -> Result<f32, candle_core::Error> {
-    t.sqr()?.sum_all()?.sqrt()?.to_scalar()
-}
-
-fn l1_norm(t: &Tensor) -> Result<f32, candle_core::Error> {
-    t.abs()?.sum_all()?.to_scalar()
-}
-
-fn l2_norm(t: &Tensor) -> Result<f32, candle_core::Error> {
-    t.abs()?.sqr()?.sum_all()?.sqrt()?.to_scalar()
-}
-
-fn skewness(t: &Tensor) -> Result<f64, candle_core::Error> {
-    let n = t.elem_count();
-
-    let x = t.mean_all()?.to_scalar::<f64>()?;
-
-    let m3 = dbg!(t.to_dtype(DType::F64)?
-        .flatten_all()?
-        .to_vec1::<f64>()?
-        .iter()
-        .map(|v| dbg!((*v - x).powi(3)))
-        .fold(0., |a, v| v - a))
-        / n as f64;
-
-    let m2 = t.to_dtype(DType::F64)?
-        .flatten_all()?
-        .to_vec1::<f64>()?
-        .iter()
-        .map(|v| (*v - x).powi(2))
-        .fold(0., |a, v| v - a)
-        / n as f64;
-
-    Ok(m3 / dbg!(m2.powf(1.5)))
-}
-
-fn sparsity(t: &Tensor) -> Result<f32, candle_core::Error> {
-    Ok(t.flatten_all()?
-        .to_vec1::<f32>()?
-        .into_iter()
-        .filter(|v| *v == 0.)
-        .count() as f32
-        / t.elem_count() as f32)
-}
-
-fn spectral_norm(t: &Tensor) -> Result<f32, candle_core::Error> {
-    Ok(t.flatten_all()?
-        .to_vec1::<f32>()?
-        .into_iter()
-        .reduce(f32::max)
-        .unwrap_or(0.))
-
-    // .fold(0., |a, v| if v > a { v } else { a })
-    // let mut max = 0.;
-    // for d in 0..t.rank() {
-    //     let v: f32 = t.max(d)?.flatten(0, 0)?.to_scalar()?;
-    //     if max < v {
-    //         max = v
-    //     }
-    // }
-    //
-    // Ok(max)
-    // dbg!(0..t.rank().fold(0., |a, v| ));
-    // Ok(t.max(t.rank())?.to_scalar()?)
-}
-
-fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
-    Ok(t.to_dtype(DType::F64)?
-        .sqr()?
-        .sum_all()?
-        .sqrt()?
-        .to_scalar()
-        .unwrap_or(0.))
-}
-
-fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
-    Ok(t.to_dtype(DType::F64)?
-        .abs()?
-        .sum_all()?
-        .to_scalar()
-        .unwrap_or(0.)
-        / t.elem_count() as f64)
-}
-
-fn _get_average_magnitude(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
-    Ok(tensors
-        .iter()
-        .filter(|(k, _t)| k.contains("weight"))
-        .filter_map(|(_k, t)| to_tensor_magnitude(t).ok())
-        .sum::<f64>()
-        / tensors.len() as f64)
-}
-
-// pub fn _get_average_strength(buffer: &[u8]) -> Result<f64, candle_core::Error> {
-fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
-    Ok(tensors
-        .iter()
-        .filter(|(k, _t)| k.contains("weight"))
-        .filter_map(|(_k, t)| to_tensor_strength(t).ok())
-        .sum::<f64>()
-        / tensors.len() as f64)
-
-    // let count = r.clone().count() as f64;
-    // Ok(r.sum::<f64>() / count)
-}
+// fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
+//     Ok(t.to_dtype(DType::F64)?
+//         .sqr()?
+//         .sum_all()?
+//         .sqrt()?
+//         .to_scalar()
+//         .unwrap_or(0.))
+// }
+//
+// fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
+//     Ok(t.to_dtype(DType::F64)?
+//         .abs()?
+//         .sum_all()?
+//         .to_scalar()
+//         .unwrap_or(0.)
+//         / t.elem_count() as f64)
+// }
+//
+// fn _get_average_magnitude(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
+//     Ok(tensors
+//         .iter()
+//         .filter(|(k, _t)| k.contains("weight"))
+//         .filter_map(|(_k, t)| to_tensor_magnitude(t).ok())
+//         .sum::<f64>()
+//         / tensors.len() as f64)
+// }
+//
+// // pub fn _get_average_strength(buffer: &[u8]) -> Result<f64, candle_core::Error> {
+// fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
+//     Ok(tensors
+//         .iter()
+//         .filter(|(k, _t)| k.contains("weight"))
+//         .filter_map(|(_k, t)| to_tensor_strength(t).ok())
+//         .sum::<f64>()
+//         / tensors.len() as f64)
+//
+//     // let count = r.clone().count() as f64;
+//     // Ok(r.sum::<f64>() / count)
+// }
 
 // fn weights_by_block(
 //     tensors: HashMap<String, Tensor>,
@@ -305,41 +189,41 @@ fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candl
 //     (text_encoder, unet)
 // }
 
-fn reduce_block_weights(
-    text_encoder: HashMap<String, Vec<Tensor>>,
-    unet: HashMap<String, Vec<Tensor>>,
-) -> HashMap<String, HashMap<String, f64>> {
-    let mut unet_weights: HashMap<String, f64> = HashMap::new();
-    for (block, weights) in unet {
-        unet_weights.insert(
-            block,
-            weights
-                .iter()
-                .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
-                .sum::<f64>()
-                / (weights.len() as f64),
-        );
-    }
-
-    let mut text_encoder_weights: HashMap<String, f64> = HashMap::new();
-    for (block, weights) in text_encoder {
-        text_encoder_weights.insert(
-            block,
-            weights
-                .iter()
-                .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
-                .sum::<f64>()
-                / (weights.len() as f64),
-        );
-    }
-
-    let mut weights: HashMap<String, HashMap<String, f64>> = HashMap::new();
-
-    weights.insert("text_encoder".to_string(), text_encoder_weights);
-    weights.insert("unet".to_string(), unet_weights);
-
-    weights
-}
+// fn reduce_block_weights(
+//     text_encoder: HashMap<String, Vec<Tensor>>,
+//     unet: HashMap<String, Vec<Tensor>>,
+// ) -> HashMap<String, HashMap<String, f64>> {
+//     let mut unet_weights: HashMap<String, f64> = HashMap::new();
+//     for (block, weights) in unet {
+//         unet_weights.insert(
+//             block,
+//             weights
+//                 .iter()
+//                 .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
+//                 .sum::<f64>()
+//                 / (weights.len() as f64),
+//         );
+//     }
+//
+//     let mut text_encoder_weights: HashMap<String, f64> = HashMap::new();
+//     for (block, weights) in text_encoder {
+//         text_encoder_weights.insert(
+//             block,
+//             weights
+//                 .iter()
+//                 .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
+//                 .sum::<f64>()
+//                 / (weights.len() as f64),
+//         );
+//     }
+//
+//     let mut weights: HashMap<String, HashMap<String, f64>> = HashMap::new();
+//
+//     weights.insert("text_encoder".to_string(), text_encoder_weights);
+//     weights.insert("unet".to_string(), unet_weights);
+//
+//     weights
+// }
 //
 // #[wasm_bindgen]
 // pub fn get_average_magnitude_by_block(buffer: &[u8]) -> JsValue {
@@ -408,48 +292,46 @@ fn reduce_block_weights(
 //     }
 // }
 
-#[wasm_bindgen]
-pub fn get_average_magnitude(buffer: &[u8]) -> JsValue {
-    console_error_panic_hook::set_once();
-
-    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-        Ok(tensors) => match _get_average_magnitude(&tensors) {
-            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-                Ok(v) => v,
-                Err(_) => todo!(),
-            },
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error {e}").as_str()));
-                todo!()
-            }
-        },
-        Err(_) => todo!(),
-    }
-}
-
-#[wasm_bindgen]
-pub fn get_average_strength(buffer: &[u8]) -> JsValue {
-    console_error_panic_hook::set_once();
-
-    match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-        Ok(tensors) => match _get_average_strength(&tensors) {
-            Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-                Ok(v) => v,
-                Err(_) => todo!(),
-            },
-            Err(e) => {
-                console_log(&JsValue::from(format!("Error {e}").as_str()));
-                todo!()
-            }
-        },
-        Err(_) => todo!(),
-    }
-}
+// #[wasm_bindgen]
+// pub fn get_average_magnitude(buffer: &[u8]) -> JsValue {
+//     console_error_panic_hook::set_once();
+//
+//     match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
+//         Ok(tensors) => match _get_average_magnitude(&tensors) {
+//             Ok(v) => match serde_wasm_bindgen::to_value(&v) {
+//                 Ok(v) => v,
+//                 Err(_) => todo!(),
+//             },
+//             Err(e) => {
+//                 console_log(&JsValue::from(format!("Error {e}").as_str()));
+//                 todo!()
+//             }
+//         },
+//         Err(_) => todo!(),
+//     }
+// }
+//
+// #[wasm_bindgen]
+// pub fn get_average_strength(buffer: &[u8]) -> JsValue {
+//     console_error_panic_hook::set_once();
+//
+//     match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
+//         Ok(tensors) => match _get_average_strength(&tensors) {
+//             Ok(v) => match serde_wasm_bindgen::to_value(&v) {
+//                 Ok(v) => v,
+//                 Err(_) => todo!(),
+//             },
+//             Err(e) => {
+//                 console_log(&JsValue::from(format!("Error {e}").as_str()));
+//                 todo!()
+//             }
+//         },
+//         Err(_) => todo!(),
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use candle_core::Tensor;
 
     // #[test]
     // fn test_weights_by_block() {
@@ -473,115 +355,55 @@ mod tests {
     //     insta::assert_json_snapshot!(dbg!(result));
     // }
     //
-    #[test]
-    fn test_to_tensor_magnitude() {
-        let device = candle_core::Device::Cpu;
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
-
-        assert_eq!(to_tensor_magnitude(&tensor).unwrap(), 3.7416573867739413);
-    }
-
-    #[test]
-    fn test_skewness() {
-        let data: Vec<f64> = vec![
-            1., 1., 1., 2., 0., 0., 1., 1., 3., 1., 1., 1., 8., 1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(skewness(&tensor).unwrap(), 17.0);
-    }
-
-    #[test]
-    fn test_spectral_norm() {
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(spectral_norm(&tensor).unwrap(), 1.0);
-    }
-
-    #[test]
-    fn test_sparsity() {
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(sparsity(&tensor).unwrap(), 0.125);
-    }
-
-    #[test]
-    fn test_l1_norm() {
-        let data: Vec<f32> = vec![
-            1., 1., 1., 2., 0., 0., 1., 1., 3., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(l1_norm(&tensor).unwrap(), 17.0);
-    }
-
-    #[test]
-    fn test_l2_norm() {
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 90., 1., 1., -1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(l2_norm(&tensor).unwrap(), 90.0722);
-    }
-
-    #[test]
-    fn test_matrix_norm() {
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 4., 1., 1., 2., 1., -1., 1., 1.,
-        ];
-
-        let tensor = candle_core::Tensor::from_vec(data, (1, 4, 4), &Device::Cpu).unwrap();
-        assert_eq!(matrix_norm(&tensor).unwrap(), 5.656854);
-    }
-
-    #[test]
-    fn test_to_tensor_strength() {
-        let device = candle_core::Device::Cpu;
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-
-        let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
-
-        assert_eq!(to_tensor_strength(&tensor).unwrap(), 0.875);
-    }
-
-    #[test]
-    fn test_get_average_magnitude() {
-        let device = candle_core::Device::Cpu;
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-        let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
-        let mut tensors: HashMap<String, Tensor> = HashMap::new();
-        tensors.insert("weight".to_string(), a.unwrap());
-        let result = _get_average_magnitude(&tensors);
-
-        assert_eq!(result.unwrap(), 3.7416573867739413);
-    }
-
-    #[test]
-    fn test_get_average_strength() {
-        let device = candle_core::Device::Cpu;
-        let data: Vec<f32> = vec![
-            1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-        ];
-        let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
-        let mut tensors: HashMap<String, Tensor> = HashMap::new();
-        tensors.insert("weight".to_string(), a.unwrap());
-        let result = _get_average_strength(&tensors);
-
-        assert_eq!(result.unwrap(), 0.875);
-    }
+    // #[test]
+    // fn test_to_tensor_magnitude() {
+    //     let device = candle_core::Device::Cpu;
+    //     let data: Vec<f32> = vec![
+    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+    //     ];
+    //
+    //     let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
+    //
+    //     assert_eq!(to_tensor_magnitude(&tensor).unwrap(), 3.7416573867739413);
+    // }
+    //
+    // #[test]
+    // fn test_to_tensor_strength() {
+    //     let device = candle_core::Device::Cpu;
+    //     let data: Vec<f32> = vec![
+    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+    //     ];
+    //
+    //     let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
+    //
+    //     assert_eq!(to_tensor_strength(&tensor).unwrap(), 0.875);
+    // }
+    //
+    // #[test]
+    // fn test_get_average_magnitude() {
+    //     let device = candle_core::Device::Cpu;
+    //     let data: Vec<f32> = vec![
+    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+    //     ];
+    //     let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
+    //     let mut tensors: HashMap<String, Tensor> = HashMap::new();
+    //     tensors.insert("weight".to_string(), a.unwrap());
+    //     let result = _get_average_magnitude(&tensors);
+    //
+    //     assert_eq!(result.unwrap(), 3.7416573867739413);
+    // }
+    //
+    // #[test]
+    // fn test_get_average_strength() {
+    //     let device = candle_core::Device::Cpu;
+    //     let data: Vec<f32> = vec![
+    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+    //     ];
+    //     let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
+    //     let mut tensors: HashMap<String, Tensor> = HashMap::new();
+    //     tensors.insert("weight".to_string(), a.unwrap());
+    //     let result = _get_average_strength(&tensors);
+    //
+    //     assert_eq!(result.unwrap(), 0.875);
+    // }
 }
