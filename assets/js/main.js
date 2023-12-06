@@ -1,10 +1,12 @@
-import init, {
-  get_metadata,
-  get_average_magnitude,
-  get_average_strength,
-  get_average_magnitude_by_block,
-  get_average_strength_by_block,
-} from "/pkg/lora_inspector_rs.js";
+// import init, {
+//   // get_metadata,
+//   // get_average_magnitude,
+//   // get_average_strength,
+//   // get_average_magnitude_by_block,
+//   // get_average_strength_by_block,
+// } from "/pkg/lora_inspector_rs.js";
+//
+// const { startup } = wasm_bindgen;
 
 const h = React.createElement;
 
@@ -792,18 +794,6 @@ function Metadata({ metadata, buffer }) {
   ];
 }
 
-async function readMetadata(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const buffer = new Uint8Array(e.target.result);
-      const metadata = get_metadata(buffer);
-
-      resolve([metadata, buffer]);
-    };
-    reader.readAsArrayBuffer(file);
-  });
-}
 // async function getAverageMagnitude(file) {
 //   return new Promise((resolve, reject) => {
 //     const reader = new FileReader();
@@ -877,9 +867,26 @@ const dropbox = document.querySelector("#dropbox");
 //   });
 // });
 
-init().then(() => {
+wasm_bindgen().then(() => {
+  const worker = new Worker("./assets/js/worker.js", {
+    // credentials: "same-origin",
+    // name: "wasm-worker",
+    // type: "classic",
+  });
+
+  async function readFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const buffer = new Uint8Array(e.target.result);
+        resolve(buffer);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   ["drop"].forEach((evtName) => {
-    document.addEventListener(evtName, (e) => {
+    document.addEventListener(evtName, async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
@@ -887,13 +894,14 @@ init().then(() => {
 
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
-        results.push(readMetadata(droppedFiles.item(i)));
+        worker.postMessage(droppedFiles.item(i));
+        // results.push();
       }
-      handleFile(results);
+      // handleFile(results);
     });
   });
 
-  document.querySelector("#file").addEventListener("change", (e) => {
+  document.querySelector("#file").addEventListener("change", async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -901,7 +909,9 @@ init().then(() => {
 
     const results = [];
     for (let i = 0; i < files.length; i++) {
-      results.push(readMetadata(files.item(i)));
+      console.log("sending file to worker...");
+      worker.postMessage(files.item(i));
+      // results.push(readMetadata(files.item(i)));
     }
     handleFile(results);
   });
