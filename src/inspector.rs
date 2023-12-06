@@ -12,13 +12,14 @@ pub struct LoRAInspector {
 
 impl LoRAInspector {
     pub fn new_from_buffer(buffer: &[u8]) -> Result<LoRAInspector, Error> {
+        dbg!(buffer);
         match load_buffer(buffer, &Device::Cpu) {
             Ok(tensors) => match Metadata::new_from_buffer(buffer) {
                 Ok(metadata) => Ok(LoRAInspector { tensors, metadata }),
 
-                Err(_) => Err(Error::Load),
+                Err(_) => Err(Error::Load("Failed to load metadata".to_owned())),
             },
-            Err(_) => todo!(),
+            Err(e) => Err(Error::Load(format!("Failed to load buffer {:?}", e))),
         }
     }
 
