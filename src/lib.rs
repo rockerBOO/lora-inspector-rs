@@ -1,409 +1,145 @@
+use web_sys::{
+    js_sys, Event, FileReader, HtmlInputElement, MessageEvent, ProgressEvent, SharedWorker,
+};
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::worker::LoraWorker;
 
 mod inspector;
 mod metadata;
 mod norms;
 mod worker;
 
-/// Helper struct used only for serialization deserialization
-#[derive(Serialize, Deserialize)]
-struct HashMetadata {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "__metadata__")]
-    metadata: Option<HashMap<String, String>>,
-}
-
-
 #[derive(Debug)]
 pub enum Error {
     Candle(candle_core::Error),
     SafeTensor(safetensors::SafeTensorError),
-    Load
+    Load(String)
 }
 
-// pub fn compile_metadata(
-//     buffer: &[u8],
-// ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
-//     let metadata = get_metadata_from_buffer(buffer)?;
-//     // let tensors = candle_core::safetensors::load_buffer(buffer, &Device::Cpu)?;
+// fn main() {
+//     use std::cell::RefCell;
+//     use std::rc::Rc;
+//     use wasm_bindgen::prelude::*;
+//     use web_sys::console;
 //
-//     Ok(metadata)
-//     // let average_magnitude = _get_average_magnitude(&tensors)?;
-//     // let average_strength = _get_average_strength(&tensors)?;
-//     //
-//     // Ok((metadata, average_magnitude, average_strength))
-// }
-
-// #[wasm_bindgen]
-// pub fn get_metadata(buffer: &[u8]) -> JsValue {
-//     console_error_panic_hook::set_once();
-//
-//     match compile_metadata(buffer) {
-//         Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-//             Ok(metadata) => metadata,
-//             Err(e) => {
-//                 console_log(&JsValue::from(format!("Error parsing {e}").as_str()));
-//                 todo!()
-//             }
-//         },
-//         Err(e) => {
-//             console_log(&JsValue::from(
-//                 format!("Error loading metadata {e}").as_str(),
-//             ));
-//             todo!()
-//         }
+//     #[wasm_bindgen]
+//     struct WorkerMessage {
+//         message_type: String,
+//         payload: JsValue,
 //     }
 //
-//     // let mut result: HashMap<String, JsValue> = HashMap::new();
-//     //
-//     // result.insert("metadata".to_string(), metadata);
-//     // result.insert("average_strength".to_string(), average_strength);
-//     // result.insert("average_magnitude".to_string(), average_magnitude);
-//     //
-//     // match serde_wasm_bindgen::to_value(&result) {
-//     //     Ok(r) => r,
-//     //     Err(e) => {
-//     //         console_log(&JsValue::from(
-//     //             format!("Could not load result {e}").as_str(),
-//     //         ));
-//     //
-//     //         todo!()
-//     //     }
-//     // }
-// }
-
-// fn to_tensor_magnitude(t: &Tensor) -> Result<f64, candle_core::Error> {
-//     Ok(t.to_dtype(DType::F64)?
-//         .sqr()?
-//         .sum_all()?
-//         .sqrt()?
-//         .to_scalar()
-//         .unwrap_or(0.))
-// }
+//     /// Run entry point for the main thread.
+//     #[wasm_bindgen]
+//     pub fn startup() {
+//         // Here, we create our worker. In a larger app, multiple callbacks should be
+//         // able to interact with the code in the worker. Therefore, we wrap it in
+//         // `Rc<RefCell>` following the interior mutability pattern. Here, it would
+//         // not be needed but we include the wrapping anyway as example.
+//         let worker_handle = Rc::new(RefCell::new(SharedWorker::new("./worker.js").unwrap()));
+//         // worker_handle
+//         //     .borrow()
+//         //     .port()
+//         //     .post_message(&text_message("register", "hello from WASM"));
+//         console::log_1(&"Created a new worker from within Wasm".into());
 //
-// fn to_tensor_strength(t: &Tensor) -> Result<f64, candle_core::Error> {
-//     Ok(t.to_dtype(DType::F64)?
-//         .abs()?
-//         .sum_all()?
-//         .to_scalar()
-//         .unwrap_or(0.)
-//         / t.elem_count() as f64)
-// }
-//
-// fn _get_average_magnitude(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
-//     Ok(tensors
-//         .iter()
-//         .filter(|(k, _t)| k.contains("weight"))
-//         .filter_map(|(_k, t)| to_tensor_magnitude(t).ok())
-//         .sum::<f64>()
-//         / tensors.len() as f64)
-// }
-//
-// // pub fn _get_average_strength(buffer: &[u8]) -> Result<f64, candle_core::Error> {
-// fn _get_average_strength(tensors: &HashMap<String, Tensor>) -> Result<f64, candle_core::Error> {
-//     Ok(tensors
-//         .iter()
-//         .filter(|(k, _t)| k.contains("weight"))
-//         .filter_map(|(_k, t)| to_tensor_strength(t).ok())
-//         .sum::<f64>()
-//         / tensors.len() as f64)
-//
-//     // let count = r.clone().count() as f64;
-//     // Ok(r.sum::<f64>() / count)
-// }
-
-// fn weights_by_block(
-//     tensors: HashMap<String, Tensor>,
-// ) -> (HashMap<String, Vec<Tensor>>, HashMap<String, Vec<Tensor>>) {
-//     let mut text_encoder: HashMap<String, Vec<Tensor>> = HashMap::new();
-//     let mut text_encoder_alphas: HashMap<String, f64> = HashMap::new();
-//     let mut unet: HashMap<String, Vec<Tensor>> = HashMap::new();
-//     let mut unet_alphas: HashMap<String, f64> = HashMap::new();
-//
-//     // SD 1
-//     let sd_text_encoder_re = Regex::new(r".*layers_(?P<layer>\d+).*").unwrap();
-//     let sd_unet_re =
-//         Regex::new(r".*(?P<block_type>up|down|mid)_blocks?_.*(?P<block_id>\d+).*").unwrap();
-//
-//     // SDXL
-//     let sdxl_text_encoder_re = Regex::new(r".*(?P<te>te\d).*layers_(?P<layer>\d+).*").unwrap();
-//     let sdxl_unet_re =
-//         Regex::new(r".*(?P<block_type>input|output|middle)_blocks?_.*(?P<block_id>\d+).*").unwrap();
-//
-//     for (key, tensor) in tensors {
-//         let period_idx = key.find('.').unwrap();
-//
-//         let name = &key[0..period_idx];
-//
-//         let (te_re, unet_re) =
-//             if name.contains("input") || name.contains("middle") || name.contains("output") {
-//                 (&sdxl_text_encoder_re, &sdxl_unet_re)
-//             } else {
-//                 (&sd_text_encoder_re, &sd_unet_re)
-//             };
-//
-//         if key.contains("text_model") {
-//             // let caps = text_encoder_re.captures(key).unwrap();
-//             if let Some(caps) = te_re.captures(name) {
-//                 let block_name = format!(
-//                     "layer_{:02}",
-//                     caps[1].to_owned().to_string().parse().unwrap_or(0)
-//                 );
-//                 if key.contains(".alpha") {
-//                     text_encoder_alphas
-//                         .entry(block_name)
-//                         .or_insert(tensor.to_scalar::<f64>().unwrap_or(0.));
-//                 } else {
-//                     text_encoder
-//                         .entry(block_name)
-//                         .and_modify(|v| v.push(tensor.to_owned()))
-//                         .or_insert(vec![tensor.to_owned()]);
-//                 }
-//             }
-//         } else if key.contains("unet") {
-//             if let Some(caps) = unet_re.captures(name) {
-//                 let block_name = format!(
-//                     "{:}_{:02}",
-//                     caps["block_type"].to_string(),
-//                     caps["block_id"].to_string().parse::<u8>().unwrap()
-//                 );
-//
-//                 // + caps["attn"].to_string().parse::<u8>().unwrap()
-//                 // + caps["trans"].to_string().parse::<u8>().unwrap()
-//
-//                 if key.contains(".alpha") {
-//                     unet_alphas
-//                         .entry(block_name)
-//                         .or_insert(tensor.to_scalar::<f64>().unwrap_or(0.));
-//                 } else {
-//                     unet.entry(block_name)
-//                         .and_modify(|v| v.push(tensor.to_owned()))
-//                         .or_insert(vec![tensor.to_owned()]);
-//                 }
-//             }
-//         }
+//         // Pass the worker to the function which sets up the `oninput` callback.
+//         setup_input_oninput_callback(worker_handle);
 //     }
 //
-//     (text_encoder, unet)
-// }
-
-// fn reduce_block_weights(
-//     text_encoder: HashMap<String, Vec<Tensor>>,
-//     unet: HashMap<String, Vec<Tensor>>,
-// ) -> HashMap<String, HashMap<String, f64>> {
-//     let mut unet_weights: HashMap<String, f64> = HashMap::new();
-//     for (block, weights) in unet {
-//         unet_weights.insert(
-//             block,
-//             weights
-//                 .iter()
-//                 .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
-//                 .sum::<f64>()
-//                 / (weights.len() as f64),
-//         );
+//     fn setup_input_oninput_callback(worker: Rc<RefCell<web_sys::SharedWorker>>) {
+//         console_error_panic_hook::set_once();
+//         let document = web_sys::window().unwrap().document().unwrap();
+//
+//         // If our `onmessage` callback should stay valid after exiting from the
+//         // `oninput` closure scope, we need to either forget it (so it is not
+//         // destroyed) or store it somewhere. To avoid leaking memory every time we
+//         // want to receive a response from the worker, we move a handle into the
+//         // `oninput` closure to which we will always attach the last `onmessage`
+//         // callback. The initial value will not be used and we silence the warning.
+//         #[allow(unused_assignments)]
+//         let mut persistent_callback_handle = get_on_msg_callback(Rc::clone(&worker));
+//         console::log_1(&"setup on input message".into());
+//
+//         let callback: Closure<dyn FnMut(ProgressEvent)> =
+//             Closure::new(move |event: ProgressEvent| {
+//                 console::log_1(&"oninput callback triggered".into());
+//                 let document = web_sys::window().unwrap().document().unwrap();
+//                 let input_field = document
+//                     .get_element_by_id("inputNumber")
+//                     .expect("#inputNumber should exist");
+//                 let input_field = input_field
+//                     .dyn_ref::<HtmlInputElement>()
+//                     .expect("#inputNumber should be a HtmlInputElement");
+//                 let files = input_field.files().expect("to get files");
+//                 let file = files.item(0).expect("to get a file");
+//
+//                 let file_name = file.name();
+//                 console::log_1(&format!("got file upload. {file_name}").into());
+//
+//                 // let worker_handle = &*worker.borrow();
+//
+//                 let worker_handle = Rc::clone(&worker);
+//
+//                 let mut onload = Closure::wrap(Box::new(move |event: Event| {
+//                     let file_reader: FileReader = event.target().unwrap().dyn_into().unwrap();
+//                     let file = file_reader.result().unwrap();
+//                     let file = js_sys::Uint8Array::new(&file);
+//
+//                     // let mut worker_file_handle2 = worker_file_handle.clone();
+//
+//                     let file_length = file.length();
+//                     console::log_1(&format!("got file upload. {file_length}").into());
+//                     let mut worker_f = worker_file_handle.borrow_mut();
+//                     // worker_f.set_buffer(file.to_vec());
+//                     //
+//                     // let len = &worker_f.buffer.as_ref().unwrap().len();
+//                     // console::log_1(&format!("worker_file_handle {len}").into());
+//
+//                     // let worker_file = WorkerFile::new(&file.to_vec().to_owned());
+//
+//                     // worker_handle
+//                     //     .borrow()
+//                     //     .port()
+//                     //     .post_message(&text_message("upload", &file_name));
+//
+//                     // let mut psd_file = vec![0; psd.length() as usize];
+//                     // file.copy_to(&mut psd_file);
+//
+//                     // store.borrow_mut().msg(&Msg::ReplacePsd(&psd_file));
+//                 }) as Box<dyn FnMut(Event)>);
+//
+//                 let file_reader = web_sys::FileReader::new().unwrap();
+//                 file_reader.read_as_array_buffer(&file).unwrap();
+//                 file_reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+//
+//                 // let msg_worker_file = Rc::clone(&worker_file_handle);
+//                 // let worker_handle = Rc::clone(&worker_handle);
+//                 persistent_callback_handle = get_on_msg_callback(Rc::clone(&worker));
+//                 worker
+//                     .borrow()
+//                     .port()
+//                     .set_onmessage(Some(persistent_callback_handle.as_ref().unchecked_ref()));
+//                 onload.forget();
+//             });
+//
+//         // Attach the closure as `oninput` callback to the input field.
+//         document
+//             .get_element_by_id("inputNumber")
+//             .expect("#inputNumber should exist")
+//             .dyn_ref::<HtmlInputElement>()
+//             .expect("#inputNumber should be a HtmlInputElement")
+//             .set_oninput(Some(callback.as_ref().unchecked_ref()));
+//
+//         // Leaks memory.
+//         callback.forget();
 //     }
 //
-//     let mut text_encoder_weights: HashMap<String, f64> = HashMap::new();
-//     for (block, weights) in text_encoder {
-//         text_encoder_weights.insert(
-//             block,
-//             weights
-//                 .iter()
-//                 .filter_map(|tensor| to_tensor_magnitude(tensor).ok())
-//                 .sum::<f64>()
-//                 / (weights.len() as f64),
-//         );
-//     }
-//
-//     let mut weights: HashMap<String, HashMap<String, f64>> = HashMap::new();
-//
-//     weights.insert("text_encoder".to_string(), text_encoder_weights);
-//     weights.insert("unet".to_string(), unet_weights);
-//
-//     weights
-// }
-//
-// #[wasm_bindgen]
-// pub fn get_average_magnitude_by_block(buffer: &[u8]) -> JsValue {
-//     let (text_encoder, unet) = match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-//         Ok(tensors) => weights_by_block(tensors),
-//         Err(e) => {
-//             console_log(&JsValue::from(format!("Error {e}").as_str()));
-//             todo!()
-//         }
-//     };
-//
-//     match serde_wasm_bindgen::to_value(&reduce_block_weights(text_encoder, unet)) {
-//         Ok(v) => v,
-//         Err(e) => {
-//             console_log(&JsValue::from(format!("Error {e}").as_str()));
-//             todo!()
-//         }
-//     }
-// }
-
-// #[wasm_bindgen]
-// pub fn get_average_strength_by_block(buffer: &[u8]) -> JsValue {
-//     let (text_encoder, unet) = match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-//         Ok(tensors) => weights_by_block(tensors),
-//         Err(e) => {
-//             console_log(&JsValue::from(format!("Error {e}").as_str()));
-//             todo!()
-//         }
-//     };
-//
-//     let mut unet_weights: HashMap<String, f64> = HashMap::new();
-//     for (block, weights) in unet {
-//         unet_weights.insert(
-//             block,
-//             weights
-//                 .iter()
-//                 .filter_map(|tensor| to_tensor_strength(tensor).ok())
-//                 .sum::<f64>()
-//                 / (weights.len() as f64),
-//         );
-//     }
-//
-//     let mut text_encoder_weights: HashMap<String, f64> = HashMap::new();
-//     for (block, weights) in text_encoder {
-//         text_encoder_weights.insert(
-//             block,
-//             weights
-//                 .iter()
-//                 .filter_map(|tensor| to_tensor_strength(tensor).ok())
-//                 .sum::<f64>()
-//                 / (weights.len() as f64),
-//         );
-//     }
-//
-//     let mut weights: HashMap<String, HashMap<String, f64>> = HashMap::new();
-//
-//     weights.insert("text_encoder".to_string(), text_encoder_weights);
-//     weights.insert("unet".to_string(), unet_weights);
-//
-//     match serde_wasm_bindgen::to_value(&weights) {
-//         Ok(v) => v,
-//         Err(e) => {
-//             console_log(&JsValue::from(format!("Error {e}").as_str()));
-//             todo!()
-//         }
+//     /// Create a closure to act on the message returned by the worker
+//     fn get_on_msg_callback(
+//         worker: Rc<RefCell<web_sys::SharedWorker>>,
+//     ) -> Closure<dyn FnMut(MessageEvent)> {
+//         Closure::new(move |event: MessageEvent| {
+//             console::log_1(&format!("WAMS ggot a message! ").into());
+//         })
 //     }
 // }
-
-// #[wasm_bindgen]
-// pub fn get_average_magnitude(buffer: &[u8]) -> JsValue {
-//     console_error_panic_hook::set_once();
-//
-//     match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-//         Ok(tensors) => match _get_average_magnitude(&tensors) {
-//             Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-//                 Ok(v) => v,
-//                 Err(_) => todo!(),
-//             },
-//             Err(e) => {
-//                 console_log(&JsValue::from(format!("Error {e}").as_str()));
-//                 todo!()
-//             }
-//         },
-//         Err(_) => todo!(),
-//     }
-// }
-//
-// #[wasm_bindgen]
-// pub fn get_average_strength(buffer: &[u8]) -> JsValue {
-//     console_error_panic_hook::set_once();
-//
-//     match candle_core::safetensors::load_buffer(buffer, &Device::Cpu) {
-//         Ok(tensors) => match _get_average_strength(&tensors) {
-//             Ok(v) => match serde_wasm_bindgen::to_value(&v) {
-//                 Ok(v) => v,
-//                 Err(_) => todo!(),
-//             },
-//             Err(e) => {
-//                 console_log(&JsValue::from(format!("Error {e}").as_str()));
-//                 todo!()
-//             }
-//         },
-//         Err(_) => todo!(),
-//     }
-// }
-
-#[cfg(test)]
-mod tests {
-
-    // #[test]
-    // fn test_weights_by_block() {
-    //     let filename = "/mnt/900/training/sets/pov-2023-11-25-025803-4cf6f9ce/pov-2023-11-25-025803-4cf6f9ce.safetensors";
-    //     let tensors = candle_core::safetensors::load(filename, &Device::Cpu).unwrap();
-    //
-    //     let (text_encoder, unet) = weights_by_block(tensors);
-    //     let result = reduce_block_weights(text_encoder, unet);
-    //
-    //     insta::assert_json_snapshot!(result);
-    // }
-    //
-    // #[test]
-    // fn test_sdxl_weights_by_block() {
-    //     let filename = "/mnt/900/lora/sdxl/Bloodstained-XL-V1.safetensors";
-    //     let tensors = candle_core::safetensors::load(filename, &Device::Cpu).unwrap();
-    //
-    //     let (text_encoder, unet) = weights_by_block(tensors);
-    //     let result = reduce_block_weights(text_encoder, unet);
-    //
-    //     insta::assert_json_snapshot!(dbg!(result));
-    // }
-    //
-    // #[test]
-    // fn test_to_tensor_magnitude() {
-    //     let device = candle_core::Device::Cpu;
-    //     let data: Vec<f32> = vec![
-    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-    //     ];
-    //
-    //     let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
-    //
-    //     assert_eq!(to_tensor_magnitude(&tensor).unwrap(), 3.7416573867739413);
-    // }
-    //
-    // #[test]
-    // fn test_to_tensor_strength() {
-    //     let device = candle_core::Device::Cpu;
-    //     let data: Vec<f32> = vec![
-    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-    //     ];
-    //
-    //     let tensor = Tensor::from_vec(data, (1, 1, 4, 4), &device).unwrap();
-    //
-    //     assert_eq!(to_tensor_strength(&tensor).unwrap(), 0.875);
-    // }
-    //
-    // #[test]
-    // fn test_get_average_magnitude() {
-    //     let device = candle_core::Device::Cpu;
-    //     let data: Vec<f32> = vec![
-    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-    //     ];
-    //     let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
-    //     let mut tensors: HashMap<String, Tensor> = HashMap::new();
-    //     tensors.insert("weight".to_string(), a.unwrap());
-    //     let result = _get_average_magnitude(&tensors);
-    //
-    //     assert_eq!(result.unwrap(), 3.7416573867739413);
-    // }
-    //
-    // #[test]
-    // fn test_get_average_strength() {
-    //     let device = candle_core::Device::Cpu;
-    //     let data: Vec<f32> = vec![
-    //         1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-    //     ];
-    //     let a = Tensor::from_vec(data, (1, 1, 4, 4), &device);
-    //     let mut tensors: HashMap<String, Tensor> = HashMap::new();
-    //     tensors.insert("weight".to_string(), a.unwrap());
-    //     let result = _get_average_strength(&tensors);
-    //
-    //     assert_eq!(result.unwrap(), 0.875);
-    // }
-}
