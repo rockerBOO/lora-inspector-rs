@@ -924,7 +924,7 @@ async function processFile(file) {
   processingMetadata = true;
   const cancel = loading();
 
-   uploadTimeoutHandler = setTimeout(() => {
+  uploadTimeoutHandler = setTimeout(() => {
     cancel();
     addErrorMessage("Timeout loading LoRA. Try again.");
   }, 5000);
@@ -958,7 +958,7 @@ function terminatePreviousProcessing() {
 function cancelLoading() {
   terminatePreviousProcessing();
   finishLoading();
-	clearTimeout(uploadTimeoutHandler);
+  clearTimeout(uploadTimeoutHandler);
 }
 
 window.addEventListener("keyup", (e) => {
