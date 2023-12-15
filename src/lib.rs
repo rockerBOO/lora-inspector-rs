@@ -149,7 +149,6 @@ fn weights_by_block(
         let period_idx = key.find('.').unwrap();
 
         let name = &key[0..period_idx];
-        dbg!(name);
 
         let (te_re, unet_re) =
             if name.contains("input") || name.contains("middle") || name.contains("output") {
