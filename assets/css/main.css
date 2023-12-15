@@ -27,6 +27,19 @@ main {
   max-width: 100vw;
 }
 
+button {
+  background-color: var(--accent-bg-color);
+  color: var(--color);
+  min-height: 3em;
+  border: 3px solid var(--accent-color);
+  box-shadow: 3px 3px 5px black;
+  border-radius: 0.5em;
+  font-size: 1rem;
+  max-width: 10em;
+  cursor: pointer;
+  font-family: monospace;
+}
+
 .note {
   font-size: 0.8em;
 }
@@ -100,7 +113,7 @@ main {
   display: none;
 }
 .box.is-dragover {
-  background-color: grey;
+  background-color: #3f6648;
 }
 
 .box__input label {
@@ -257,7 +270,8 @@ button.primary {
   box-shadow: 3px 3px 5px black;
   border-radius: 0.5em;
   font-size: 1rem;
-  max-width: 10em;
+  padding: 0 1em;
+  min-width: 12em;
   cursor: pointer;
   font-family: monospace;
 }
@@ -305,4 +319,85 @@ text.ct-label {
 .ct-label.ct-vertical.ct-start {
   text-align: center;
   justify-content: center;
+}
+
+.loading-overlay {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: hsla(170, 80%, 0%, 0.8);
+}
+
+.loading-file {
+  animation:
+    fade-in 1s ease-in,
+    rotate 1s infinite ease-in-out;
+  user-select: none;
+}
+
+.error-overlay {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: hsla(170, 80%, 0%, 0.9);
+  animation: 240ms fade-in ease-in-out;
+}
+
+.error-block {
+  display: grid;
+  grid-gap: 1em;
+  grid-template-areas: "error", "close";
+  grid-auto-flow: column;
+  align-items: center;
+  background-color: hsla(170, 80%, 0%, 0.9);
+  padding: 1em;
+  border-radius: 0.5em;
+}
+
+.error-block button {
+  grid-area: "close";
+}
+
+.error {
+  color: red;
+  grid-area: "error";
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0);
+  }
+
+  25% {
+    transform: rotate(0);
+  }
+
+  75% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }

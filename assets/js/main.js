@@ -785,8 +785,9 @@ function Main({ metadata }) {
   ]);
 }
 
-function Metadata({ metadata }) {
+function Metadata({ metadata, filename }) {
   return [
+    h("div", null, h("div", null, "Lora file"), h("h1", null, filename)),
     h(Header, { metadata }),
     // h("div", {}, "wtf"),
     // h(Blocks, { metadata, buffer }),
@@ -866,91 +867,178 @@ const dropbox = document.querySelector("#dropbox");
 //     e.preventDefault();
 //   });
 // });
-
+let worker = new Worker("./assets/js/worker.js", {});
 wasm_bindgen().then(() => {
-  let worker = new Worker("./assets/js/worker.js", {
-    // credentials: "same-origin",
-    // name: "wasm-worker",
-    // type: "classic",
-  });
-
-  // async function readFile(file) {
-  //   return new Promise((resolve, reject) => {
-  //     const reader = new FileReader();
-  //     reader.onload = function (e) {
-  //       const buffer = new Uint8Array(e.target.result);
-  //       resolve(buffer);
-  //     };
-  //     reader.readAsArrayBuffer(file);
-  //   });
-  // }
-
   ["drop"].forEach((evtName) => {
     document.addEventListener(evtName, async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
       const droppedFiles = e.dataTransfer.files;
-
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
-        worker.postMessage({
-          messageType: "file_upload",
-          file: droppedFiles.item(i),
-        });
-        // results.push();
+        processFile(droppedFiles.item(i));
       }
-      // handleFile(results);
     });
   });
 
-  // if we are processing the uploaded file
-  // we want to be able to terminate the worker if we are still working on a previous file
-  // in the current implementation
-  let processingMetadata = false;
+  document
+    .querySelector("#file")
+    .addEventListener("change", async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
 
-  document.querySelector("#file").addEventListener("change", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+      const files = e.target.files;
 
-    const files = e.target.files;
-
-    const results = [];
-    for (let i = 0; i < files.length; i++) {
-      console.log("sending file to worker...");
-      // worker.postMessage(files.item(i));
-
-      if (processingMetadata) {
-        // restart the worker
-        worker.terminate();
-        // make a new worker
-        worker = new Worker("./assets/js/worker.js");
-      }
-
-      worker.postMessage({ messageType: "file_upload", file: files.item(i) });
-      processingMetadata = true;
-
-      worker.addEventListener("message", (e) => {
-        // console.log('got message on main', e.data)
-
-        if (e.data.messageType === "metadata") {
-          processingMetadata = false;
-          handleMetadata(e.data.metadata);
+      for (let i = 0; i < files.length; i++) {
+        if (files.item(i).type != "") {
+          addErrorMessage("Invalid filetype. Try a .safetensors file.");
+          continue;
         }
-      });
+
+        processFile(files.item(i));
+      }
+    });
+});
+
+async function handleMetadata(metadata, filename) {
+  dropbox.classList.remove("box__open");
+  dropbox.classList.add("box__closed");
+  document.querySelector("#jumbo").classList.remove("jumbo__intro");
+  document.querySelector("#note").classList.add("hidden");
+  const root = ReactDOM.createRoot(document.getElementById("results"));
+  root.render(
+    h(Metadata, {
+      metadata,
+      filename,
+    }),
+  );
+}
+
+let uploadTimeoutHandler;
+
+async function processFile(file) {
+  terminatePreviousProcessing();
+
+  worker.postMessage({ messageType: "file_upload", file: file });
+  processingMetadata = true;
+  const cancel = loading();
+
+   uploadTimeoutHandler = setTimeout(() => {
+    cancel();
+    addErrorMessage("Timeout loading LoRA. Try again.");
+  }, 5000);
+
+  worker.addEventListener("message", (e) => {
+    // console.log('got message on main', e.data)
+    clearTimeout(uploadTimeoutHandler);
+    if (e.data.messageType === "metadata") {
+      processingMetadata = false;
+      handleMetadata(e.data.metadata, file.name);
+      finishLoading();
+    }
+  });
+}
+
+// if we are processing the uploaded file
+// we want to be able to terminate the worker if we are still working on a previous file
+// in the current implementation
+let processingMetadata = false;
+function terminatePreviousProcessing() {
+  if (processingMetadata) {
+    // restart the worker
+    worker.terminate();
+    // make a new worker
+    worker = new Worker("./assets/js/worker.js");
+  }
+
+  processingMetadata = false;
+}
+
+function cancelLoading() {
+  terminatePreviousProcessing();
+  finishLoading();
+	clearTimeout(uploadTimeoutHandler);
+}
+
+window.addEventListener("keyup", (e) => {
+  if (e.key === "Escape") {
+    cancelLoading();
+  }
+});
+
+function loading() {
+  const loadingEle = document.createElement("div");
+  const loadingOverlayEle = document.createElement("div");
+
+  loadingEle.classList.add("loading-file");
+  loadingOverlayEle.classList.add("loading-overlay");
+  loadingOverlayEle.id = "loading-overlay";
+
+  loadingEle.textContent = "loading...";
+  loadingOverlayEle.appendChild(loadingEle);
+  document.body.appendChild(loadingOverlayEle);
+
+  let clicks = 0;
+  loadingOverlayEle.addEventListener("click", () => {
+    clicks += 1;
+
+    // The user is getting fustrated or we are about to make them made. Either way.
+    if (clicks > 1) {
+      cancelLoading();
     }
   });
 
-  async function handleMetadata(metadata) {
-    dropbox.classList.remove("box__open");
-    dropbox.classList.add("box__closed");
-    document.querySelector("#jumbo").classList.remove("jumbo__intro");
-    document.querySelector("#note").classList.add("hidden");
-    const root = ReactDOM.createRoot(document.getElementById("results"));
-    root.render(
-      h(Metadata, {
-        metadata,
-      }),
-    );
+  return function cancel() {
+    cancelLoading();
+  };
+}
+
+function finishLoading() {
+  const overlay = document.querySelector("#loading-overlay");
+
+  if (overlay) {
+    overlay.remove();
   }
-});
+}
+
+function addErrorMessage(errorMessage) {
+  const errorEle = document.createElement("div");
+  const errorOverlayEle = document.createElement("div");
+  const errorBlockEle = document.createElement("div");
+
+  errorEle.classList.add("error");
+  errorBlockEle.classList.add("error-block");
+  errorOverlayEle.classList.add("error-overlay");
+  errorOverlayEle.id = "error-overlay";
+
+  errorEle.textContent = errorMessage;
+
+  const button = document.createElement("button");
+  button.textContent = "Close";
+  button.addEventListener("click", closeErrorMessage);
+
+  errorBlockEle.append(errorEle, button);
+
+  errorBlockEle.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  errorOverlayEle.appendChild(errorBlockEle);
+
+  errorOverlayEle.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeErrorMessage();
+  });
+
+  document.body.appendChild(errorOverlayEle);
+}
+
+function closeErrorMessage() {
+  const overlay = document.querySelector("#error-overlay");
+
+  if (overlay) {
+    overlay.remove();
+  }
+}
