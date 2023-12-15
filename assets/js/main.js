@@ -229,14 +229,14 @@ function Optimizer({ metadata }) {
   ]);
 }
 
-function Weight({ metadata, buffer }) {
+function Weight({ metadata }) {
   const [averageStrength, setAverageStrength] = React.useState(undefined);
   const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
-  React.useEffect(() => {
-    setAverageStrength(get_average_strength(buffer));
-    setAverageMagnitude(get_average_magnitude(buffer));
-  }, []);
+  // React.useEffect(() => {
+  //   setAverageStrength(get_average_strength(buffer));
+  //   setAverageMagnitude(get_average_magnitude(buffer));
+  // }, []);
 
   return [
     h("div", { className: "row space-apart" }, [
@@ -261,7 +261,7 @@ function Weight({ metadata, buffer }) {
         value: averageMagnitude?.toPrecision(4),
       }),
     ]),
-    h(Blocks, { metadata, buffer }),
+    h(Blocks, { metadata }),
   ];
 }
 
@@ -269,7 +269,7 @@ function Weight({ metadata, buffer }) {
 // Chart.defaults.font.size = 16;
 // Chart.defaults.font.family = "monospace";
 
-function Blocks({ metadata, buffer }) {
+function Blocks({ metadata }) {
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
@@ -279,21 +279,21 @@ function Blocks({ metadata, buffer }) {
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
 
-  React.useEffect(() => {
-    if (!hasBlockWeights) {
-      return;
-    }
-
-    const averageMagnitudes = get_average_magnitude_by_block(buffer);
-    const averageStrength = get_average_strength_by_block(buffer);
-
-    setTEMagBlocks(averageMagnitudes.get("text_encoder"));
-    setUnetMagBlocks(averageMagnitudes.get("unet"));
-
-    setTEStrBlocks(averageStrength.get("text_encoder"));
-    setUnetStrBlocks(averageStrength.get("unet"));
-    return function cleanup() {};
-  }, [hasBlockWeights]);
+  // React.useEffect(() => {
+  //   if (!hasBlockWeights) {
+  //     return;
+  //   }
+  //
+  //   const averageMagnitudes = get_average_magnitude_by_block(buffer);
+  //   const averageStrength = get_average_strength_by_block(buffer);
+  //
+  //   setTEMagBlocks(averageMagnitudes.get("text_encoder"));
+  //   setUnetMagBlocks(averageMagnitudes.get("unet"));
+  //
+  //   setTEStrBlocks(averageStrength.get("text_encoder"));
+  //   setUnetStrBlocks(averageStrength.get("unet"));
+  //   return function cleanup() {};
+  // }, [hasBlockWeights]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -770,13 +770,13 @@ function TagFrequency({ tagFrequency, metadata }) {
     });
 }
 
-function Main({ metadata, buffer }) {
+function Main({ metadata }) {
   return h("main", null, [
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
     h(LRScheduler, { metadata }),
     h(Optimizer, { metadata }),
-    h(Weight, { metadata, buffer }),
+    h(Weight, { metadata }),
     h(EpochStep, { metadata }),
     h(Batch, { metadata }),
     h(Noise, { metadata }),
@@ -785,12 +785,12 @@ function Main({ metadata, buffer }) {
   ]);
 }
 
-function Metadata({ metadata, buffer }) {
+function Metadata({ metadata }) {
   return [
     h(Header, { metadata }),
     // h("div", {}, "wtf"),
     // h(Blocks, { metadata, buffer }),
-    h(Main, { metadata, buffer }),
+    h(Main, { metadata }),
   ];
 }
 
@@ -868,22 +868,22 @@ const dropbox = document.querySelector("#dropbox");
 // });
 
 wasm_bindgen().then(() => {
-  const worker = new Worker("./assets/js/worker.js", {
+  let worker = new Worker("./assets/js/worker.js", {
     // credentials: "same-origin",
     // name: "wasm-worker",
     // type: "classic",
   });
 
-  async function readFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const buffer = new Uint8Array(e.target.result);
-        resolve(buffer);
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  }
+  // async function readFile(file) {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader();
+  //     reader.onload = function (e) {
+  //       const buffer = new Uint8Array(e.target.result);
+  //       resolve(buffer);
+  //     };
+  //     reader.readAsArrayBuffer(file);
+  //   });
+  // }
 
   ["drop"].forEach((evtName) => {
     document.addEventListener(evtName, async (e) => {
@@ -894,12 +894,20 @@ wasm_bindgen().then(() => {
 
       const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
-        worker.postMessage(droppedFiles.item(i));
+        worker.postMessage({
+          messageType: "file_upload",
+          file: droppedFiles.item(i),
+        });
         // results.push();
       }
       // handleFile(results);
     });
   });
+
+  // if we are processing the uploaded file
+  // we want to be able to terminate the worker if we are still working on a previous file
+  // in the current implementation
+  let processingMetadata = false;
 
   document.querySelector("#file").addEventListener("change", async (e) => {
     e.preventDefault();
@@ -910,27 +918,39 @@ wasm_bindgen().then(() => {
     const results = [];
     for (let i = 0; i < files.length; i++) {
       console.log("sending file to worker...");
-      worker.postMessage(files.item(i));
-      // results.push(readMetadata(files.item(i)));
+      // worker.postMessage(files.item(i));
+
+      if (processingMetadata) {
+        // restart the worker
+        worker.terminate();
+        // make a new worker
+        worker = new Worker("./assets/js/worker.js");
+      }
+
+      worker.postMessage({ messageType: "file_upload", file: files.item(i) });
+      processingMetadata = true;
+
+      worker.addEventListener("message", (e) => {
+        // console.log('got message on main', e.data)
+
+        if (e.data.messageType === "metadata") {
+          processingMetadata = false;
+          handleMetadata(e.data.metadata);
+        }
+      });
     }
-    handleFile(results);
   });
 
-  async function handleFile(results) {
-    const metadatas = await Promise.all(results);
-
+  async function handleMetadata(metadata) {
     dropbox.classList.remove("box__open");
     dropbox.classList.add("box__closed");
     document.querySelector("#jumbo").classList.remove("jumbo__intro");
     document.querySelector("#note").classList.add("hidden");
-    metadatas.forEach(([metadata, buffer]) => {
-      const root = ReactDOM.createRoot(document.getElementById("results"));
-      root.render(
-        h(Metadata, {
-          metadata,
-          buffer,
-        }),
-      );
-    });
+    const root = ReactDOM.createRoot(document.getElementById("results"));
+    root.render(
+      h(Metadata, {
+        metadata,
+      }),
+    );
   }
 });

@@ -1,63 +1,143 @@
-use std::collections::HashMap;
 
-use candle_core::{safetensors::load_buffer, Device, Tensor};
 
-use crate::{metadata::Metadata, Error};
+// use crate::file::LoRAFile;
 
-#[derive(Debug)]
-pub struct LoRAInspector {
-    tensors: HashMap<String, Tensor>,
-    metadata: Metadata,
-}
+// use candle_core::{safetensors::load_buffer, Device, Tensor};
+// use serde::{de, Deserialize, Deserializer, Serialize};
+//
+// use crate::metadata::Metadata;
 
-impl LoRAInspector {
-    pub fn new_from_buffer(buffer: &[u8]) -> Result<LoRAInspector, Error> {
-        dbg!(buffer);
-        match load_buffer(buffer, &Device::Cpu) {
-            Ok(tensors) => match Metadata::new_from_buffer(buffer) {
-                Ok(metadata) => Ok(LoRAInspector { tensors, metadata }),
+// /// LoRA file buffer
+// #[derive(Debug, Clone)]
+// pub struct LoRAFile {
+//     buffer: Vec<u8>,
+//     filename: String,
+// }
+//
+// /// Tensor weights
+// #[derive(Debug, Clone)]
+// pub struct LoRAWeight {
+//     tensors: HashMap<String, Tensor>,
+// }
+//
+// /// LoRA Metadata
+// #[derive(Debug, Clone)]
+// pub struct LoRAMetadata {
+//     metadata: Metadata,
+// }
 
-                Err(_) => Err(Error::Load("Failed to load metadata".to_owned())),
-            },
-            Err(e) => Err(Error::Load(format!("Failed to load buffer {:?}", e))),
-        }
-    }
+// #[derive(Clone)]
+// pub struct LoRAInspector {}
 
-    pub fn metadata(self) -> Metadata {
-        self.metadata
-    }
-
-    pub fn keys_by_key(self, key: &str) -> Vec<String> {
-        self.tensors
-            .keys()
-            .filter_map(|k| k.contains(key).then(|| k.to_owned()))
-            .collect()
-    }
-
-    pub fn weights_keys(self) -> Vec<String> {
-        self.keys_by_key("weights")
-    }
-
-    pub fn alpha_keys(self) -> Vec<String> {
-        self.keys_by_key("alpha")
-    }
-
-    pub fn up_keys(self) -> Vec<String> {
-        self.keys_by_key("lora_up")
-    }
-
-    pub fn down_keys(self) -> Vec<String> {
-        self.keys_by_key("lora_down")
-    }
-
-    pub fn get(self, key: &str) -> Option<Tensor> {
-        self.tensors.get(key).cloned()
-    }
-
-    pub fn tensors(self) -> HashMap<String, Tensor> {
-        self.tensors
-    }
-}
+// impl LoRAInspector {
+//     pub fn new_from_buffer(buffer: &[u8], filename: String) -> LoRAFile {
+//         LoRAFile {
+//             buffer: buffer.to_vec(),
+//             filename,
+//         }
+//
+//         // match load_buffer(buffer, &Device::Cpu) {
+//         //     Ok(tensors) => match Metadata::new_from_buffer(buffer) {
+//         //         Ok(metadata) => Ok(LoRAInspector { tensors, metadata }),
+//         //
+//         //         Err(_) => Err(Error::Load("Failed to load metadata".to_owned())),
+//         //     },
+//         //     Err(e) => Err(Error::Load(format!("Failed to load buffer {:?}", e))),
+//         // }
+//     }
+//
+//     // pub fn load_tensors(&mut self) -> Result<&Option<HashMap<String, Tensor>>, candle_core::Error> {
+//     //     self.tensors = Some(load_buffer(&self.buffer, &Device::Cpu)?);
+//     //
+//     //     Ok(&self.tensors)
+//     // }
+//
+//     // pub fn tensors(&mut self) {
+//     //     self.load_tensors()
+//     //
+//     //     self.tensors
+//     // }
+//
+//     // pub fn metadata(&self) -> &Option<Metadata> {
+//     //     &self.metadata
+//     // }
+//     //
+//     // pub fn network_args(&self) -> Option<NetworkArgs> {
+//     //     //
+//     //     match &self.metadata {
+//     //         Some(metadata) => match metadata.get("ss_network_args") {
+//     //             Some(network_args) => match serde_json::from_str::<NetworkArgs>(&network_args) {
+//     //                 Ok(network_args) => Some(network_args),
+//     //                 Err(_) => None,
+//     //             },
+//     //             None => todo!(),
+//     //         },
+//     //         None => None,
+//     //     }
+//     // }
+//     //
+//     // pub fn network_type(&self) -> Option<NetworkType> {
+//     //     // try to discover the network type
+//     //     match self.network_module() {
+//     //         Some(NetworkModule::KohyaSSLoRA) => match self
+//     //             .network_args()
+//     //             .map(|network_args| network_args.conv_dim)
+//     //         {
+//     //             // We need to make the name for LoCon/Lo-Curious
+//     //             Some(_) => Some(NetworkType::LoRA),
+//     //             None => Some(NetworkType::LoRA),
+//     //         },
+//     //         Some(NetworkModule::Lycoris) => {
+//     //             self.network_args()
+//     //                 .and_then(|network_args| match network_args.algo {
+//     //                     Some(algo) => match algo.as_str() {
+//     //                         "diag-oft" => Some(NetworkType::DiagOFT),
+//     //                         "loha" => Some(NetworkType::LoHA),
+//     //                         "lokr" => Some(NetworkType::LoKr),
+//     //                         "glora" => Some(NetworkType::GLora),
+//     //                         "glokr" => Some(NetworkType::GLoKr),
+//     //                         _ => None,
+//     //                     },
+//     //                     None => None,
+//     //                 })
+//     //         }
+//     //         Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
+//     //         Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
+//     //         None => None,
+//     //     }
+//     // }
+//     //
+//     // pub fn network_module(&self) -> Option<NetworkModule> {
+//     //     match self
+//     //         .metadata
+//     //         .map(|metadata| metadata.get("ss_network_module"))
+//     //     {
+//     //         Some(Some(network_module)) => {
+//     //             match network_module.as_str() {
+//     //                 "networks.lora" => {
+//     //                     // this is a Kohya network, probably
+//     //                     Some(NetworkModule::KohyaSSLoRA)
+//     //                 }
+//     //                 "networks.lora_fa" => {
+//     //                     // this is a Kohya network, probably
+//     //                     Some(NetworkModule::KohyaSSLoRAFA)
+//     //                 }
+//     //                 "networks.dylora" => {
+//     //                     // this is a Kohya network, probably
+//     //                     Some(NetworkModule::KohyaSSDyLoRA)
+//     //                 }
+//     //                 "lycoris.kohya" => {
+//     //                     // lycoris network module
+//     //                     Some(NetworkModule::Lycoris)
+//     //                 }
+//     //                 _ => None,
+//     //             }
+//     //         }
+//     //         Some(None) => None,
+//     //         None => None,
+//     //     }
+//     // }
+// }
 
 #[cfg(test)]
 mod tests {

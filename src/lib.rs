@@ -1,19 +1,16 @@
-use web_sys::{
-    js_sys, Event, FileReader, HtmlInputElement, MessageEvent, ProgressEvent, SharedWorker,
-};
-
-use crate::worker::LoraWorker;
-
 mod inspector;
 mod metadata;
 mod norms;
 mod worker;
+mod network;
+mod file;
+mod weight;
 
 #[derive(Debug)]
 pub enum Error {
     Candle(candle_core::Error),
     SafeTensor(safetensors::SafeTensorError),
-    Load(String)
+    Load(String),
 }
 
 // fn main() {

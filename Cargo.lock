@@ -560,6 +560,7 @@ dependencies = [
  "safetensors",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "serde_with",
  "wasm-bindgen",
  "wasm-bindgen-test",

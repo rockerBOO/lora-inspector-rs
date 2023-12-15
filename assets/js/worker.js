@@ -3,7 +3,7 @@
 // available which we need to initialize our Wasm code.
 importScripts("/pkg/lora_inspector_rs.js");
 
-console.log("Initializing worker");
+console.log("Initializing !worker");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
@@ -20,22 +20,6 @@ function init_wasm_in_worker() {
 
     console.log("Worker setup...");
 
-    // onconnect = function (event) {
-    //   console.log("WORKER WASMS? ports", event.ports);
-    //   //   const port = event.ports[0];
-    //   //
-    //   //   // Set callback to handle messages passed to the worker.
-    //     onmessage = async (e) => {
-    //       console.log("WORKER WASMS? ports", ports["wasm"]);
-    //       console.log(e.data);
-    //       // By using methods of a struct as reaction to messages passed to the
-    //       // worker, we can preserve our state between messages.
-    //       // var worker_result = num_eval.is_even(event.data);
-    //
-    //       // Send response back to be handled by callback in main thread.
-    //   sendClientMessage(e.data)
-    //     };
-    // };
   });
 }
 
@@ -51,22 +35,49 @@ function sendWASMMessage(message) {
   });
 }
 
-  async function readFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const buffer = new Uint8Array(e.target.result);
-        resolve(buffer);
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  }
+async function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const buffer = new Uint8Array(e.target.result);
+      resolve(buffer);
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+let processing = false;
+
+
+onerror = (event) => {
+  console.log("There is an error inside your worker!", event);
+};
 
 onmessage = async (e) => {
-  console.log("got a message on the worker", e.data);
-  const buffer = await readFile(e.data);
-  const loraWorker = LoraWorker.new_from_buffer(buffer, e.data.name);
-  console.log("got filename", loraWorker.filename());
+  console.log("got a message wowf on the worker", e.data);
+  console.log(e.data.messageType);
+
+  if (e.data.messageType === "file_upload") {
+    console.log("Reading file...");
+    console.log(e);
+    const file = e.data.file;
+    const buffer = await readFile(file);
+
+    console.log(e.source);
+    console.log(e.origin);
+    console.log("Loading file...");
+    const loraWorker = new LoraWorker(buffer, file.name);
+    console.log("got filename", loraWorker.filename());
+    console.log("metadata", loraWorker.metadata());
+    console.log("weight keys", loraWorker.keys().sort());
+    console.log("network_args", loraWorker.network_args());
+    console.log("network_type", loraWorker.network_type());
+
+    self.postMessage({
+      messageType: "metadata",
+      metadata: loraWorker.metadata(),
+    });
+  }
 };
 
 // onconnect = function (event) {

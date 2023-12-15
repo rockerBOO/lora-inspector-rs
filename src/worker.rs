@@ -1,55 +1,70 @@
-#![allow(unused)]
 extern crate console_error_panic_hook;
+use std::fmt;
+
 use wasm_bindgen::prelude::*;
 
-use crate::inspector::LoRAInspector;
+use crate::file::LoRAFile;
 use crate::metadata::Metadata;
-// use crate::norms::{l1, l2, spectral};
+use crate::network::NetworkModule;
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct LoraWorker {
-    inspector: LoRAInspector,
-    filename: String,
     metadata: Metadata,
+    file: LoRAFile,
+}
+
+impl fmt::Display for LoraWorker {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LoRAWorker: {}", self.filename())
+    }
 }
 
 #[wasm_bindgen]
 impl LoraWorker {
+    #[wasm_bindgen(constructor)]
     pub fn new_from_buffer(buffer: &[u8], filename: String) -> Result<LoraWorker, JsError> {
         console_error_panic_hook::set_once();
-        match LoRAInspector::new_from_buffer(buffer) {
-            Ok(inspector) => match Metadata::new_from_buffer(buffer) {
-                Ok(metadata) => Ok(LoraWorker {
-                    inspector,
-                    filename,
-                    metadata,
-                }),
-                Err(e) => Err(JsError::new("Could not load metadata")),
-            },
-            Err(e) => Err(JsError::new(
-                &format!("Could not load inspector. {:?}", e).to_owned(),
-            )),
+        Ok(LoraWorker {
+            metadata: Metadata::new_from_buffer(buffer)?,
+            file: LoRAFile::new_from_buffer(buffer, filename),
+        })
+    }
+
+    pub fn metadata(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(&self.metadata.metadata)
+            .unwrap_or_else(|_v| serde_wasm_bindgen::to_value("invalid metadata").unwrap())
+    }
+
+    pub fn filename(&self) -> String {
+        self.file.filename()
+    }
+
+    pub fn weight_keys(&self) -> Vec<String> {
+        self.file.weight_keys()
+    }
+
+    pub fn keys(&self) -> Vec<String> {
+        self.file.keys()
+    }
+
+    pub fn network_module(&self) -> String {
+        match self.metadata.network_module() {
+            Some(NetworkModule::Lycoris) => "lycoris".to_owned(),
+            Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
+            Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
+            Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
+            None => "no_module_found".to_owned(),
         }
     }
 
-    pub fn metadata(self) -> Metadata {
-        self.metadata
+    pub fn network_args(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
+        serde_wasm_bindgen::to_value(&self.metadata.network_args())
     }
 
-    pub fn filename(self) -> String {
-        self.filename
+    pub fn network_type(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
+        serde_wasm_bindgen::to_value(&self.metadata.network_type())
     }
-
-    // pub fn norm<T: WithDType>(
-    //     self,
-    //     norm_fn: impl Fn(&Tensor) -> Result<T, candle_core::Error>,
-    // ) -> Vec<T> {
-    //     self.inspector
-    //         .tensors()
-    //         .values()
-    //         .filter_map(|v| norm_fn(v).ok())
-    //         .collect()
-    // }
 }
 
 // #[wasm_bindgen]
@@ -67,7 +82,7 @@ impl LoraWorker {
 //     worker.norm(spectral)
 // }
 
-#[wasm_bindgen]
-pub fn metadata(worker: LoraWorker) -> Metadata {
-    worker.metadata()
-}
+// #[wasm_bindgen]
+// pub fn metadata(worker: LoraWorker) -> Metadata {
+//     worker.metadata()
+// }
