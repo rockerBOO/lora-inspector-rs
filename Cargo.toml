@@ -20,33 +20,30 @@ serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.4"
 serde_with = "3.4.0"
 console_error_panic_hook = { version = "0.1.6", optional = true }
-# console_error_panic_hook = { version = "0.1.6" }
 candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.1" }
 getrandom = { version = "0.2", features = ["js"] }
 serde_json = "1.0.108"
 # web-sys = { version = "0.3.65", features = ["console"] }
-# tokenizers = { version = "0.15.1", default-features = false, featurehj }
-# tokenizers = { default-features = false, features = ["unstable_wasm"], git = "https://github.com/huggingface/tokenizers" }
 
 [dependencies.web-sys]
 version = "0.3.65"
 features = [
     'console',
-    'Document',
-    'HtmlElement',
-    'HtmlInputElement',
-    'FileList',
-    'File',
-    'Blob',
-    'FileReader',
-    'MessageEvent',
-    'ProgressEvent',
-    'MessagePort',
-    'Window',
-    'Worker',
-    'SharedWorker',
-    'WorkerOptions',
-    'RequestCredentials'
+    # 'Document',
+    # 'HtmlElement',
+    # 'HtmlInputElement',
+    # 'FileList',
+    # 'File',
+    # 'Blob',
+    # 'FileReader',
+    # 'MessageEvent',
+    # 'ProgressEvent',
+    # 'MessagePort',
+    # 'Window',
+    # 'Worker',
+    # 'SharedWorker',
+    # 'WorkerOptions',
+    # 'RequestCredentials'
 ]  
 
 [dev-dependencies]
