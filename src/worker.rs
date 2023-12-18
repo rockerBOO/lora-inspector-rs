@@ -8,7 +8,6 @@ use crate::metadata::Metadata;
 use crate::network::NetworkModule;
 
 #[wasm_bindgen]
-#[derive(Clone)]
 pub struct LoraWorker {
     metadata: Metadata,
     file: LoRAFile,
@@ -39,9 +38,25 @@ impl LoraWorker {
     pub fn filename(&self) -> String {
         self.file.filename()
     }
+    //
+    // pub fn load_tensors(&mut self) -> bool {
+    //     self.file.load_tensors().is_ok()
+    // }
+
+    pub fn is_tensors_loaded(&self) -> bool {
+        self.file.is_tensors_loaded()
+    }
 
     pub fn weight_keys(&self) -> Vec<String> {
         self.file.weight_keys()
+    }
+
+    pub fn alpha_keys(&self) -> Vec<String> {
+        self.file.alpha_keys()
+    }
+
+    pub fn alphas(&self) -> Vec<u32> {
+        self.file.alphas()
     }
 
     pub fn keys(&self) -> Vec<String> {

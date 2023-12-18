@@ -867,6 +867,10 @@ const dropbox = document.querySelector("#dropbox");
 //     e.preventDefault();
 //   });
 // });
+
+let files = new Map();
+let mainFilename;
+
 let worker = new Worker("./assets/js/worker.js", {});
 wasm_bindgen().then(() => {
   ["drop"].forEach((evtName) => {
@@ -875,8 +879,12 @@ wasm_bindgen().then(() => {
       e.stopPropagation();
 
       const droppedFiles = e.dataTransfer.files;
-      const results = [];
       for (let i = 0; i < droppedFiles.length; i++) {
+        if (files.item(i).type != "") {
+          addErrorMessage("Invalid filetype. Try a .safetensors file.");
+          continue;
+        }
+
         processFile(droppedFiles.item(i));
       }
     });
@@ -929,15 +937,28 @@ async function processFile(file) {
     addErrorMessage("Timeout loading LoRA. Try again.");
   }, 5000);
 
-  worker.addEventListener("message", (e) => {
+  function messageHandler(e) {
     // console.log('got message on main', e.data)
     clearTimeout(uploadTimeoutHandler);
     if (e.data.messageType === "metadata") {
       processingMetadata = false;
+
+      // Setup some access points to the file
+      // (we shouldn't hold on to the file handlers but just he metadata)
+      files.set(file.name, file);
+      mainFilename = file.name;
+
       handleMetadata(e.data.metadata, file.name);
+      worker.postMessage({ messageType: "network_module", name: mainFilename });
+      worker.postMessage({ messageType: "network_args", name: mainFilename });
+      worker.postMessage({ messageType: "network_type", name: mainFilename });
+      worker.postMessage({ messageType: "weight_keys", name: mainFilename });
+      worker.postMessage({ messageType: "alphas", name: mainFilename });
       finishLoading();
     }
-  });
+  }
+
+  worker.addEventListener("message", messageHandler);
 }
 
 // if we are processing the uploaded file
