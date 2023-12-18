@@ -3,7 +3,7 @@ use candle_core::{
     DType, Device, Tensor,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
 
@@ -61,31 +61,6 @@ impl WeightKey for BufferedLoRAWeight {
         self.keys_by_key("alpha")
     }
 
-    fn alphas(&self) -> Vec<u32> {
-        self.buffered
-            .tensors()
-            .iter()
-            .filter(|(k, _v)| k.contains("alpha"))
-            .filter_map(|(k, _v)| {
-                self.get(k)
-                    .unwrap()
-                    .to_dtype(DType::U32)
-                    .map(|v| v.to_scalar::<u32>())
-                    .unwrap()
-                    .ok()
-            })
-            .fold(Vec::new(), |mut alphas: Vec<u32>, v| {
-                match alphas.len() {
-                    0 => {
-                        alphas.push(v);
-                        Some(())
-                    }
-                    _ => (!alphas.iter().any(|alpha| alpha == &v)).then(|| alphas.push(v)),
-                };
-                alphas
-            })
-    }
-
     fn up_keys(&self) -> Vec<String> {
         self.keys_by_key("lora_up")
     }
@@ -113,6 +88,43 @@ impl Weight for BufferedLoRAWeight {
 
         up.matmul(&down)?.matmul(&scale)
     }
+
+    fn alphas(&self) -> HashSet<u32> {
+        self.buffered
+            .tensors()
+            .iter()
+            .filter(|(k, _v)| k.contains("alpha"))
+            .filter_map(|(k, _v)| {
+                self.get(k)
+                    .unwrap()
+                    .to_dtype(DType::U32)
+                    .map(|v| v.to_scalar::<u32>())
+                    .unwrap()
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut alphas: HashSet<u32>, v| {
+                alphas.insert(v);
+                alphas
+            })
+    }
+
+    fn dims(&self) -> HashSet<u32> {
+        self.buffered
+            .tensors()
+            .iter()
+            .filter(|(k, _v)| k.contains("lora_down"))
+            .filter_map(|(k, _v)| {
+                self.get(k)
+                    .map(|v| v.to_dtype(DType::U32).map(|v| v.dims2()))
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut dims: HashSet<u32>, res| {
+                if let Ok(Ok((v, _))) = res {
+                    dims.insert(v as u32);
+                };
+                dims
+            })
+    }
 }
 
 impl BufferedLoRAWeight {
@@ -134,13 +146,14 @@ pub trait WeightKey {
     fn weight_keys(&self) -> Vec<String>;
     fn down_keys(&self) -> Vec<String>;
     fn alpha_keys(&self) -> Vec<String>;
-    fn alphas(&self) -> Vec<u32>;
 }
 
 pub trait Weight {
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error>;
 
     fn scale_weight(&self, base_name: &str, device: &Device) -> Result<Tensor, candle_core::Error>;
+    fn alphas(&self) -> HashSet<u32>;
+    fn dims(&self) -> HashSet<u32>;
 }
 
 /// Tensor weights
@@ -178,28 +191,6 @@ impl WeightKey for LoRAWeight {
         self.keys_by_key("alpha")
     }
 
-    fn alphas(&self) -> Vec<u32> {
-        self.tensors
-            .iter()
-            .filter(|(k, _v)| k.contains("alpha"))
-            .filter_map(|(_k, v)| {
-                v.to_dtype(DType::U32)
-                    .map(|v| v.to_scalar::<u32>())
-                    .unwrap()
-                    .ok()
-            })
-            .fold(Vec::new(), |mut alphas: Vec<u32>, v| {
-                match alphas.len() {
-                    0 => {
-                        alphas.push(v);
-                        Some(())
-                    }
-                    _ => (!alphas.iter().any(|alpha| alpha == &v)).then(|| alphas.push(v)),
-                };
-                alphas
-            })
-    }
-
     fn up_keys(&self) -> Vec<String> {
         self.keys_by_key("lora_up")
     }
@@ -207,18 +198,6 @@ impl WeightKey for LoRAWeight {
     fn down_keys(&self) -> Vec<String> {
         self.keys_by_key("lora_down")
     }
-}
-
-fn get_base_name(name: &str) -> String {
-    name.split('.')
-        .filter(|part| !matches!(*part, "weight" | "lora_up" | "lora_down" | "alpha"))
-        .fold(String::new(), |acc, v| {
-            if acc.is_empty() {
-                v.to_owned()
-            } else {
-                format!("{acc}.{v}")
-            }
-        })
 }
 
 impl Weight for LoRAWeight {
@@ -250,6 +229,39 @@ impl Weight for LoRAWeight {
         let scale = Tensor::new(&[up.dims1()? as f32], device)?.div(alpha)?;
 
         up.matmul(down)?.matmul(&scale)
+    }
+
+    fn alphas(&self) -> HashSet<u32> {
+        self.tensors
+            .iter()
+            .filter(|(k, _v)| k.contains("alpha"))
+            .filter_map(|(_k, v)| {
+                v.to_dtype(DType::U32)
+                    .map(|v| v.to_scalar::<u32>())
+                    .unwrap()
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut alphas: HashSet<u32>, v| {
+                alphas.insert(v);
+                alphas
+            })
+    }
+
+    fn dims(&self) -> HashSet<u32> {
+        self.tensors
+            .iter()
+            .filter(|(k, _v)| k.contains("lora_down"))
+            .filter_map(|(k, _v)| {
+                self.get(k)
+                    .map(|v| v.to_dtype(DType::U32).map(|v| v.dims2()))
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut dims: HashSet<u32>, res| {
+                if let Ok(Ok((v, _))) = res {
+                    dims.insert(v as u32);
+                };
+                dims
+            })
     }
 }
 
@@ -303,7 +315,6 @@ mod tests {
         // Arrange
         let lora_weight = BufferedLoRAWeight::new(buffer).unwrap();
 
-
         // Act
         let result_alphas = lora_weight.alphas();
 
@@ -320,15 +331,62 @@ mod tests {
     }
 
     #[test]
-    fn get_base_name_test() {
-        let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_up.weight");
-        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+    fn dims_returns_unique_values() {
+        let buffer = load_test_file().unwrap();
 
-        let base_name =
-            get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_down.weight");
-        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+        // Arrange
+        let lora_weight = LoRAWeight::new(buffer).unwrap();
 
-        let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");
-        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+        // Act
+        let result_dims = lora_weight.dims();
+
+        assert_eq!(result_dims.len(), 1);
+
+        // Assert
+        // Add assertions to verify that result_dims contains unique values
+        assert_eq!(result_dims.len(), result_dims.iter().collect::<HashSet<_>>().len());
     }
+
+    #[test]
+    fn buffered_dims_returns_unique_values() {
+        let buffer = load_test_file().unwrap();
+
+        // Arrange
+        let lora_weight = BufferedLoRAWeight::new(buffer).unwrap();
+
+        // Act
+        let result_dims = lora_weight.dims();
+
+        assert_eq!(result_dims.len(), 1);
+
+        // Assert
+        // Add assertions to verify that result_dims contains unique values
+        assert_eq!(result_dims.len(), result_dims.iter().collect::<HashSet<_>>().len());
+    }
+    //
+    // #[test]
+    // fn dims_returns_empty_set_when_no_lora_down_tensors() {
+    //     // Arrange
+    //     let buffer = load_test_file_without_lora_down_tensors().unwrap();
+    //     let lora_weight = LoRAWeight::new(buffer).unwrap();
+    //
+    //     // Act
+    //     let result_dims = lora_weight.dims();
+    //
+    //     // Assert
+    //     assert!(result_dims.is_empty());
+    // }
+    //
+    // #[test]
+    // fn dims_handles_invalid_tensor_values() {
+    //     // Arrange
+    //     let buffer = load_test_file_with_invalid_tensors().unwrap();
+    //     let lora_weight = LoRAWeight::new(buffer).unwrap();
+    //
+    //     // Act
+    //     let result_dims = lora_weight.dims();
+    //
+    //     // Assert
+    //     // Add assertions to handle cases where invalid tensor values are present
+    // }
 }

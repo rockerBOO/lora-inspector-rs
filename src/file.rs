@@ -1,31 +1,30 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
-use crate::weight::{BufferedLoRAWeight, WeightKey};
-use safetensors::SafeTensors;
+use crate::weight::{BufferedLoRAWeight, WeightKey, Weight};
 
 /// LoRA file buffer
 #[derive(Debug)]
 pub struct LoRAFile {
-    buffer: Vec<u8>,
+    // buffer: Vec<u8>,
     filename: String,
     weights: Option<BufferedLoRAWeight>,
-    metadata: Option<HashMap<String, String>>,
+    // metadata: Option<HashMap<String, String>>,
 }
 
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: String) -> LoRAFile {
         LoRAFile {
-            buffer: buffer.to_vec(),
+            // buffer: buffer.to_vec(),
             filename,
             weights: BufferedLoRAWeight::new(buffer.to_vec())
                 .map(Some)
                 .unwrap_or_else(|_| None),
-            metadata: match SafeTensors::read_metadata(buffer)
-                .map(|(_, meta)| meta.metadata().clone())
-            {
-                Ok(Some(metadata)) => Some(metadata.clone()),
-                _ => None,
-            },
+            // metadata: match SafeTensors::read_metadata(buffer)
+            //     .map(|(_, meta)| meta.metadata().clone())
+            // {
+            //     Ok(Some(metadata)) => Some(metadata.clone()),
+            //     _ => None,
+            // },
         }
     }
 
@@ -51,10 +50,17 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn alphas(&self) -> Vec<u32> {
+    pub fn alphas(&self) -> HashSet<u32> {
         self.weights
             .as_ref()
             .map(|weights| weights.alphas())
+            .unwrap_or_default()
+    }
+
+    pub fn dims(&self) -> HashSet<u32> {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.dims())
             .unwrap_or_default()
     }
 
@@ -84,23 +90,6 @@ mod tests {
 
         Ok(data)
     }
-
-    // #[test]
-    // fn new_from_buffer_creates_instance() {
-    //     // Arrange
-    //     let buffer = load_test_file().unwrap();
-    //     let filename = String::from("boo.safetensors");
-    //
-    //     // Act
-    //     let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
-    //
-    //
-    //
-    //     // Assert
-    //     // assert_eq!(lora_file.buffer, buffer);
-    //     // assert_eq!(lora_file.filename, filename);
-    //     // assert!(lora_file.weights.is_none());
-    // }
 
     #[test]
     fn load_tensors_success() {

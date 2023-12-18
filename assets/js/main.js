@@ -953,7 +953,9 @@ async function processFile(file) {
       worker.postMessage({ messageType: "network_args", name: mainFilename });
       worker.postMessage({ messageType: "network_type", name: mainFilename });
       worker.postMessage({ messageType: "weight_keys", name: mainFilename });
+      worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
       worker.postMessage({ messageType: "alphas", name: mainFilename });
+      worker.postMessage({ messageType: "dims", name: mainFilename });
       finishLoading();
     }
   }
