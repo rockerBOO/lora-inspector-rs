@@ -10,4 +10,5 @@ pub enum Error {
     Candle(candle_core::Error),
     SafeTensor(safetensors::SafeTensorError),
     Load(String),
+    Msg(String)
 }
