@@ -2,12 +2,16 @@ use candle_core::{
     safetensors::{load_buffer, BufferedSafetensors, Load},
     DType, Device, Tensor,
 };
+use std::ops::Mul;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
+use web_sys::console;
 
 use wasm_bindgen::prelude::*;
+
+use crate::get_base_name;
 
 #[wasm_bindgen]
 pub struct BufferedLoRAWeight {
@@ -68,6 +72,13 @@ impl WeightKey for BufferedLoRAWeight {
     fn down_keys(&self) -> Vec<String> {
         self.keys_by_key("lora_down")
     }
+
+    fn base_names(&self) -> Vec<String> {
+        self.weight_keys()
+            .iter()
+            .map(|name| get_base_name(name))
+            .collect()
+    }
 }
 
 impl Weight for BufferedLoRAWeight {
@@ -77,16 +88,21 @@ impl Weight for BufferedLoRAWeight {
 
     fn scale_weight(&self, base_name: &str, device: &Device) -> Result<Tensor, candle_core::Error> {
         let lora_up = format!("{}.lora_up.weight", base_name);
-        let lora_down = format!("{}.lora_up.weight", base_name);
+        let lora_down = format!("{}.lora_down.weight", base_name);
         let lora_alpha = format!("{}.alpha", base_name);
 
         let up = self.buffered.get(&lora_up)?.load(device)?;
         let down = self.buffered.get(&lora_down)?.load(device)?;
         let alpha = self.buffered.get(&lora_alpha)?.load(device)?;
 
-        let scale = Tensor::new(&[up.dims1()? as f32], device)?.div(&alpha)?;
+        let dims = up.dims();
 
-        up.matmul(&down)?.matmul(&scale)
+        let scale = dims[1] as f64 / alpha.to_dtype(DType::F64)?.to_scalar::<f64>()?;
+
+        println!("{:#?} {:#?}", lora_up, lora_down);
+        println!("{:#?} {:#?}", &up, &down);
+
+        up.matmul(&down)?.to_dtype(DType::F64)?.mul(scale)
     }
 
     fn alphas(&self) -> HashSet<u32> {
@@ -146,6 +162,7 @@ pub trait WeightKey {
     fn weight_keys(&self) -> Vec<String>;
     fn down_keys(&self) -> Vec<String>;
     fn alpha_keys(&self) -> Vec<String>;
+    fn base_names(&self) -> Vec<String>;
 }
 
 pub trait Weight {
@@ -197,6 +214,13 @@ impl WeightKey for LoRAWeight {
 
     fn down_keys(&self) -> Vec<String> {
         self.keys_by_key("lora_down")
+    }
+
+    fn base_names(&self) -> Vec<String> {
+        self.weight_keys()
+            .iter()
+            .map(|name| get_base_name(name))
+            .collect()
     }
 }
 
@@ -344,7 +368,10 @@ mod tests {
 
         // Assert
         // Add assertions to verify that result_dims contains unique values
-        assert_eq!(result_dims.len(), result_dims.iter().collect::<HashSet<_>>().len());
+        assert_eq!(
+            result_dims.len(),
+            result_dims.iter().collect::<HashSet<_>>().len()
+        );
     }
 
     #[test]
@@ -361,7 +388,10 @@ mod tests {
 
         // Assert
         // Add assertions to verify that result_dims contains unique values
-        assert_eq!(result_dims.len(), result_dims.iter().collect::<HashSet<_>>().len());
+        assert_eq!(
+            result_dims.len(),
+            result_dims.iter().collect::<HashSet<_>>().len()
+        );
     }
     //
     // #[test]

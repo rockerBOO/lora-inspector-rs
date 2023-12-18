@@ -787,7 +787,7 @@ function Main({ metadata }) {
 
 function Metadata({ metadata, filename }) {
   return [
-    h("div", null, h("div", null, "Lora file"), h("h1", null, filename)),
+    h("div", null, h("div", null, "LoRA file"), h("h1", null, filename)),
     h(Header, { metadata }),
     // h("div", {}, "wtf"),
     // h(Blocks, { metadata, buffer }),
@@ -954,6 +954,9 @@ async function processFile(file) {
       worker.postMessage({ messageType: "network_type", name: mainFilename });
       worker.postMessage({ messageType: "weight_keys", name: mainFilename });
       worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
+      worker.postMessage({ messageType: "keys", name: mainFilename });
+      worker.postMessage({ messageType: "base_names", name: mainFilename });
+      worker.postMessage({ messageType: "weight_norms", name: mainFilename });
       worker.postMessage({ messageType: "alphas", name: mainFilename });
       worker.postMessage({ messageType: "dims", name: mainFilename });
       finishLoading();

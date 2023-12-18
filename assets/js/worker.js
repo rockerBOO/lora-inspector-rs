@@ -44,7 +44,13 @@ function init_wasm_in_worker() {
       } else if (e.data.messageType === "network_type") {
         getNetworkType(e);
       } else if (e.data.messageType === "weight_keys") {
-        getWeightkeys(e);
+        getWeightKeys(e);
+      } else if (e.data.messageType === "keys") {
+        getKeys(e);
+      } else if (e.data.messageType === "base_names") {
+        getBaseNames(e);
+      } else if (e.data.messageType === "weight_norms") {
+        getWeightNorms(e);
       } else if (e.data.messageType === "alpha_keys") {
         getAlphaKeys(e);
       } else if (e.data.messageType === "dims") {
@@ -102,11 +108,37 @@ async function getNetworkModule(e) {
   console.log(loraWorker.network_module());
 }
 
-async function getWeightkeys(e) {
+async function getWeightKeys(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
 
   console.log(loraWorker.weight_keys());
+}
+
+async function getKeys(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+  console.log("keys", loraWorker.keys());
+}
+
+async function getBaseNames(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+  console.log("base names", loraWorker.base_names());
+}
+
+async function getWeightNorms(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+	console.time("Calculating norms")
+  console.log(
+    "weight_norms",
+    loraWorker.base_names().map((name) => [name, loraWorker.weight_norm(name)]),
+  );
+	console.timeEnd("Calculating norms")
 }
 
 async function getAlphaKeys(e) {
