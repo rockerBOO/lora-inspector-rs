@@ -54,3 +54,7 @@ memmap2 = "0.9.0"
 [profile.release]
 lto = true
 opt-level = 's'
+
+[[bin]]
+name = "broadcast_matmul"
+

@@ -154,6 +154,7 @@ h1 {
 .alpha {
   font-size: 2em;
   font-weight: bold;
+	animation: 0.5s ease-in-out slide-in, 1s ease-in-out fade-in;
 }
 
 .hash {
@@ -167,6 +168,7 @@ h1 {
 
 .number {
   font-size: 1.5em;
+	animation: 0.5s ease-in-out slide-in, 1s ease-in-out fade-in;
 }
 
 .args {
@@ -402,6 +404,20 @@ text.ct-label {
 
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translate3d(-2em, 0, 0);
+  }
+
+  25% {
+    transform: translate3d(-0.4em, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0em, 0, 0);
   }
 }
 

@@ -1,7 +1,9 @@
 extern crate console_error_panic_hook;
 use std::fmt;
 
+use candle_core::Device;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use crate::file::LoRAFile;
 use crate::metadata::Metadata;
@@ -61,6 +63,20 @@ impl LoraWorker {
 
     pub fn keys(&self) -> Vec<String> {
         self.file.keys()
+    }
+
+    pub fn base_names(&self) -> Vec<String> {
+        self.file.base_names()
+    }
+
+    pub fn weight_norm(&self, base_name: &str) -> Option<f32> {
+        self.file
+            .weight_norm(base_name, &Device::Cpu)
+            .map_err(|e| {
+                console::error_1(&format!("Weight Norm for {} Error: {:#?}", base_name, e).into());
+                e
+            })
+            .ok()
     }
 
     pub fn network_module(&self) -> String {
