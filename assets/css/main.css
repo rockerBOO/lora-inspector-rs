@@ -40,6 +40,10 @@ button {
   font-family: monospace;
 }
 
+h1 {
+  animation:   fade-in 1s ease-in-out;
+}
+
 .note {
   font-size: 0.8em;
 }
@@ -372,15 +376,32 @@ text.ct-label {
 }
 
 @keyframes fade-in {
-  0% {
+  from {
     opacity: 0;
+    filter: blur(24px) saturate(0%);
   }
+
   50% {
-    opacity: 0.8;
+    filter: blur(1px) saturate(100%);
   }
 
   100% {
     opacity: 1;
+    filter: blur(0px) saturate(100%);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.8);
+  }
+
+  25% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }
 
