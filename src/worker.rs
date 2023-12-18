@@ -38,10 +38,6 @@ impl LoraWorker {
     pub fn filename(&self) -> String {
         self.file.filename()
     }
-    //
-    // pub fn load_tensors(&mut self) -> bool {
-    //     self.file.load_tensors().is_ok()
-    // }
 
     pub fn is_tensors_loaded(&self) -> bool {
         self.file.is_tensors_loaded()
@@ -56,7 +52,11 @@ impl LoraWorker {
     }
 
     pub fn alphas(&self) -> Vec<u32> {
-        self.file.alphas()
+        self.file.alphas().into_iter().collect()
+    }
+
+    pub fn dims(&self) -> Vec<u32> {
+        self.file.dims().into_iter().collect()
     }
 
     pub fn keys(&self) -> Vec<String> {

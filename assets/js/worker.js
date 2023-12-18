@@ -34,6 +34,8 @@ function init_wasm_in_worker() {
 
     onmessage = async (e) => {
       if (e.data.messageType === "file_upload") {
+        // unload old workers for now...
+        loraWorkers.clear();
         fileUploadHandler(e);
       } else if (e.data.messageType === "network_module") {
         getNetworkModule(e);
@@ -42,14 +44,13 @@ function init_wasm_in_worker() {
       } else if (e.data.messageType === "network_type") {
         getNetworkType(e);
       } else if (e.data.messageType === "weight_keys") {
-        ensureTensorsLoaded(e)
-          .then(getWeightkeys)
-          .catch(handleTensorsLoadedError);
-      
+        getWeightkeys(e);
+      } else if (e.data.messageType === "alpha_keys") {
+        getAlphaKeys(e);
+      } else if (e.data.messageType === "dims") {
+        getDims(e);
       } else if (e.data.messageType === "alphas") {
-        ensureTensorsLoaded(e)
-          .then(getAlphas)
-          .catch(handleTensorsLoadedError);
+        getAlphas(e);
       }
     };
   });
@@ -94,43 +95,6 @@ async function fileUploadHandler(e) {
   }
 }
 
-function ensureTensorsLoaded(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
-
-  return new Promise((resolve) => {
-    if (!loraWorker.is_tensors_loaded()) {
-      if (!loraWorker.load_tensors()) {
-        reject("Could not load the tensors");
-      }
-    }
-
-    resolve(e);
-  });
-}
-
-function handleTensorsLoadedError(err) {
-  self.postMessage({
-    messageType: "ensure_tensors_loaded_error",
-    message: "Could not load the tensors",
-    errorMessage: err,
-    errorCode: 3,
-  });
-}
-
-async function loadTensors(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
-
-  if (!loraWorker.load_tensors()) {
-    self.postMessage({
-      messageType: "load_tensor_error",
-      message: "Failed to load the tensor",
-      errorCode: 2,
-    });
-  }
-}
-
 async function getNetworkModule(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
@@ -145,11 +109,25 @@ async function getWeightkeys(e) {
   console.log(loraWorker.weight_keys());
 }
 
+async function getAlphaKeys(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+  console.log("alpha keys", loraWorker.alpha_keys());
+}
+
 async function getAlphas(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
 
-  console.log(loraWorker.alphas());
+  console.log("alphas", loraWorker.alphas());
+}
+
+async function getDims(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+  console.log("dims", loraWorker.dims());
 }
 
 async function getNetworkArgs(e) {
