@@ -7,7 +7,6 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
-use web_sys::console;
 
 use wasm_bindgen::prelude::*;
 
@@ -250,9 +249,9 @@ impl Weight for LoRAWeight {
             .get(&lora_alpha)
             .ok_or_else(|| candle_core::Error::Msg("no lora alpha".to_string()))?;
 
-        let scale = Tensor::new(&[up.dims1()? as f32], device)?.div(alpha)?;
+        let scale = up.dims1()? as f64 / alpha.to_scalar::<f64>()?;
 
-        up.matmul(down)?.matmul(&scale)
+        up.matmul(down)?.mul(scale)
     }
 
     fn alphas(&self) -> HashSet<u32> {
