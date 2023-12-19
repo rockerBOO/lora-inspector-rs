@@ -1,3 +1,12 @@
+use std::fmt::Debug;
+// use std::alloc::Global;
+use std::string::String;
+
+// use candle_core::safetensors;
+// use std::error::Error;
+// use std::marker::Send;
+// use std::marker::Sync;
+
 mod file;
 mod metadata;
 mod network;
@@ -5,12 +14,36 @@ mod norms;
 mod weight;
 mod worker;
 
+pub type Result<T> = std::result::Result<T, InspectorError>;
+
 #[derive(Debug)]
-pub enum Error {
+pub enum InspectorError {
     Candle(candle_core::Error),
     SafeTensor(safetensors::SafeTensorError),
     Load(String),
     Msg(String),
+}
+
+impl InspectorError {
+    fn candle(err: candle_core::Error) -> InspectorError {
+        InspectorError::Candle(err)
+    }
+
+    fn safetensor(err: safetensors::SafeTensorError) -> InspectorError {
+        InspectorError::SafeTensor(err)
+    }
+}
+
+impl From<candle_core::Error> for InspectorError {
+    fn from(err: candle_core::Error) -> InspectorError {
+        InspectorError::candle(err)
+    }
+}
+
+impl From<safetensors::SafeTensorError> for InspectorError {
+    fn from(err: safetensors::SafeTensorError) -> InspectorError {
+        InspectorError::safetensor(err)
+    }
 }
 
 pub fn get_base_name(name: &str) -> String {

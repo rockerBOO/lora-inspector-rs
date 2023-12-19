@@ -19,9 +19,11 @@ serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.4"
 serde_with = "3.4.0"
 console_error_panic_hook = { version = "0.1.6", optional = true }
-candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.2" }
+# candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.2" }
+candle-core = { path = "/home/rockerboo/code/others/candle/candle-core", version = "0.3.2" }
 getrandom = { version = "0.2", features = ["js"] }
 serde_json = "1.0.108"
+num = "0.4.1"
 # web-sys = { version = "0.3.65", features = ["console"] }
 
 [dependencies.web-sys]
@@ -54,6 +56,4 @@ memmap2 = "0.9.0"
 lto = true
 opt-level = 's'
 
-[[bin]]
-name = "broadcast_matmul"
 

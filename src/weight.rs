@@ -7,7 +7,6 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
-use web_sys::console;
 
 use wasm_bindgen::prelude::*;
 
