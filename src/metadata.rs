@@ -22,13 +22,13 @@ impl Metadata {
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<String> {
-        self.metadata.get(key).to_owned().cloned()
-    }
-
-    pub fn insert(&mut self, key: &str, value: String) -> Option<String> {
-        self.metadata.insert(key.to_string(), value)
-    }
+    // pub fn get(&self, key: &str) -> Option<String> {
+    //     self.metadata.get(key).to_owned().cloned()
+    // }
+    //
+    // pub fn insert(&mut self, key: &str, value: String) -> Option<String> {
+    //     self.metadata.insert(key.to_string(), value)
+    // }
 
     pub fn network_args(&self) -> Option<NetworkArgs> {
         match &self.metadata.get("ss_network_args") {
