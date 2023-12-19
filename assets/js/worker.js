@@ -49,8 +49,15 @@ function init_wasm_in_worker() {
         getKeys(e);
       } else if (e.data.messageType === "base_names") {
         getBaseNames(e);
-      } else if (e.data.messageType === "weight_norms") {
-        getWeightNorms(e);
+      } else if (e.data.messageType === "l2_norm") {
+        getL2Norms(e).then((norms) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "l2_norm",
+              norms,
+            });
+          }
+        });
       } else if (e.data.messageType === "alpha_keys") {
         getAlphaKeys(e);
       } else if (e.data.messageType === "dims") {
@@ -136,22 +143,19 @@ async function getBaseNames(e) {
   console.log("base names", baseNames.map(parseSDKey));
 }
 
-async function getWeightNorms(e) {
+async function getL2Norms(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
 
   console.time("Calculating norms");
+  console.log("Calculating l2 norms...");
 
   let l2Norms = loraWorker
     .base_names()
     .map((base_name) => [base_name, loraWorker.l2_norm(base_name)])
-		.map(([base_name, norm]) => {
-
-		console.log([base_name, norm]);
-		return [base_name, norm];
-	})
     .reduce(
       (acc, [base_name, norm]) => {
+        console.log("Processing l2 norms...");
         const parts = parseSDKey(base_name);
 
         const blockName = parts.name;
@@ -187,13 +191,27 @@ async function getWeightNorms(e) {
       return k > k2;
     }),
   );
-  console.log(
-    "weight_norms mean",
-    Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
-      return k > k2;
-    }),
-  );
+  const norms = Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
+    return k > k2;
+  });
+
+  console.log("weight_norms mean", norms);
   console.timeEnd("Calculating norms");
+
+  // Split between TE and UNet
+  const splitNorms = norms.reduce(
+    (acc, [k, v]) => {
+      if (k.includes("TE")) {
+        acc.te.set(k, v);
+      } else {
+        acc.unet.set(k, v);
+      }
+      return acc;
+    },
+    { te: new Map(), unet: new Map() },
+  );
+
+  return splitNorms;
 }
 
 async function getAlphaKeys(e) {
@@ -243,6 +261,8 @@ function sendWASMMessage(message) {
   });
 }
 
+// Handle parsing of the keys
+
 const SDRE =
   /.*(?<block_type>up|down|mid)_blocks?_.*(?<block_id>\d+).*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<subblock_id>\d+).*/;
 
@@ -265,6 +285,7 @@ function parseSDKey(key) {
   let subBlockId;
   let name;
 
+  // Handle the text encoder
   if (key.includes("te_text_model")) {
     const matches = key.match(TE_SDRE);
     if (matches) {
@@ -272,10 +293,13 @@ function parseSDKey(key) {
       blockId = parseInt(groups["block_id"]);
       blockType = groups["block_type"];
 
+      name = `TE${padTwo(blockId)}`;
+
       if (blockType === "self_attn") {
         isAttention = true;
       }
     }
+    // Handling the UNet values
   } else {
     const matches = key.match(SDRE);
     if (matches) {
@@ -302,7 +326,7 @@ function parseSDKey(key) {
         isSampler = true;
       }
 
-			console.log("block_type", groups['block_type'])
+      // console.log("block_type", groups["block_type"]);
 
       if (groups["block_type"] === "down") {
         blockIdx = 1 + idx;
@@ -312,11 +336,11 @@ function parseSDKey(key) {
         name = `OUT${padTwo(idx)}`;
       } else if (groups["block_type"] === "mid") {
         blockIdx = NUM_OF_BLOCKS;
-   
       }
+      // Handle the mid block
     } else if (key.includes("mid_block_")) {
       const midMatch = key.match(MID_SDRE);
-			name = `MID`;
+      name = `MID`;
 
       if (midMatch) {
         const groups = midMatch.groups;

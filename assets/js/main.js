@@ -229,7 +229,7 @@ function Optimizer({ metadata }) {
   ]);
 }
 
-function Weight({ metadata }) {
+function Weight({ metadata, filename }) {
   const [averageStrength, setAverageStrength] = React.useState(undefined);
   const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
@@ -261,7 +261,7 @@ function Weight({ metadata }) {
         value: averageMagnitude?.toPrecision(4),
       }),
     ]),
-    h(Blocks, { metadata }),
+    h(Blocks, { metadata, filename }),
   ];
 }
 
@@ -269,7 +269,7 @@ function Weight({ metadata }) {
 // Chart.defaults.font.size = 16;
 // Chart.defaults.font.family = "monospace";
 
-function Blocks({ metadata }) {
+function Blocks({ metadata, filename }) {
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
@@ -279,21 +279,31 @@ function Blocks({ metadata }) {
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
 
-  // React.useEffect(() => {
-  //   if (!hasBlockWeights) {
-  //     return;
-  //   }
-  //
-  //   const averageMagnitudes = get_average_magnitude_by_block(buffer);
-  //   const averageStrength = get_average_strength_by_block(buffer);
-  //
-  //   setTEMagBlocks(averageMagnitudes.get("text_encoder"));
-  //   setUnetMagBlocks(averageMagnitudes.get("unet"));
-  //
-  //   setTEStrBlocks(averageStrength.get("text_encoder"));
-  //   setUnetStrBlocks(averageStrength.get("unet"));
-  //   return function cleanup() {};
-  // }, [hasBlockWeights]);
+  React.useEffect(() => {
+    if (!hasBlockWeights) {
+      return;
+    }
+
+    // const averageMagnitudes = get_average_magnitude_by_block(buffer);
+    // const averageStrength = get_average_strength_by_block(buffer);
+
+    console.log("getting l2 norms...");
+    trySyncMessage({
+      messageType: "l2_norm",
+      name: filename,
+      reply: true,
+    }).then((resp) => {
+      console.log(resp);
+      // setTEMagBlocks(averageMagnitudes.get("text_encoder"));
+      setTEMagBlocks(resp.norms.te);
+      setUnetMagBlocks(resp.norms.unet);
+      //
+      // setTEStrBlocks(averageStrength.get("text_encoder"));
+      // setUnetStrBlocks(averageStrength.get("unet"));
+    });
+
+    return function cleanup() {};
+  }, [hasBlockWeights]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -310,6 +320,7 @@ function Blocks({ metadata }) {
           // dataset.map(([k, v]) => strBlocks.get(k)),
         ],
       };
+      console.log("chartdata", data);
       const chart = new Chartist.Line(chartRef.current, data, {
         chartPadding: {
           right: 60,
@@ -377,20 +388,14 @@ function Blocks({ metadata }) {
     };
 
     if (teMagBlocks.size > 0) {
-      makeChart(
-        Array.from(teMagBlocks).sort(([a, _], [b, _v]) => a > b),
-        teChartRef,
-        teStrBlocks,
-      );
+      makeChart(Array.from(teMagBlocks), teChartRef, teStrBlocks);
     }
     if (unetMagBlocks.size > 0) {
-      makeChart(
-        Array.from(unetMagBlocks).sort(([a, _], [b, _v]) => a > b),
-        unetChartRef,
-        unetStrBlocks,
-      );
+      makeChart(Array.from(unetMagBlocks), unetChartRef, unetStrBlocks);
     }
   }, [teMagBlocks, teStrBlocks, unetMagBlocks, unetStrBlocks]);
+
+  console.log(teMagBlocks, unetMagBlocks);
 
   if (!hasBlockWeights) {
     return h(
@@ -421,14 +426,14 @@ function Blocks({ metadata }) {
             return h(
               "div",
               null,
-              h(MetaAttribute, {
-                name: `${k} average strength`,
-                value: teStrBlocks.get(k).toPrecision(6),
-                valueClassName: "number",
-              }),
+              // h(MetaAttribute, {
+              //   name: `${k} average strength`,
+              //   value: teStrBlocks[k].toPrecision(6),
+              //   valueClassName: "number",
+              // }),
               h(MetaAttribute, {
                 className: "te-block",
-                name: `${k} average magnitude`,
+                name: `${k} norm`,
                 value: v.toPrecision(6),
                 valueClassName: "number",
               }),
@@ -446,27 +451,37 @@ function Blocks({ metadata }) {
       h(
         "div",
         { className: "block-weights unet" },
-        Array.from(unetMagBlocks)
-          .sort(([a, _], [b, _v]) => a > b)
-          .map(([k, v]) => {
-            return h(
-              "div",
-              null,
-              h(MetaAttribute, {
-                name: `${k} average strength`,
-                value: unetStrBlocks.get(k).toPrecision(6),
-                valueClassName: "number",
-              }),
-              h(MetaAttribute, {
-                className: "unet-block",
-                name: `${k} average magnitude`,
-                value: v.toPrecision(6),
-                valueClassName: "number",
-              }),
-            );
-          }),
+        Array.from(unetMagBlocks).map(([k, v]) => {
+          return h(
+            "div",
+            null,
+            // h(MetaAttribute, {
+            //   name: `${k} average strength`,
+            //   value: v.toPrecision(6),
+            //   valueClassName: "number",
+            // }),
+            h(MetaAttribute, {
+              className: "unet-block",
+              name: `${k} average magnitude`,
+              value: v.toPrecision(6),
+              valueClassName: "number",
+            }),
+          );
+        }),
       ),
     ];
+  }
+
+  if (
+    unetBlockWeights.length === 0 &&
+    teBlockWeights.length === 0 &&
+    hasBlockWeights === true
+  ) {
+    return h(
+      "div",
+      { className: "marquee" },
+      h("span", null, "Loading block weights... please wait"),
+    );
   }
 
   return [teBlockWeights, unetBlockWeights];
@@ -770,13 +785,13 @@ function TagFrequency({ tagFrequency, metadata }) {
     });
 }
 
-function Main({ metadata }) {
+function Main({ metadata, filename }) {
   return h("main", null, [
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
     h(LRScheduler, { metadata }),
     h(Optimizer, { metadata }),
-    h(Weight, { metadata }),
+    h(Weight, { metadata, filename }),
     h(EpochStep, { metadata }),
     h(Batch, { metadata }),
     h(Noise, { metadata }),
@@ -791,7 +806,7 @@ function Metadata({ metadata, filename }) {
     h(Header, { metadata }),
     // h("div", {}, "wtf"),
     // h(Blocks, { metadata, buffer }),
-    h(Main, { metadata }),
+    h(Main, { metadata, filename }),
   ];
 }
 
@@ -1068,3 +1083,20 @@ function closeErrorMessage() {
     overlay.remove();
   }
 }
+
+async function trySyncMessage(message) {
+  return new Promise((resolve) => {
+    worker.postMessage(message);
+
+    const workerHandler = (e) => {
+      worker.removeEventListener("message", workerHandler);
+      resolve(e.data);
+    };
+
+    worker.addEventListener("message", workerHandler);
+  });
+}
+
+// async function getBlockWeights() {
+//   return ;
+// }

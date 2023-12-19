@@ -25,6 +25,13 @@ wasm-pack build --target web
 fly deploy
 ```
 
-# Contributions
+## Contributions
 
 Welcome
+
+## Bugs
+
+- Loading a new file doesn't unload the previous LoRA properly (be aware of loading multiple LoRAS in the future)
+- Loading some LoRAs fail to be loaded into the buffer
+- Loading some LoRAs fail to load their block weights (undefined error)
+- Average TE/UNet blocks are now invalid (generally)
