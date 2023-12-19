@@ -69,11 +69,31 @@ impl LoraWorker {
         self.file.base_names()
     }
 
-    pub fn weight_norm(&self, base_name: &str) -> Option<f32> {
+    pub fn l1_norm(&self, base_name: &str) -> Option<f64> {
         self.file
-            .weight_norm(base_name, &Device::Cpu)
+            .l1_norm(base_name, &Device::Cpu)
             .map_err(|e| {
-                console::error_1(&format!("Weight Norm for {} Error: {:#?}", base_name, e).into());
+                console::error_1(&format!("L1 norm for {} Error: {:#?}", base_name, e).into());
+                e
+            })
+            .ok()
+    }
+
+    pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
+        self.file
+            .l2_norm(base_name, &Device::Cpu)
+            .map_err(|e| {
+                console::error_1(&format!("L2 norm for {} Error: {:#?}", base_name, e).into());
+                e
+            })
+            .ok()
+    }
+
+    pub fn matrix_norm(&self, base_name: &str) -> Option<f64> {
+        self.file
+            .matrix_norm(base_name, &Device::Cpu)
+            .map_err(|e| {
+                console::error_1(&format!("Matrix orm for {} Error: {:#?}", base_name, e).into());
                 e
             })
             .ok()

@@ -7,6 +7,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
 };
+use web_sys::console;
 
 use wasm_bindgen::prelude::*;
 
@@ -94,14 +95,25 @@ impl Weight for BufferedLoRAWeight {
         let down = self.buffered.get(&lora_down)?.load(device)?;
         let alpha = self.buffered.get(&lora_alpha)?.load(device)?;
 
-        let dims = up.dims();
+        let dims = down.dims();
 
-        let scale = dims[1] as f64 / alpha.to_dtype(DType::F64)?.to_scalar::<f64>()?;
+        let scale = alpha.to_dtype(DType::F64)?.to_scalar::<f64>()? / dims[0] as f64;
 
-        println!("{:#?} {:#?}", lora_up, lora_down);
-        println!("{:#?} {:#?}", &up, &down);
-
-        up.matmul(&down)?.to_dtype(DType::F64)?.mul(scale)
+        if dims.len() == 2 {
+            up.matmul(&down)?.mul(scale)
+        } else if dims[2] == 1 && dims[3] == 1 {
+            up.squeeze(3)?
+                .squeeze(2)?
+                .matmul(&down.squeeze(3)?.squeeze(2)?)?
+                .unsqueeze(2)?
+                .unsqueeze(3)?
+                .mul(scale)
+        } else {
+            down.permute((1, 0, 2, 3))?
+                .conv2d(&up, 0, 1, 1, 1)?
+                .permute((1, 0, 2, 3))?
+                .mul(scale)
+        }
     }
 
     fn alphas(&self) -> HashSet<u32> {
@@ -231,7 +243,11 @@ impl Weight for LoRAWeight {
             .cloned()
     }
 
-    fn scale_weight(&self, base_name: &str, device: &Device) -> Result<Tensor, candle_core::Error> {
+    fn scale_weight(
+        &self,
+        base_name: &str,
+        _device: &Device,
+    ) -> Result<Tensor, candle_core::Error> {
         let lora_up = format!("{}.lora_up.weight", base_name);
         let lora_down = format!("{}.lora_up.weight", base_name);
         let lora_alpha = format!("{}.alpha", base_name);
@@ -249,9 +265,25 @@ impl Weight for LoRAWeight {
             .get(&lora_alpha)
             .ok_or_else(|| candle_core::Error::Msg("no lora alpha".to_string()))?;
 
-        let scale = up.dims1()? as f64 / alpha.to_scalar::<f64>()?;
+        let dims = down.dims();
 
-        up.matmul(down)?.mul(scale)
+        let scale = alpha.to_scalar::<f64>()? / dims[0] as f64;
+
+        if dims.len() == 2 {
+            up.matmul(down)?.mul(scale)
+        } else if dims[2] == 1 && dims[3] == 1 {
+            up.squeeze(3)?
+                .squeeze(2)?
+                .matmul(&down.squeeze(3)?.squeeze(2)?)?
+                .unsqueeze(2)?
+                .unsqueeze(3)?
+                .mul(scale)
+        } else {
+            down.permute((1, 0, 2, 3))?
+                .conv2d(up, 0, 1, 1, 1)?
+                .permute((1, 0, 2, 3))?
+                .mul(scale)
+        }
     }
 
     fn alphas(&self) -> HashSet<u32> {
@@ -300,6 +332,16 @@ mod tests {
 
     fn load_test_file() -> Result<Vec<u8>, io::Error> {
         let filename = "boo.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_conv_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "/mnt/900/lora/testing/nsfw/pov-2023-12-18-114530-5d004039.safetensors";
 
         let mut f = File::open(filename)?;
         let mut data = vec![];
@@ -391,6 +433,31 @@ mod tests {
             result_dims.len(),
             result_dims.iter().collect::<HashSet<_>>().len()
         );
+    }
+
+    #[test]
+    fn buffered_dims_scale_weight_conv2d() {
+        let buffer = load_test_conv_file().unwrap();
+
+        // Arrange
+        let lora_weight = BufferedLoRAWeight::new(buffer).unwrap();
+
+        // Act
+
+        let result = lora_weight
+            .scale_weight("lora_unet_down_blocks_1_resnets_1_conv2", &Device::Cpu);
+
+        // Assert
+        assert!(result.is_ok());
+        let scaled_tensor = result.unwrap();
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[640, 640, 3, 3]);
+
+        // Verify that the tensor values are within an acceptable range
+        for value in scaled_tensor.flatten_all().unwrap().to_vec0::<f32>().iter() {
+            assert!(*value >= 0. && *value <= 2.);
+        }
     }
     //
     // #[test]

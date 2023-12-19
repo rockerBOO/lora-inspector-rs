@@ -4,7 +4,7 @@ use candle_core::{DType, Device};
 use web_sys::console;
 
 use crate::{
-    norms::l1,
+    norms::{l1, l2, matrix_norm},
     weight::{BufferedLoRAWeight, Weight, WeightKey},
     Error,
 };
@@ -85,13 +85,38 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn weight_norm(&self, base_name: &str, device: &Device) -> Result<f32, Error> {
+    pub fn l2_norm(&self, base_name: &str, device: &Device) -> Result<f64, Error> {
         match self.weights.as_ref() {
             Some(weights) => weights
                 .scale_weight(base_name, device)
                 .map_err(Error::Candle)
                 .map(|t| {
-                    l1(&t.to_dtype(DType::F32).map_err(Error::Candle)?).map_err(Error::Candle)
+                    l2(&t.to_dtype(DType::F64).map_err(Error::Candle)?).map_err(Error::Candle)
+                })?,
+            None => Err(Error::Msg("no weight found".to_string())),
+        }
+    }
+
+    pub fn l1_norm(&self, base_name: &str, device: &Device) -> Result<f64, Error> {
+        match self.weights.as_ref() {
+            Some(weights) => weights
+                .scale_weight(base_name, device)
+                .map_err(Error::Candle)
+                .map(|t| {
+                    l1(&t.to_dtype(DType::F64).map_err(Error::Candle)?).map_err(Error::Candle)
+                })?,
+            None => Err(Error::Msg("no weight found".to_string())),
+        }
+    }
+
+    pub fn matrix_norm(&self, base_name: &str, device: &Device) -> Result<f64, Error> {
+        match self.weights.as_ref() {
+            Some(weights) => weights
+                .scale_weight(base_name, device)
+                .map_err(Error::Candle)
+                .map(|t| {
+                    matrix_norm(&t.to_dtype(DType::F32).map_err(Error::Candle)?)
+                        .map_err(Error::Candle)
                 })?,
             None => Err(Error::Msg("no weight found".to_string())),
         }
@@ -196,7 +221,7 @@ mod tests {
         let device = &Device::Cpu;
 
         // Act
-        let result = lora_file.weight_norm(base_name, device);
+        let result = lora_file.l1_norm(base_name, device);
 
         println!("{:#?}", result);
 
@@ -215,7 +240,7 @@ mod tests {
         let device = &Device::Cpu;
 
         // Act
-        let result = lora_file.weight_norm(base_name, device);
+        let result = lora_file.l1_norm(base_name, device);
 
         // Assert
         assert!(result.is_err());
@@ -232,7 +257,7 @@ mod tests {
         let device = &Device::Cpu;
 
         // Act
-        let result = lora_file.weight_norm(base_name, device);
+        let result = lora_file.l1_norm(base_name, device);
 
         // Assert
         assert!(result.is_err());
@@ -249,7 +274,7 @@ mod tests {
         let device = &Device::Cpu;
 
         // Act
-        let result = lora_file.weight_norm(base_name, device);
+        let result = lora_file.l1_norm(base_name, device);
 
         // Assert
         assert!(result.is_err());

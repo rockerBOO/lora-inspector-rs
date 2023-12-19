@@ -62,6 +62,11 @@ function init_wasm_in_worker() {
   });
 }
 
+init_wasm_in_worker();
+
+// FUNCTIONS
+// ============================
+
 async function readFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -126,19 +131,69 @@ async function getBaseNames(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
 
-  console.log("base names", loraWorker.base_names());
+  const baseNames = loraWorker.base_names();
+
+  console.log("base names", baseNames.map(parseSDKey));
 }
 
 async function getWeightNorms(e) {
   const name = e.data.name;
   const loraWorker = loraWorkers.get(name);
 
-	console.time("Calculating norms")
+  console.time("Calculating norms");
+
+  let l2Norms = loraWorker
+    .base_names()
+    .map((base_name) => [base_name, loraWorker.l2_norm(base_name)])
+		.map(([base_name, norm]) => {
+
+		console.log([base_name, norm]);
+		return [base_name, norm];
+	})
+    .reduce(
+      (acc, [base_name, norm]) => {
+        const parts = parseSDKey(base_name);
+
+        const blockName = parts.name;
+
+        acc["block"].set(blockName, (acc["block"].get(blockName) ?? 0) + norm);
+        acc["block_count"].set(
+          blockName,
+          (acc["block_count"].get(blockName) ?? 0) + 1,
+        );
+        acc["block_mean"].set(
+          blockName,
+          acc["block"].get(blockName) / acc["block_count"].get(blockName),
+        );
+
+        return acc;
+      },
+      {
+        block: new Map(),
+        block_count: new Map(),
+        block_mean: new Map(),
+      },
+    );
+
   console.log(
-    "weight_norms",
-    loraWorker.base_names().map((name) => [name, loraWorker.weight_norm(name)]),
+    "weight_norms block",
+    Array.from(l2Norms["block"]).sort(([k, _], [k2, _v]) => {
+      return k > k2;
+    }),
   );
-	console.timeEnd("Calculating norms")
+  console.log(
+    "weight_norms count",
+    Array.from(l2Norms["block_count"]).sort(([k, _], [k2, _v]) => {
+      return k > k2;
+    }),
+  );
+  console.log(
+    "weight_norms mean",
+    Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
+      return k > k2;
+    }),
+  );
+  console.timeEnd("Calculating norms");
 }
 
 async function getAlphaKeys(e) {
@@ -188,4 +243,129 @@ function sendWASMMessage(message) {
   });
 }
 
-init_wasm_in_worker();
+const SDRE =
+  /.*(?<block_type>up|down|mid)_blocks?_.*(?<block_id>\d+).*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<subblock_id>\d+).*/;
+
+const MID_SDRE =
+  /.*(?<block_type>up|down|mid)_block_.*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<subblock_id>\d+).*/;
+const TE_SDRE = /(?<block_id>\d+).*(?<block_type>self_attn|mlp)/;
+const NUM_OF_BLOCKS = 12;
+
+function parseSDKey(key) {
+  let blockIdx = -1;
+  let idx;
+
+  let isConv = false;
+  let isAttention = false;
+  let isSampler = false;
+
+  let type;
+  let blockType;
+  let blockId;
+  let subBlockId;
+  let name;
+
+  if (key.includes("te_text_model")) {
+    const matches = key.match(TE_SDRE);
+    if (matches) {
+      const groups = matches.groups;
+      blockId = parseInt(groups["block_id"]);
+      blockType = groups["block_type"];
+
+      if (blockType === "self_attn") {
+        isAttention = true;
+      }
+    }
+  } else {
+    const matches = key.match(SDRE);
+    if (matches) {
+      const groups = matches.groups;
+
+      type = groups["type"];
+      blockType = groups["block_type"];
+      blockId = parseInt(groups["block_id"]);
+      subBlockId = parseInt(groups["subblock_id"]);
+
+      // console.log(groups["block_id"]);
+
+      if (groups["type"] === "attentions") {
+        idx = 3 * blockId + subBlockId;
+        isAttention = true;
+      } else if (groups["type"] === "resnets") {
+        idx = 3 * blockId + subBlockId;
+        isConv = true;
+      } else if (
+        groups["type"] === "upsamplers" ||
+        groups["type"] === "downsamplers"
+      ) {
+        idx = 3 * blockId + 2;
+        isSampler = true;
+      }
+
+			console.log("block_type", groups['block_type'])
+
+      if (groups["block_type"] === "down") {
+        blockIdx = 1 + idx;
+        name = `IN${padTwo(idx)}`;
+      } else if (groups["block_type"] === "up") {
+        blockIdx = NUM_OF_BLOCKS + 1 + idx;
+        name = `OUT${padTwo(idx)}`;
+      } else if (groups["block_type"] === "mid") {
+        blockIdx = NUM_OF_BLOCKS;
+   
+      }
+    } else if (key.includes("mid_block_")) {
+      const midMatch = key.match(MID_SDRE);
+			name = `MID`;
+
+      if (midMatch) {
+        const groups = midMatch.groups;
+
+        type = groups["type"];
+        blockType = groups["block_type"];
+        subBlockId = parseInt(groups["subblock_id"]);
+
+        if (groups.type == "attentions") {
+          isAttention = true;
+        } else if (groups.type === "resnets") {
+          isConv = true;
+        }
+      }
+
+      blockIdx = NUM_OF_BLOCKS;
+    }
+  }
+
+  return {
+    // Used in commmon format IN01
+    idx,
+    // Block index between 1 and 24
+    blockIdx,
+    // Common name IN01
+    name,
+    // name of the block up, down, mid
+    // id of the block (up_0, down_1)
+    blockId,
+    // id of the subblock (resnet, attentions)
+    subBlockId,
+    // resnets, attentions, upscalers, downscalers
+    type,
+    //
+    blockType,
+    // is a convolution key
+    isConv,
+    // is an attention key
+    isAttention,
+    // is a upscaler/downscaler
+    isSampler,
+    key,
+  };
+}
+
+function padTwo(number, padWith = "0") {
+  if (number < 10) {
+    return `${padWith}${number}`;
+  }
+
+  return `${number}`;
+}
