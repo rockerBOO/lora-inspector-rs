@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use safetensors::{SafeTensorError, SafeTensors};
+use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 
 use crate::network::{NetworkArgs, NetworkModule, NetworkType};
@@ -9,17 +9,16 @@ use crate::network::{NetworkArgs, NetworkModule, NetworkType};
 // #[wasm_bindgen]
 pub struct Metadata {
     size: usize,
-    pub metadata: HashMap<String, String>,
+    pub metadata: Option<HashMap<String, String>>,
 }
 
 impl Metadata {
-    pub fn new_from_buffer(buffer: &[u8]) -> Result<Metadata, SafeTensorError> {
-        let (size, metadata) = SafeTensors::read_metadata(buffer)?;
-
-        match metadata.metadata().to_owned() {
-            Some(metadata) => Ok(Metadata { size, metadata }),
-            None => Err(SafeTensorError::MetadataIncompleteBuffer),
-        }
+    pub fn new_from_buffer(buffer: &[u8]) -> crate::Result<Metadata> {
+        // console::log_1(&format!("Reading metadata from buffer {}", buffer.len()).into());
+        Ok(SafeTensors::read_metadata(buffer).map(|(size, metadata)| Metadata {
+            size,
+            metadata: metadata.metadata().clone(),
+        })?)
     }
 
     // pub fn get(&self, key: &str) -> Option<String> {
@@ -31,12 +30,12 @@ impl Metadata {
     // }
 
     pub fn network_args(&self) -> Option<NetworkArgs> {
-        match &self.metadata.get("ss_network_args") {
-            Some(network_args) => match serde_json::from_str::<NetworkArgs>(network_args) {
+        match &self.metadata.as_ref().map(|v| v.get("ss_network_args")) {
+            Some(Some(network_args)) => match serde_json::from_str::<NetworkArgs>(network_args) {
                 Ok(network_args) => Some(network_args),
                 Err(_) => None,
             },
-            None => None,
+            _ => None,
         }
     }
 
@@ -69,8 +68,8 @@ impl Metadata {
     }
 
     pub fn network_module(&self) -> Option<NetworkModule> {
-        match self.metadata.get("ss_network_module") {
-            Some(network_module) => {
+        match self.metadata.as_ref().map(|v| v.get("ss_network_module")) {
+            Some(Some(network_module)) => {
                 match network_module.as_str() {
                     "networks.lora" => {
                         // this is a Kohya network, probably
@@ -91,7 +90,7 @@ impl Metadata {
                     _ => None,
                 }
             }
-            None => None,
+            _ => None,
         }
     }
 }
