@@ -38,9 +38,11 @@ button {
   max-width: 10em;
   cursor: pointer;
   font-family: monospace;
+	text-shadow: 2px 2px black;
 }
 
 h1 {
+	text-shadow: 2px 2px black;
   animation: fade-in 1s ease-in-out;
 }
 
@@ -154,6 +156,7 @@ h1 {
 .alpha {
   font-size: 2em;
   font-weight: bold;
+	text-shadow: 2px 2px black;
   animation:
     0.5s ease-in-out slide-in,
     1s ease-in-out fade-in;
@@ -166,10 +169,13 @@ h1 {
 
 .lr {
   font-size: 1.5em;
+  font-weight: bold;
+	text-shadow: 2px 2px black;
 }
 
 .number {
   font-size: 1.5em;
+	text-shadow: 2px 2px black;
   animation:
     0.5s ease-in-out slide-in,
     1s ease-in-out fade-in;
