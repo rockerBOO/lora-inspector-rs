@@ -1,37 +1,29 @@
 use std::collections::HashSet;
 
 use candle_core::{DType, Device};
+use web_sys::console;
 
 use crate::{
     norms::{l1, l2, matrix_norm},
     weight::{BufferedLoRAWeight, Weight, WeightKey},
-    InspectorError,
-    Result
+    InspectorError, Result,
 };
 
 /// LoRA file buffer
 #[derive(Debug)]
 pub struct LoRAFile {
-    // buffer: Vec<u8>,
     filename: String,
     weights: Option<BufferedLoRAWeight>,
-    // metadata: Option<HashMap<String, String>>,
 }
 
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: String) -> LoRAFile {
+        console::error_1(&"Loading buffered weights...".to_string().into());
         LoRAFile {
-            // buffer: buffer.to_vec(),
             filename,
             weights: BufferedLoRAWeight::new(buffer.to_vec())
                 .map(Some)
                 .unwrap_or_else(|_| None),
-            // metadata: match SafeTensors::read_metadata(buffer)
-            //     .map(|(_, meta)| meta.metadata().clone())
-            // {
-            //     Ok(Some(metadata)) => Some(metadata.clone()),
-            //     _ => None,
-            // },
         }
     }
 
@@ -85,35 +77,41 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn l2_norm<T: candle_core::WithDType>(&self, base_name: &str, device: &Device) -> Result<T> {
+    pub fn l2_norm<T: candle_core::WithDType>(
+        &self,
+        base_name: &str,
+        device: &Device,
+    ) -> Result<T> {
         match self.weights.as_ref() {
             Some(weights) => weights
                 .scale_weight(base_name, device)
-                .map(|t| {
-                    l2(&t.to_dtype(DType::F64)?)
-                })?,
+                .map(|t| l2(&t.to_dtype(DType::F64)?))?,
             None => Err(InspectorError::Msg("no weight found".to_string())),
         }
     }
 
-    pub fn l1_norm<T: candle_core::WithDType>(&self, base_name: &str, device: &Device) -> Result<T> {
+    pub fn l1_norm<T: candle_core::WithDType>(
+        &self,
+        base_name: &str,
+        device: &Device,
+    ) -> Result<T> {
         match self.weights.as_ref() {
             Some(weights) => weights
                 .scale_weight(base_name, device)
-                .map(|t| {
-                    l1(&t.to_dtype(DType::F64)?)
-                })?,
+                .map(|t| l1(&t.to_dtype(DType::F64)?))?,
             None => Err(InspectorError::Msg("no weight found".to_string())),
         }
     }
 
-    pub fn matrix_norm<T: candle_core::WithDType>(&self, base_name: &str, device: &Device) -> Result<T> {
+    pub fn matrix_norm<T: candle_core::WithDType>(
+        &self,
+        base_name: &str,
+        device: &Device,
+    ) -> Result<T> {
         match self.weights.as_ref() {
             Some(weights) => weights
                 .scale_weight(base_name, device)
-                .map(|t| {
-                    matrix_norm(&t.to_dtype(DType::F64)?)
-                })?,
+                .map(|t| matrix_norm(&t.to_dtype(DType::F64)?))?,
             None => Err(InspectorError::Msg("no weight found".to_string())),
         }
     }
@@ -140,6 +138,14 @@ mod tests {
     fn load_test_file() -> Result<Vec<u8>, io::Error> {
         let filename = "boo.safetensors";
 
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_file(filename: &str) -> Result<Vec<u8>, io::Error> {
         let mut f = File::open(filename)?;
         let mut data = vec![];
         f.read_to_end(&mut data)?;
@@ -273,5 +279,24 @@ mod tests {
         // Assert
         assert!(result.is_err());
         // Add assertions to verify that the correct error variant is returned
+    }
+
+    #[test]
+    fn weight_load() -> crate::Result<()> {
+        let device = &Device::Cpu;
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+
+        assert_eq!(
+            502.32165664434433,
+            lora_file.l1_norm::<f64>(
+                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
+                device
+            )?
+        );
+
+        Ok(())
     }
 }

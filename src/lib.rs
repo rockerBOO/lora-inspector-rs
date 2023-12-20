@@ -1,6 +1,10 @@
+use core::fmt;
 use std::fmt::Debug;
+use std::io;
 // use std::alloc::Global;
 use std::string::String;
+
+use wasm_bindgen::JsError;
 
 // use candle_core::safetensors;
 // use std::error::Error;
@@ -20,6 +24,7 @@ pub type Result<T> = std::result::Result<T, InspectorError>;
 pub enum InspectorError {
     Candle(candle_core::Error),
     SafeTensor(safetensors::SafeTensorError),
+    Io(io::Error),
     Load(String),
     Msg(String),
 }
@@ -43,6 +48,24 @@ impl From<candle_core::Error> for InspectorError {
 impl From<safetensors::SafeTensorError> for InspectorError {
     fn from(err: safetensors::SafeTensorError) -> InspectorError {
         InspectorError::safetensor(err)
+    }
+}
+
+impl From<io::Error> for InspectorError {
+    fn from(err: io::Error) -> InspectorError {
+        InspectorError::Io(err)
+    }
+}
+
+impl fmt::Display for InspectorError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InspectorError::Candle(e) => write!(f, "Candle Error "),
+            InspectorError::SafeTensor(_) => write!(f, "SafeTensor Error"),
+            InspectorError::Io(_) => write!(f, "IO Error"),
+            InspectorError::Load(e) => write!(f, "Load Error {}", e),
+            InspectorError::Msg(e) => write!(f, "Error {}", e),
+        }
     }
 }
 

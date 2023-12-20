@@ -24,12 +24,11 @@ impl fmt::Display for LoraWorker {
 #[wasm_bindgen]
 impl LoraWorker {
     #[wasm_bindgen(constructor)]
-    pub fn new_from_buffer(buffer: &[u8], filename: String) -> Result<LoraWorker, JsError> {
-        console_error_panic_hook::set_once();
-        Ok(LoraWorker {
-            metadata: Metadata::new_from_buffer(buffer)?,
-            file: LoRAFile::new_from_buffer(buffer, filename),
-        })
+    pub fn new_from_buffer(buffer: &[u8], filename: String) -> Result<LoraWorker, String> {
+        let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
+        let file = LoRAFile::new_from_buffer(buffer, filename.clone());
+
+        metadata.map(|metadata| LoraWorker { metadata, file })
     }
 
     pub fn metadata(&self) -> JsValue {

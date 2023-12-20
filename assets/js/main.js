@@ -230,13 +230,17 @@ function Optimizer({ metadata }) {
 }
 
 function Weight({ metadata, filename }) {
-  const [averageStrength, setAverageStrength] = React.useState(undefined);
-  const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
+  // const [averageStrength, setAverageStrength] = React.useState(undefined);
+  // const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
   // React.useEffect(() => {
   //   setAverageStrength(get_average_strength(buffer));
   //   setAverageMagnitude(get_average_magnitude(buffer));
   // }, []);
+
+  if (!metadata) {
+    return h(Blocks, { metadata, filename });
+  }
 
   return [
     h("div", { className: "row space-apart" }, [
@@ -250,16 +254,16 @@ function Weight({ metadata, filename }) {
         valueClassName: "number",
         value: metadata.get("ss_scale_weight_norms"),
       }),
-      h(MetaAttribute, {
-        name: "Average vector strength, UNet + TE",
-        valueClassName: "number",
-        value: averageStrength?.toPrecision(4),
-      }),
-      h(MetaAttribute, {
-        name: "Average vector magnitude, UNet + TE",
-        valueClassName: "number",
-        value: averageMagnitude?.toPrecision(4),
-      }),
+      // h(MetaAttribute, {
+      //   name: "Average vector strength, UNet + TE",
+      //   valueClassName: "number",
+      //   value: averageStrength?.toPrecision(4),
+      // }),
+      // h(MetaAttribute, {
+      //   name: "Average vector magnitude, UNet + TE",
+      //   valueClassName: "number",
+      //   value: averageMagnitude?.toPrecision(4),
+      // }),
     ]),
     h(Blocks, { metadata, filename }),
   ];
@@ -270,11 +274,17 @@ function Weight({ metadata, filename }) {
 // Chart.defaults.font.family = "monospace";
 
 function Blocks({ metadata, filename }) {
+  // console.log("!!!! BLOCKS !!!!! METADATA FILENAME", filename);
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
   const [teStrBlocks, setTEStrBlocks] = React.useState(new Map());
   const [unetStrBlocks, setUnetStrBlocks] = React.useState(new Map());
+  const [normProgress, setNormProgress] = React.useState(0);
+  const [currentCount, setCurrentCount] = React.useState(0);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [startTime, setStartTime] = React.useState(undefined);
+  const [currentBaseName, setCurrentBaseName] = React.useState("");
 
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
@@ -300,6 +310,26 @@ function Blocks({ metadata, filename }) {
       //
       // setTEStrBlocks(averageStrength.get("text_encoder"));
       // setUnetStrBlocks(averageStrength.get("unet"));
+    });
+
+    return function cleanup() {};
+  }, [hasBlockWeights]);
+
+  React.useEffect(() => {
+    if (!hasBlockWeights) {
+      return;
+    }
+
+    setStartTime(performance.now());
+
+    listenProgress("l2_norms_progress").then(async (getProgress) => {
+      while ((progress = await getProgress().next())) {
+        const value = progress.value;
+        setCurrentBaseName(value.baseName);
+        setCurrentCount(value.currentCount);
+        setTotalCount(value.totalCount);
+        setNormProgress(value.currentCount / value.totalCount);
+      }
     });
 
     return function cleanup() {};
@@ -395,7 +425,7 @@ function Blocks({ metadata, filename }) {
     }
   }, [teMagBlocks, teStrBlocks, unetMagBlocks, unetStrBlocks]);
 
-  console.log(teMagBlocks, unetMagBlocks);
+  // console.log(teMagBlocks, unetMagBlocks);
 
   if (!hasBlockWeights) {
     return h(
@@ -477,10 +507,21 @@ function Blocks({ metadata, filename }) {
     teBlockWeights.length === 0 &&
     hasBlockWeights === true
   ) {
+    const elapsedTime = performance.now() - startTime;
+		const remaining = ((elapsedTime * totalCount) / normProgress - elapsedTime * totalCount);
+		const perSecond = currentCount / (elapsedTime / 1_000);
+
     return h(
       "div",
-      { className: "marquee" },
-      h("span", null, "Loading block weights... please wait"),
+      null,
+      // { className: "marquee" },
+      h(
+        "span",
+        null,
+        `Loading block weights... ${(normProgress * 100).toFixed(
+          2,
+        )}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(remaining / 1_000_000).toFixed(2)}s remaining ${currentBaseName} `,
+      ),
     );
   }
 
@@ -786,6 +827,10 @@ function TagFrequency({ tagFrequency, metadata }) {
 }
 
 function Main({ metadata, filename }) {
+  if (!metadata) {
+    return h("main", null, [h(Weight, { metadata, filename })]);
+  }
+
   return h("main", null, [
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
@@ -801,6 +846,11 @@ function Main({ metadata, filename }) {
 }
 
 function Metadata({ metadata, filename }) {
+  console.log("METADATA FILENAME", filename);
+  if (!metadata) {
+    return h("main", null, [h(Weight, { metadata, filename })]);
+  }
+
   return [
     h("div", null, h("div", null, "LoRA file"), h("h1", null, filename)),
     h(Header, { metadata }),
@@ -925,6 +975,7 @@ wasm_bindgen().then(() => {
 });
 
 async function handleMetadata(metadata, filename) {
+  console.log("HANDLE METADATA", filename);
   dropbox.classList.remove("box__open");
   dropbox.classList.add("box__closed");
   document.querySelector("#jumbo").classList.remove("jumbo__intro");
@@ -975,6 +1026,8 @@ async function processFile(file) {
       worker.postMessage({ messageType: "alphas", name: mainFilename });
       worker.postMessage({ messageType: "dims", name: mainFilename });
       finishLoading();
+    } else {
+      // console.log("UNHANDLED MESSAGE", e.data);
     }
   }
 
@@ -1089,12 +1142,46 @@ async function trySyncMessage(message) {
     worker.postMessage(message);
 
     const workerHandler = (e) => {
-      worker.removeEventListener("message", workerHandler);
-      resolve(e.data);
+      if (e.data.messageType === message.messageType) {
+        worker.removeEventListener("message", workerHandler);
+        resolve(e.data);
+      }
     };
 
     worker.addEventListener("message", workerHandler);
   });
+}
+
+async function listenProgress(messageType) {
+  let isFinished = false;
+  function finishedWorkerHandler(e) {
+    if (e.data.messageType === `${messageType}_finished`) {
+      worker.removeEventListener("message", finishedWorkerHandler);
+      isFinished = true;
+    } else {
+      // console.log("unhandled finished message", e.data);
+    }
+  }
+
+  worker.addEventListener("message", finishedWorkerHandler);
+
+  return async function* listen() {
+    if (isFinished) {
+      console.log("IS FINISHEDD!!!");
+      return;
+    }
+
+    yield await new Promise((resolve) => {
+      function workerHandler(e) {
+        if (e.data.messageType === messageType) {
+          worker.removeEventListener("message", workerHandler);
+          resolve(e.data);
+        }
+      }
+
+      worker.addEventListener("message", workerHandler);
+    });
+  };
 }
 
 // async function getBlockWeights() {

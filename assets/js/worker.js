@@ -33,8 +33,10 @@ function init_wasm_in_worker() {
     };
 
     onmessage = async (e) => {
+      console.log(e.data);
       if (e.data.messageType === "file_upload") {
         // unload old workers for now...
+        console.log("Clearing workers!!!!!");
         loraWorkers.clear();
         fileUploadHandler(e);
       } else if (e.data.messageType === "network_module") {
@@ -93,10 +95,12 @@ async function fileUploadHandler(e) {
 
   console.log("Loading file...");
   try {
+    console.log("!!!!! file.name", file.name);
     loraWorkers.set(file.name, new LoraWorker(buffer, file.name));
+
     const loraWorker = loraWorkers.get(file.name);
 
-    console.log("Getting metadata...");
+    console.log("!!!!!Getting metadata...");
 
     console.timeEnd("file_upload");
     self.postMessage({
@@ -145,17 +149,46 @@ async function getBaseNames(e) {
 
 async function getL2Norms(e) {
   const name = e.data.name;
+
+  console.assert(name, "name is invalid");
   const loraWorker = loraWorkers.get(name);
+  console.log("loraWorkers", loraWorkers);
 
   console.time("Calculating norms");
   console.log("Calculating l2 norms...");
 
-  let l2Norms = loraWorker
-    .base_names()
-    .map((base_name) => [base_name, loraWorker.l2_norm(base_name)])
+  const baseNames = loraWorker.base_names();
+  const totalCount = baseNames.length;
+
+  let currentCount = 0;
+
+  // const progressInterval = setInterval(
+  //   (currentCount, totalCount) => {
+  //     console.log("l2_norms_progress", currentCount, totalCount);
+  //   },
+  //   1000,
+  //   currentCount,
+  //   totalCount,
+  // );
+
+  // console.log("progress interval", progressInterval);
+
+  console.log("wtf");
+
+  let l2Norms = baseNames
+    .map((base_name) => {
+      currentCount += 1;
+
+      self.postMessage({
+        messageType: "l2_norms_progress",
+        currentCount,
+        totalCount,
+				baseName: base_name
+      });
+      return [base_name, loraWorker.l2_norm(base_name)];
+    })
     .reduce(
       (acc, [base_name, norm]) => {
-        console.log("Processing l2 norms...");
         const parts = parseSDKey(base_name);
 
         const blockName = parts.name;
@@ -178,6 +211,10 @@ async function getL2Norms(e) {
         block_mean: new Map(),
       },
     );
+
+  self.postMessage({
+    messageType: "l2_norm_progress_finished",
+  });
 
   console.log(
     "weight_norms block",
