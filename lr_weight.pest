@@ -1,0 +1,4 @@
+curve  = { "cosine" }
+op     = { "+" | "-" }
+amount = { ASCII_DIGIT+? ~ "." ~ ASCII_DIGIT+ }
+f      = { SOI ~ curve ~ op ~ amount ~ EOI }

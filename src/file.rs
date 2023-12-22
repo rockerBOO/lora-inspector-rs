@@ -16,9 +16,10 @@ pub struct LoRAFile {
     weights: Option<BufferedLoRAWeight>,
 }
 
+const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
+
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: String) -> LoRAFile {
-        console::error_1(&"Loading buffered weights...".to_string().into());
         LoRAFile {
             filename,
             weights: BufferedLoRAWeight::new(buffer.to_vec())
@@ -86,7 +87,7 @@ impl LoRAFile {
             Some(weights) => weights
                 .scale_weight(base_name, device)
                 .map(|t| l2(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg("no weight found".to_string())),
+            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
         }
     }
 
@@ -99,7 +100,7 @@ impl LoRAFile {
             Some(weights) => weights
                 .scale_weight(base_name, device)
                 .map(|t| l1(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg("no weight found".to_string())),
+            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
         }
     }
 
@@ -112,7 +113,7 @@ impl LoRAFile {
             Some(weights) => weights
                 .scale_weight(base_name, device)
                 .map(|t| matrix_norm(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg("no weight found".to_string())),
+            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
         }
     }
 
@@ -127,11 +128,23 @@ impl LoRAFile {
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::HashSet,
         fs::File,
         io::{self, Read},
     };
 
+    macro_rules! assert_err {
+        ($expression:expr, $($pattern:tt)+) => {
+            match $expression {
+                $($pattern)+ => (),
+                ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
+            }
+        }
+    }
+
     use candle_core::Device;
+
+    use crate::InspectorError;
 
     use super::LoRAFile;
 
@@ -223,8 +236,6 @@ mod tests {
         // Act
         let result = lora_file.l1_norm::<f64>(base_name, device);
 
-        println!("{:#?}", result);
-
         // Assert
         assert!(result.is_ok());
         // Add assertions to verify that the norm result is correct
@@ -244,7 +255,8 @@ mod tests {
 
         // Assert
         assert!(result.is_err());
-        // Add assertions to verify that the correct error variant is returned
+
+        assert_err!(result, Err(InspectorError::Candle(_)));
     }
 
     #[test]
@@ -261,7 +273,8 @@ mod tests {
 
         // Assert
         assert!(result.is_err());
-        // Add assertions to verify that the correct error variant is returned
+
+        assert_err!(result, Err(InspectorError::Candle(_)));
     }
 
     #[test]
@@ -278,11 +291,42 @@ mod tests {
 
         // Assert
         assert!(result.is_err());
-        // Add assertions to verify that the correct error variant is returned
+
+        assert_err!(result, Err(InspectorError::Candle(_)));
     }
 
     #[test]
-    fn weight_load() -> crate::Result<()> {
+    fn load_from_invalid_buffer() {
+        // Arrange
+        let filename = String::from("boo.safetensors");
+        let lora_file = LoRAFile::new_from_buffer(&[1_u8], filename.clone());
+        let base_name = "l1_error_weight";
+        let device = &Device::Cpu;
+
+        // Act
+        let result = lora_file.l1_norm::<f64>(base_name, device);
+
+        // Assert
+        assert!(result.is_err());
+        assert_err!(result, Err(InspectorError::Msg(_)));
+
+        // Act
+        let result = lora_file.l2_norm::<f64>(base_name, device);
+
+        // Assert
+        assert!(result.is_err());
+        assert_err!(result, Err(InspectorError::Msg(_)));
+
+        // Act
+        let result = lora_file.matrix_norm::<f64>(base_name, device);
+
+        // Assert
+        assert!(result.is_err());
+        assert_err!(result, Err(InspectorError::Msg(_)));
+    }
+
+    #[test]
+    fn weight_load_no_metadata() -> crate::Result<()> {
         let device = &Device::Cpu;
         let file = "edgWar40KAdeptaSororitas.safetensors";
         let buffer = load_file(file)?;
@@ -296,6 +340,80 @@ mod tests {
                 device
             )?
         );
+
+        assert_eq!(
+            0.7227786684427061,
+            lora_file.l2_norm::<f64>(
+                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
+                device
+            )?
+        );
+
+        assert_eq!(
+            0.7227786684427061,
+            lora_file.matrix_norm::<f64>(
+                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
+                device
+            )?
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn alpha_keys() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+
+        let mut alpha_keys = lora_file.alpha_keys();
+        alpha_keys.sort_by_key(|a| a.to_lowercase());
+
+        insta::assert_json_snapshot!(alpha_keys);
+
+        Ok(())
+    }
+
+    #[test]
+    fn alphas() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut compare_set = HashSet::new();
+        compare_set.insert(4);
+        assert_eq!(compare_set, lora_file.alphas());
+
+        Ok(())
+    }
+
+    #[test]
+    fn dims() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+
+        let mut compare_set = HashSet::new();
+        compare_set.insert(4);
+
+        assert_eq!(compare_set, lora_file.dims());
+
+        Ok(())
+    }
+
+    #[test]
+    fn base_names() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+
+        let mut base_names = lora_file.base_names();
+        base_names.sort_by_key(|a| a.to_lowercase());
+
+        insta::assert_json_snapshot!(base_names);
 
         Ok(())
     }

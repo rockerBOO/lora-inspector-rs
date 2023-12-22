@@ -1,0 +1,59 @@
+prefix =  { "lora_unet" | "lora_te_text_model_encoder" | "lora_te" ~ num ~ "_text_model_encoder" }
+num    =  { ASCII_DIGIT+ }
+sep    = _{ "_" }
+
+transformer_block = { "transformer_blocks" ~ sep ~ num }
+time_embedding    = { "time_embedding" ~ sep ~ "linear" ~ sep ~ num }
+layers            = { "layers" ~ sep ~ num }
+down_block        = { ("down_blocks") ~ sep ~ num }
+input_block       = { "input_blocks" ~ sep ~ num ~ sep ~ num }
+up_block          = { "up_blocks" ~ sep ~ num }
+output_block      = { "output_blocks" ~ sep ~ num ~ sep ~ num }
+mid_block         = { "mid_block" }
+middle_block      = { "middle_block" ~ sep ~ num }
+block             = { (layers | down_block | input_block | mid_block | middle_block | up_block | output_block) }
+
+attentions   = { "attentions" ~ sep ~ num }
+resnets      = { "resnets" ~ sep ~ num }
+upsamplers   = { "upsamplers" ~ sep ~ num }
+downsamplers = { "downsamplers" ~ sep ~ num }
+block_type   = { (resnets | attentions | upsamplers | downsamplers) }
+
+sub_sep       = _{ "." }
+attn          =  { "attn" ~ num }
+self_attn     =  { "self_attn" ~ sep ~ ("k_proj" | "out_proj" | "q_proj" | "v_proj") }
+mlp           =  { "mlp" }
+fc            =  { "fc" ~ num }
+to            =  { "to" ~ sep ~ ("v" | "k" | "q" | "out" ~ sep ~ num) }
+conv          =  { "conv" ~ num | "conv_shortcut" | "conv_in" | "conv_out" | "conv" }
+proj          =  { "proj_in" | "proj_out" }
+time_emb_proj =  { "time_emb_proj" }
+
+// Hada
+in_layer        = { "in_layers" ~ sep ~ num }
+out_layer       = { "out_layers" ~ sep ~ num }
+emb_layer       = { "emb_layers" ~ sep ~ num }
+op              = { "op" }
+skip_connection = { "skip_connection" }
+
+ff_net     = { "ff_net" ~ sep ~ num ~ (sep ~ "proj")? }
+hada_block = { in_layer | emb_layer | out_layer | skip_connection | op }
+sub_block  = { (self_attn | hada_block | mlp ~ sep ~ fc | (transformer_block ~ sep ~ (attn ~ sep ~ to | ff_net)) | proj | conv | time_emb_proj) }
+
+lora_up     = { "lora_up" }
+lora_down   = { "lora_down" }
+lora_weight = { (lora_up | lora_down) ~ sub_sep ~ "weight" }
+lora_alpha  = { "alpha" }
+
+hada_a = { "a" } 
+hada_b = { "b" }
+hada_weight = { "hada_w" ~ num ~ sep ~ (hada_a | hada_b) }
+
+oft_post  = { "oft_diag" }
+lokr_post = { "lokr_w" ~ num }
+hada_post = { hada_weight }
+lora_post = { (lora_weight | lora_alpha) }
+
+post = { sub_sep ~ (oft_post | lora_post | hada_post | lokr_post) }
+
+key = { SOI ~ prefix ~ sep ~ ((block ~ sep ~ (block_type ~ sep)? ~ sub_block) | conv | time_embedding) ~ post? ~ EOI }

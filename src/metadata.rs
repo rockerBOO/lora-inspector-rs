@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::network::{NetworkArgs, NetworkModule, NetworkType};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// #[wasm_bindgen]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
     size: usize,
     pub metadata: Option<HashMap<String, String>>,
@@ -14,11 +13,12 @@ pub struct Metadata {
 
 impl Metadata {
     pub fn new_from_buffer(buffer: &[u8]) -> crate::Result<Metadata> {
-        // console::log_1(&format!("Reading metadata from buffer {}", buffer.len()).into());
-        Ok(SafeTensors::read_metadata(buffer).map(|(size, metadata)| Metadata {
-            size,
-            metadata: metadata.metadata().clone(),
-        })?)
+        Ok(
+            SafeTensors::read_metadata(buffer).map(|(size, metadata)| Metadata {
+                size,
+                metadata: metadata.metadata().clone(),
+            })?,
+        )
     }
 
     // pub fn get(&self, key: &str) -> Option<String> {
@@ -33,7 +33,10 @@ impl Metadata {
         match &self.metadata.as_ref().map(|v| v.get("ss_network_args")) {
             Some(Some(network_args)) => match serde_json::from_str::<NetworkArgs>(network_args) {
                 Ok(network_args) => Some(network_args),
-                Err(_) => None,
+                Err(e) => {
+                    println!("{:#?}", e);
+                    None
+                }
             },
             _ => None,
         }
@@ -42,25 +45,25 @@ impl Metadata {
     pub fn network_type(&self) -> Option<NetworkType> {
         // try to discover the network type
         match self.network_module() {
-            Some(NetworkModule::KohyaSSLoRA) => match self.network_args() {
+            Some(NetworkModule::KohyaSSLoRA) => match dbg!(self.network_args()) {
                 Some(network_args) => match network_args.conv_dim {
                     // We need to make the name for LoCon/Lo-Curious
                     Some(_) => Some(NetworkType::LoRA),
                     None => Some(NetworkType::LoRA),
                 },
-                None => None,
+                None => Some(NetworkType::LoRA),
             },
-            Some(NetworkModule::Lycoris) => {
-                self.network_args()
-                    .and_then(|network_args| match network_args.algo().as_str() {
-                        "diag-oft" => Some(NetworkType::DiagOFT),
-                        "loha" => Some(NetworkType::LoHA),
-                        "lokr" => Some(NetworkType::LoKr),
-                        "glora" => Some(NetworkType::GLora),
-                        "glokr" => Some(NetworkType::GLoKr),
-                        _ => None,
-                    })
-            }
+            Some(NetworkModule::Lycoris) => self.network_args().and_then(|network_args| {
+                match network_args.algo.as_ref().map(|algo| algo.as_ref()) {
+                    Some("diag-oft") => Some(NetworkType::DiagOFT),
+                    Some("loha") => Some(NetworkType::LoHA),
+                    Some("lokr") => Some(NetworkType::LoKr),
+                    Some("glora") => Some(NetworkType::GLora),
+                    Some("glokr") => Some(NetworkType::GLoKr),
+                    Some(algo) => panic!("Invalid algo {}", algo),
+                    None => todo!(),
+                }
+            }),
             Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             None => None,
@@ -95,23 +98,165 @@ impl Metadata {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::fs::File;
-//
-//     use super::*;
-//     use memmap2::MmapOptions;
-//
-//     fn new_from_file(filename: &str) -> Result<Metadata, SafeTensorError> {
-//         let file = File::open(filename).unwrap();
-//         let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
-//         Metadata::new_from_buffer(&buffer)
-//     }
-//
-//     #[test]
-//     fn test_metadata() {
-//         let filename = "/mnt/900/lora/booscapes_v2.safetensors";
-//
-//         safetensors::SafeTensors::load()
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs::File,
+        io::{self, Read},
+    };
+
+    macro_rules! assert_err {
+        ($expression:expr, $($pattern:tt)+) => {
+            match $expression {
+                $($pattern)+ => (),
+                ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
+            }
+        }
+    }
+
+    use super::*;
+
+    fn load_test_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "boo.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_new_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "booscapes_v2.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_no_type() -> Result<Vec<u8>, io::Error> {
+        let filename = "/mnt/900/lora/Colorful-V1.5-scaled.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_no_meta_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "edgWar40KAdeptaSororitas.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    #[test]
+    fn load_from_invalid_buffer() -> crate::Result<()> {
+        let metadata = Metadata::new_from_buffer(&[1_u8]);
+
+        // Act
+
+        assert!(metadata.is_err());
+        assert_err!(metadata, Err(_));
+
+        Ok(())
+    }
+
+    #[test]
+    fn load_from_buffer() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer);
+
+        // Act
+
+        assert!(metadata.is_ok());
+        assert_err!(metadata, Ok(_));
+
+        Ok(())
+    }
+
+    #[test]
+    fn no_network_args() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        // println!("{:#?}", metadata.metadata.clone().unwrap());
+        //
+        // let network_args = .unwrap();
+        // let compare_network_args = NetworkArgs::new(None);
+
+        assert!(metadata.network_args().is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn network_args() -> crate::Result<()> {
+        let buffer = load_test_new_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        println!(
+            "{:#?}",
+            metadata.metadata.clone().unwrap().get("ss_network_args")
+        );
+
+        // let network_args = metadata.network_args().unwrap();
+        // let compare_network_args = NetworkArgs::new(None);
+
+        assert!(metadata.network_args().is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn network_type() -> crate::Result<()> {
+        let buffer = load_test_new_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        println!(
+            "{:#?}",
+            metadata.metadata.clone().unwrap().get("ss_network_module")
+        );
+
+        // let network_args = metadata.network_args().unwrap();
+        // let compare_network_args = NetworkArgs::new(None);
+
+        assert!(metadata.network_type().is_some());
+        assert_eq!(metadata.network_type().unwrap(), NetworkType::LoRA);
+
+        Ok(())
+    }
+
+    #[test]
+    fn no_network_type() -> crate::Result<()> {
+        let buffer = load_test_no_type()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        println!(
+            "{:#?}",
+            metadata.metadata.clone().unwrap().get("ss_network_module")
+        );
+
+        assert!(metadata.network_type().is_some());
+        assert_eq!(metadata.network_type().unwrap(), NetworkType::LoRA);
+
+        Ok(())
+    }
+
+
+    #[test]
+    fn no_meta_network_type() -> crate::Result<()> {
+        let buffer = load_test_no_meta_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        assert!(metadata.network_type().is_none());
+
+        Ok(())
+    }
+}

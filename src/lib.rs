@@ -4,7 +4,12 @@ use std::io;
 // use std::alloc::Global;
 use std::string::String;
 
-use wasm_bindgen::JsError;
+// use pest::Parser;
+use pest_derive::Parser;
+
+#[derive(Parser)]
+#[grammar = "key.pest"]
+pub struct KeyParser;
 
 // use candle_core::safetensors;
 // use std::error::Error;
@@ -83,7 +88,11 @@ pub fn get_base_name(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::get_base_name;
+
+    use std::fs;
+    use pest::Parser;
+
+    use crate::{get_base_name, KeyParser, Rule};
 
     #[test]
     fn get_base_name_test() {
@@ -96,5 +105,20 @@ mod tests {
 
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+    }
+
+    fn load_keys_json() -> serde_json::Result<Vec<String>> {
+        let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
+        serde_json::from_str::<Vec<String>>(&keys)
+    }
+
+    #[test]
+    fn test_key_parsing() {
+        let keys: Vec<String> = load_keys_json().unwrap();
+
+        for key in keys {
+            let successful_parse = KeyParser::parse(Rule::key, &key);
+            assert!(successful_parse.is_ok());
+        }
     }
 }
