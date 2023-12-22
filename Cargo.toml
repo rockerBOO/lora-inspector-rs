@@ -25,6 +25,8 @@ getrandom = { version = "0.2", features = ["js"] }
 serde_json = "1.0.108"
 num = "0.4.1"
 # web-sys = { version = "0.3.65", features = ["console"] }
+pest = "2.6"
+pest_derive = "2.6"
 
 [dependencies.web-sys]
 version = "0.3.65"

@@ -1,13 +1,14 @@
-extern crate console_error_panic_hook;
 use std::fmt;
 
 use candle_core::Device;
+use pest::Parser;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 use crate::file::LoRAFile;
 use crate::metadata::Metadata;
 use crate::network::NetworkModule;
+use crate::{KeyParser, Rule};
 
 #[wasm_bindgen]
 pub struct LoraWorker {
@@ -66,6 +67,13 @@ impl LoraWorker {
 
     pub fn base_names(&self) -> Vec<String> {
         self.file.base_names()
+    }
+
+    pub fn parse_key(&self, parse_key: &str) {
+        let successful_parse = KeyParser::parse(Rule::key, parse_key);
+        if let Ok(pairs) = successful_parse {
+            console::log_1(&format!("{:#?}", pairs).into());
+        }
     }
 
     pub fn l1_norm(&self, base_name: &str) -> Option<f64> {

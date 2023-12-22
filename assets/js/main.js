@@ -126,14 +126,52 @@ function MetaAttribute({ name, value, valueClassName, metadata }) {
   );
 }
 
-function Network({ metadata }) {
-  const networkArgs = metadata.has("ss_network_args")
-    ? JSON.stringify(JSON.parse(metadata.get("ss_network_args")))
-    : "";
+function Network({ metadata, filename }) {
+  const [alphas, setAlphas] = React.useState([
+    metadata.get("ss_network_alpha"),
+  ]);
+  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
+  const [networkModule, setNetworkModule] = React.useState(
+    metadata.get("ss_network_module"),
+  );
+  const [networkType, setNetworkType] = React.useState("");
+  const [networkArgs, setNetworkArgs] = React.useState(
+    metadata.has("ss_network_args")
+      ? JSON.parse(metadata.get("ss_network_args"))
+      : null,
+  );
 
   // TODO: date parsing isn't working right or the date is invalid
   // const trainingStart = new Date(Number.parseInt(metadata.get("ss_training_started_at"))).toLocaleString()
   // const trainingEnded = new Date(Number.parseInt(metadata.get("ss_training_ended_at"))).toLocaleString()
+
+  React.useEffect(() => {
+    trySyncMessage({ messageType: "alphas", name: mainFilename }).then(
+      (resp) => {
+        console.log("ALPHAS", resp);
+        setAlphas(resp.alphas);
+      },
+    );
+    trySyncMessage({ messageType: "dims", name: mainFilename }).then((resp) => {
+      console.log("DIMS", resp);
+      setDims(resp.dims);
+    });
+    trySyncMessage({ messageType: "network_args", name: mainFilename }).then(
+      (resp) => {
+        setNetworkArgs(resp.networkArgs);
+      },
+    );
+    trySyncMessage({ messageType: "network_module", name: mainFilename }).then(
+      (resp) => {
+        setNetworkModule(resp.networkModule);
+      },
+    );
+    trySyncMessage({ messageType: "network_type", name: mainFilename }).then(
+      (resp) => {
+        setNetworkType(resp.networkType);
+      },
+    );
+  }, []);
 
   return [
     h(
@@ -141,17 +179,21 @@ function Network({ metadata }) {
       { className: "row space-apart" }, //
       h(MetaAttribute, {
         name: "Network module",
-        value: metadata.get("ss_network_module"),
+        value: networkModule,
+      }),
+      h(MetaAttribute, {
+        name: "Network type",
+        value: networkType,
       }),
       h(MetaAttribute, {
         name: "Network Rank/Dimension",
         valueClassName: "rank",
-        value: metadata.get("ss_network_dim"),
+        value: dims.join(", "),
       }),
       h(MetaAttribute, {
         name: "Network Alpha",
         valueClassName: "alpha",
-        value: metadata.get("ss_network_alpha"),
+        value: alphas.join(", "),
       }),
       h(MetaAttribute, {
         name: "Network dropout",
@@ -165,7 +207,7 @@ function Network({ metadata }) {
       h(MetaAttribute, {
         name: "Network args",
         valueClassName: "args",
-        value: networkArgs,
+        value: JSON.stringify(networkArgs),
       }),
     ),
   ];
@@ -346,7 +388,7 @@ function Blocks({ metadata, filename }) {
         labels: dataset.map(([k, _]) => k),
         // Our series array that contains series objects or in this case series data arrays
         series: [
-          dataset.map(([_k, v]) => v),
+          dataset.map(([_k, v]) => v["mean"]),
           // dataset.map(([k, v]) => strBlocks.get(k)),
         ],
       };
@@ -429,15 +471,19 @@ function Blocks({ metadata, filename }) {
 
   if (!hasBlockWeights) {
     return h(
-      "button",
-      {
-        className: "primary",
-        onClick: (e) => {
-          e.preventDefault();
-          setHasBlockWeights((state) => (state ? false : true));
+      "div",
+      { className: "block-weights-container" },
+      h(
+        "button",
+        {
+          className: "primary",
+          onClick: (e) => {
+            e.preventDefault();
+            setHasBlockWeights((state) => (state ? false : true));
+          },
         },
-      },
-      "Get block weights",
+        "Get block weights",
+      ),
     );
   }
 
@@ -463,8 +509,8 @@ function Blocks({ metadata, filename }) {
               // }),
               h(MetaAttribute, {
                 className: "te-block",
-                name: `${k} norm`,
-                value: v.toPrecision(6),
+                name: `${k} norm ${v["metadata"]["type"]}`,
+                value: v["mean"].toPrecision(6),
                 valueClassName: "number",
               }),
             );
@@ -492,8 +538,8 @@ function Blocks({ metadata, filename }) {
             // }),
             h(MetaAttribute, {
               className: "unet-block",
-              name: `${k} average magnitude`,
-              value: v.toPrecision(6),
+              name: `${k} l2 norm  ${v["metadata"]["type"]}`,
+              value: v["mean"].toPrecision(6),
               valueClassName: "number",
             }),
           );
@@ -508,24 +554,30 @@ function Blocks({ metadata, filename }) {
     hasBlockWeights === true
   ) {
     const elapsedTime = performance.now() - startTime;
-		const remaining = ((elapsedTime * totalCount) / normProgress - elapsedTime * totalCount);
-		const perSecond = currentCount / (elapsedTime / 1_000);
+    const remaining =
+      (elapsedTime * totalCount) / normProgress - elapsedTime * totalCount;
+    const perSecond = currentCount / (elapsedTime / 1_000);
 
     return h(
       "div",
-      null,
+      { className: "block-weights-container" },
       // { className: "marquee" },
       h(
         "span",
         null,
         `Loading block weights... ${(normProgress * 100).toFixed(
           2,
-        )}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(remaining / 1_000_000).toFixed(2)}s remaining ${currentBaseName} `,
+        )}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(
+          remaining / 1_000_000
+        ).toFixed(2)}s remaining ${currentBaseName} `,
       ),
     );
   }
 
-  return [teBlockWeights, unetBlockWeights];
+  return h("div", { className: "block-weights-container" }, [
+    teBlockWeights,
+    unetBlockWeights,
+  ]);
 }
 
 function EpochStep({ metadata }) {
@@ -845,15 +897,118 @@ function Main({ metadata, filename }) {
   ]);
 }
 
+function Raw({ metadata, filename }) {
+  const [showRaw, setShowRaw] = React.useState(undefined);
+
+  if (showRaw) {
+    const entries = Object.fromEntries(metadata);
+
+    const sortedEntries = Object.keys(entries)
+      .sort()
+      .reduce((obj, key) => {
+        obj[key] = entries[key];
+        return obj;
+      }, {});
+
+    return h(
+      "div",
+      { className: "full-overlay" },
+      h("pre", null, JSON.stringify(sortedEntries, null, 2)),
+
+      h(
+        "div",
+        { className: "action-overlay" },
+        h(
+          "button",
+          {
+            className: "download",
+            onClick: () => {
+              sortedEntries;
+              const data =
+                "text/json;charset=utf-8," +
+                encodeURIComponent(JSON.stringify(sortedEntries, null, 2));
+              const a = document.createElement("a");
+              a.href = "data:" + data;
+              a.download = `${filename.replace(
+                ".safetensors",
+                "",
+              )}-metadata.json`;
+
+              var container = document.body;
+              container.appendChild(a);
+              a.click();
+
+              a.remove();
+            },
+          },
+          "Download",
+        ),
+        h(
+          "button",
+          {
+            className: "close",
+            onClick: () => {
+              setShowRaw(false);
+            },
+          },
+          "Close",
+        ),
+      ),
+    );
+  }
+
+  return h(
+    "div",
+    {
+      style: {
+        display: "grid",
+        "justify-items": "end",
+        "align-items": "flex-start",
+      },
+    },
+    h(
+      "button",
+      {
+        className: "secondary",
+        onClick: () => {
+          setShowRaw(true);
+        },
+      },
+      "Raw metadata",
+    ),
+  );
+}
+
+function Headline({ metadata, filename }) {
+  let raw;
+  if (metadata) {
+    raw = h(Raw, { metadata, filename });
+  }
+
+  return h("div", { className: "headline" }, [
+    h("div", null, h("div", null, "LoRA file"), h("h1", null, filename)),
+    raw,
+  ]);
+}
+
+function NoMetadata({ filename }) {
+  return h(
+    "main",
+    null,
+
+    h(Headline, { filename }),
+    [h(Weight, { filename })],
+  );
+}
+
 function Metadata({ metadata, filename }) {
-  console.log("METADATA FILENAME", filename);
   if (!metadata) {
-    return h("main", null, [h(Weight, { metadata, filename })]);
+    return h("main", {}, h(NoMetadata, { filename }));
   }
 
   return [
-    h("div", null, h("div", null, "LoRA file"), h("h1", null, filename)),
-    h(Header, { metadata }),
+    h(Headline, { metadata, filename }),
+    h(Header, { metadata, filename }),
     // h("div", {}, "wtf"),
     // h(Blocks, { metadata, buffer }),
     h(Main, { metadata, filename }),
@@ -994,6 +1149,7 @@ let uploadTimeoutHandler;
 async function processFile(file) {
   terminatePreviousProcessing();
 
+  mainFilename = undefined;
   worker.postMessage({ messageType: "file_upload", file: file });
   processingMetadata = true;
   const cancel = loading();
@@ -1012,19 +1168,25 @@ async function processFile(file) {
       // Setup some access points to the file
       // (we shouldn't hold on to the file handlers but just he metadata)
       files.set(file.name, file);
-      mainFilename = file.name;
+      mainFilename = e.data.filename;
 
-      handleMetadata(e.data.metadata, file.name);
-      worker.postMessage({ messageType: "network_module", name: mainFilename });
-      worker.postMessage({ messageType: "network_args", name: mainFilename });
-      worker.postMessage({ messageType: "network_type", name: mainFilename });
-      worker.postMessage({ messageType: "weight_keys", name: mainFilename });
-      worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
-      worker.postMessage({ messageType: "keys", name: mainFilename });
-      worker.postMessage({ messageType: "base_names", name: mainFilename });
-      worker.postMessage({ messageType: "weight_norms", name: mainFilename });
-      worker.postMessage({ messageType: "alphas", name: mainFilename });
-      worker.postMessage({ messageType: "dims", name: mainFilename });
+      console.log(":) :) MAIN FILENAME :) :) ", mainFilename);
+
+      handleMetadata(e.data.metadata, file.name).then(() => {
+        worker.postMessage({
+          messageType: "network_module",
+          name: mainFilename,
+        });
+        worker.postMessage({ messageType: "network_args", name: mainFilename });
+        worker.postMessage({ messageType: "network_type", name: mainFilename });
+        worker.postMessage({ messageType: "weight_keys", name: mainFilename });
+        worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
+        worker.postMessage({ messageType: "keys", name: mainFilename });
+        worker.postMessage({ messageType: "base_names", name: mainFilename });
+        worker.postMessage({ messageType: "weight_norms", name: mainFilename });
+        // worker.postMessage({ messageType: "alphas", name: mainFilename });
+        // worker.postMessage({ messageType: "dims", name: mainFilename });
+      });
       finishLoading();
     } else {
       // console.log("UNHANDLED MESSAGE", e.data);
@@ -1139,7 +1301,7 @@ function closeErrorMessage() {
 
 async function trySyncMessage(message) {
   return new Promise((resolve) => {
-    worker.postMessage(message);
+    worker.postMessage({ ...message, reply: true });
 
     const workerHandler = (e) => {
       if (e.data.messageType === message.messageType) {
@@ -1147,6 +1309,8 @@ async function trySyncMessage(message) {
         resolve(e.data);
       }
     };
+
+    console.log("Attaching sync message for ", message);
 
     worker.addEventListener("message", workerHandler);
   });
