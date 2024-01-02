@@ -117,6 +117,8 @@ impl WeightKey for BufferedLoRAWeight {
         self.weight_keys()
             .iter()
             .map(|name| get_base_name(name))
+            .collect::<HashSet<String>>()
+            .into_iter()
             .collect()
     }
 }
@@ -329,10 +331,13 @@ impl Weight for BufferedLoRAWeight {
     }
 
     fn shapes(&self) -> HashMap<String, Vec<usize>> {
-        self.buffered.tensors().iter().fold(HashMap::new(), |mut acc, (k, t)| {
-            acc.insert(k.to_string(), t.shape().to_vec());
-            acc
-        })
+        self.buffered
+            .tensors()
+            .iter()
+            .fold(HashMap::new(), |mut acc, (k, t)| {
+                acc.insert(k.to_string(), t.shape().iter().cloned().collect());
+                acc
+            })
     }
 }
 
@@ -447,6 +452,8 @@ impl WeightKey for LoRAWeight {
         self.weight_keys()
             .iter()
             .map(|name| get_base_name(name))
+            .collect::<HashSet<String>>()
+            .into_iter()
             .collect()
     }
 }
