@@ -96,7 +96,6 @@ impl LoraWorker {
         }
     }
 
-
     // TODO: Rename this function please
     pub fn scaled(&mut self, base_name: &str, scaled_funcs: Vec<String>) -> crate::Result<JsValue> {
         let scaled = self.file.scaled::<f64>(

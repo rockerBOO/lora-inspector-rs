@@ -103,16 +103,20 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "l2_norm") {
-        getL2Norms(e).then((norms) => {
-          if (e.data.reply) {
-            self.postMessage({
-              messageType: "l2_norm",
-              norms,
-            });
-          }
-        });
+				// We must lock if we are getting scaled weights 
+        await navigator.locks.request(`scaled-weights`, async (lock) => {
+					getL2Norms(e).then((norms) => {
+						if (e.data.reply) {
+							self.postMessage({
+								messageType: "l2_norm",
+								norms,
+							});
+						}
+					});
+				});
       } else if (e.data.messageType === "norms") {
-        await navigator.locks.request(`norms`, async (lock) => {
+				// We must lock if we are getting scaled weights 
+        await navigator.locks.request(`scaled-weights`, async (lock) => {
           getNorms(e).then((norms) => {
             if (e.data.reply) {
               self.postMessage({
@@ -263,8 +267,6 @@ async function getNorms(e) {
     "std_dev",
     "median",
   ]);
-
-  console.log("scaled norms", scaled);
 
   return scaled;
 }
