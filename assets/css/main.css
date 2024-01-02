@@ -186,7 +186,7 @@ h1 {
 
 .hash {
   max-width: 10em;
-  overflow: scroll;
+  overflow: hidden;
 }
 
 .lr {
@@ -204,7 +204,7 @@ h1 {
 }
 
 .args {
-  overflow: scroll;
+  overflow: auto;
   max-height: 10em;
   word-break: break-all;
   max-width: 100%;
@@ -468,6 +468,11 @@ text.ct-label {
 	display: grid;
 	grid-gap: 1em;
 	grid-auto-flow: column;
+}
+
+.bucket-infos {
+	display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
 }
 
 /* .download { */

@@ -1,13 +1,3 @@
-// import init, {
-//   // get_metadata,
-//   // get_average_magnitude,
-//   // get_average_strength,
-//   // get_average_magnitude_by_block,
-//   // get_average_strength_by_block,
-// } from "/pkg/lora_inspector_rs.js";
-//
-// const { startup } = wasm_bindgen;
-
 const h = React.createElement;
 
 function Header({ metadata }) {
@@ -127,10 +117,6 @@ function MetaAttribute({ name, value, valueClassName, metadata }) {
 }
 
 function Network({ metadata, filename }) {
-  const [alphas, setAlphas] = React.useState([
-    metadata.get("ss_network_alpha"),
-  ]);
-  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
   const [networkModule, setNetworkModule] = React.useState(
     metadata.get("ss_network_module"),
   );
@@ -141,21 +127,11 @@ function Network({ metadata, filename }) {
       : null,
   );
 
-  // TODO: date parsing isn't working right or the date is invalid
+  // // TODO: date parsing isn't working right or the date is invalid
   // const trainingStart = new Date(Number.parseInt(metadata.get("ss_training_started_at"))).toLocaleString()
   // const trainingEnded = new Date(Number.parseInt(metadata.get("ss_training_ended_at"))).toLocaleString()
 
   React.useEffect(() => {
-    trySyncMessage({ messageType: "alphas", name: mainFilename }).then(
-      (resp) => {
-        console.log("ALPHAS", resp);
-        setAlphas(resp.alphas);
-      },
-    );
-    trySyncMessage({ messageType: "dims", name: mainFilename }).then((resp) => {
-      console.log("DIMS", resp);
-      setDims(resp.dims);
-    });
     trySyncMessage({ messageType: "network_args", name: mainFilename }).then(
       (resp) => {
         setNetworkArgs(resp.networkArgs);
@@ -173,6 +149,14 @@ function Network({ metadata, filename }) {
     );
   }, []);
 
+  let networkOptions;
+
+  if (networkType === "DiagOFT") {
+    networkOptions = h(DiagOFTNetwork, { metadata });
+  } else {
+    networkOptions = h(LoRANetwork, { metadata });
+  }
+
   return [
     h(
       "div",
@@ -185,16 +169,7 @@ function Network({ metadata, filename }) {
         name: "Network type",
         value: networkType,
       }),
-      h(MetaAttribute, {
-        name: "Network Rank/Dimension",
-        valueClassName: "rank",
-        value: dims.join(", "),
-      }),
-      h(MetaAttribute, {
-        name: "Network Alpha",
-        valueClassName: "alpha",
-        value: alphas.join(", "),
-      }),
+      networkOptions,
       h(MetaAttribute, {
         name: "Network dropout",
         valueClassName: "number",
@@ -210,20 +185,68 @@ function Network({ metadata, filename }) {
         value: JSON.stringify(networkArgs),
       }),
     ),
+    // h("div", {}, [
+    //   h("div", { title: "seed" }, metadata.get("ss_seed")),
+    //   h("div", { title: "Training started at" }, trainingStart),
+    //   h("div", { title: "Training ended at" }, trainingEnded),
+    // ]),
   ];
-  // h("div", {}, [
-  // h("div", { title: "seed" }, metadata.get("ss_seed")),
-  //    h(
-  //      "div",
-  //      { title: "Training started at" },
-  //      trainingStart,
-  //    ),
-  //    h(
-  //      "div",
-  //      { title: "Training ended at" },
-  // trainingEnded
-  //    ),
-  // ]),
+}
+
+function DiagOFTNetwork({ metadata }) {
+  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
+  React.useEffect(() => {
+    trySyncMessage({ messageType: "dims", name: mainFilename }).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
+  return [
+    h(MetaAttribute, {
+      name: "Network blocks",
+      valueClassName: "rank",
+      value: dims.join(", "),
+    }),
+  ];
+}
+
+function LoRANetwork({ metadata }) {
+  const [alphas, setAlphas] = React.useState([
+    metadata.get("ss_network_alpha"),
+  ]);
+  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
+  React.useEffect(() => {
+    trySyncMessage({ messageType: "alphas", name: mainFilename }).then(
+      (resp) => {
+        setAlphas(resp.alphas);
+      },
+    );
+    trySyncMessage({ messageType: "dims", name: mainFilename }).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
+
+  return [
+    h(MetaAttribute, {
+      name: "Network Rank/Dimension",
+      valueClassName: "rank",
+      value: dims.join(", "),
+    }),
+    h(MetaAttribute, {
+      name: "Network Alpha",
+      valueClassName: "alpha",
+      value: alphas
+        .map((alpha) => {
+          if (typeof alpha === "number") {
+            return alpha.toPrecision(2);
+          } else if (alpha.includes(".")) {
+            return parseFloat(alpha).toPrecision(2);
+          } else {
+            return parseInt(alpha);
+          }
+        })
+        .join(", "),
+    }),
+  ];
 }
 
 function LRScheduler({ metadata }) {
@@ -272,6 +295,7 @@ function Optimizer({ metadata }) {
 }
 
 function Weight({ metadata, filename }) {
+  const [precision, setPrecision] = React.useState("");
   // const [averageStrength, setAverageStrength] = React.useState(undefined);
   // const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
@@ -279,6 +303,14 @@ function Weight({ metadata, filename }) {
   //   setAverageStrength(get_average_strength(buffer));
   //   setAverageMagnitude(get_average_magnitude(buffer));
   // }, []);
+
+  React.useEffect(() => {
+    trySyncMessage({ messageType: "precision", name: mainFilename }).then(
+      (resp) => {
+        setPrecision(resp.precision);
+      },
+    );
+  }, []);
 
   if (!metadata) {
     return h(Blocks, { metadata, filename });
@@ -296,11 +328,11 @@ function Weight({ metadata, filename }) {
         valueClassName: "number",
         value: metadata.get("ss_scale_weight_norms"),
       }),
-      // h(MetaAttribute, {
-      //   name: "Average vector strength, UNet + TE",
-      //   valueClassName: "number",
-      //   value: averageStrength?.toPrecision(4),
-      // }),
+      h(MetaAttribute, {
+        name: "Precision",
+        valueClassName: "number",
+        value: precision,
+      }),
       // h(MetaAttribute, {
       //   name: "Average vector magnitude, UNet + TE",
       //   valueClassName: "number",
@@ -327,6 +359,7 @@ function Blocks({ metadata, filename }) {
   const [totalCount, setTotalCount] = React.useState(0);
   const [startTime, setStartTime] = React.useState(undefined);
   const [currentBaseName, setCurrentBaseName] = React.useState("");
+  const [canHaveBlockWeights, setCanHaveBlockWeights] = React.useState(false);
 
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
@@ -356,6 +389,27 @@ function Blocks({ metadata, filename }) {
 
     return function cleanup() {};
   }, [hasBlockWeights]);
+
+  React.useEffect(() => {
+    trySyncMessage({
+      messageType: "network_type",
+      name: filename,
+      reply: true,
+    }).then((resp) => {
+      if (resp.networkType === "LoRA" || resp.networkType === "LoRAFA") {
+        setCanHaveBlockWeights(true);
+        trySyncMessage({
+          messageType: "precision",
+          name: filename,
+          reply: true,
+        }).then((resp) => {
+          if (resp.precision == "bf16") {
+            setCanHaveBlockWeights(false);
+          }
+        });
+      }
+    });
+  }, []);
 
   React.useEffect(() => {
     if (!hasBlockWeights) {
@@ -467,9 +521,13 @@ function Blocks({ metadata, filename }) {
     }
   }, [teMagBlocks, teStrBlocks, unetMagBlocks, unetStrBlocks]);
 
-  // console.log(teMagBlocks, unetMagBlocks);
-
-  if (!hasBlockWeights) {
+  if (!canHaveBlockWeights) {
+    return h(
+      "div",
+      { className: "block-weights-container" },
+      "Block weights not supported for this network type or precision.",
+    );
+  } else if (!hasBlockWeights) {
     return h(
       "div",
       { className: "block-weights-container" },
@@ -491,7 +549,7 @@ function Blocks({ metadata, filename }) {
 
   if (teMagBlocks.size > 0) {
     teBlockWeights = [
-      h("h3", {}, "Text Encoder Block Weights"),
+      h("h3", {}, "Text encoder block weights"),
       h("div", { ref: teChartRef, className: "chart" }),
       h(
         "div",
@@ -509,7 +567,7 @@ function Blocks({ metadata, filename }) {
               // }),
               h(MetaAttribute, {
                 className: "te-block",
-                name: `${k} norm ${v["metadata"]["type"]}`,
+                name: `${k} avg l2 norm ${v["metadata"]["type"]}`,
                 value: v["mean"].toPrecision(6),
                 valueClassName: "number",
               }),
@@ -522,7 +580,7 @@ function Blocks({ metadata, filename }) {
   let unetBlockWeights = [];
   if (unetMagBlocks.size > 0) {
     unetBlockWeights = [
-      h("h3", {}, "UNet Block Weights"),
+      h("h3", {}, "UNet block weights"),
       h("div", { ref: unetChartRef, className: "chart" }),
       h(
         "div",
@@ -538,7 +596,7 @@ function Blocks({ metadata, filename }) {
             // }),
             h(MetaAttribute, {
               className: "unet-block",
-              name: `${k} l2 norm  ${v["metadata"]["type"]}`,
+              name: `${k} avg l2 norm  ${v["metadata"]["type"]}`,
               value: v["mean"].toPrecision(6),
               valueClassName: "number",
             }),
@@ -656,6 +714,16 @@ function Noise({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_adaptive_noise_scale"),
     }),
+    h(MultiresNoise, { metadata }),
+  ]);
+}
+
+function MultiresNoise({ metadata }) {
+  if (metadata.get("ss_multires_noise_iterations") === "None") {
+    return [];
+  }
+
+  return [
     h(MetaAttribute, {
       name: "MultiRes Noise Iterations",
       valueClassName: "number",
@@ -666,7 +734,7 @@ function Noise({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_multires_noise_discount"),
     }),
-  ]);
+  ];
 }
 
 function Loss({ metadata }) {
@@ -764,7 +832,7 @@ function Buckets({ dataset, metadata }) {
 }
 
 function BucketInfo({ metadata, dataset }) {
-  return [
+  return h("div", { className: "bucket-infos" }, [
     Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
       return h(
         "div",
@@ -777,7 +845,7 @@ function BucketInfo({ metadata, dataset }) {
         }),
       );
     }),
-  ];
+  ]);
 }
 
 function Subset({ subset, metadata }) {
@@ -878,9 +946,225 @@ function TagFrequency({ tagFrequency, metadata }) {
     });
 }
 
+function Advanced({ metadata, filename }) {
+  const [baseNames, setBaseNames] = React.useState([]);
+  const [showBaseNames, setShowBlockNames] = React.useState(false);
+
+  const [textEncoderKeys, setTextEncoderKeys] = React.useState([]);
+  const [showTextEncoderKeys, setShowTextEncoderKeys] = React.useState(false);
+
+  const [unetKeys, setUnetKeys] = React.useState([]);
+  const [showUnetKeys, setShowUnetKeys] = React.useState(false);
+
+  const [allKeys, setAllKeys] = React.useState([]);
+  const [showAllKeys, setShowAllKeys] = React.useState(false);
+
+  React.useEffect(() => {
+    trySyncMessage({ messageType: "base_names", name: filename }).then(
+      (resp) => {
+        resp.baseNames.sort();
+        console.log(resp.baseNames);
+        setBaseNames(resp.baseNames);
+      },
+    );
+
+    trySyncMessage({ messageType: "text_encoder_keys", name: filename }).then(
+      (resp) => {
+        resp.textEncoderKeys.sort();
+        console.log(resp.textEncoderKeys);
+        setTextEncoderKeys(resp.textEncoderKeys);
+      },
+    );
+
+    trySyncMessage({ messageType: "unet_keys", name: filename }).then(
+      (resp) => {
+        resp.unetKeys.sort();
+        console.log(resp.unetKeys);
+        setUnetKeys(resp.unetKeys);
+      },
+    );
+
+    trySyncMessage({ messageType: "keys", name: filename }).then((resp) => {
+      resp.keys.sort();
+
+      setAllKeys(resp.keys);
+    });
+  }, []);
+
+  return [
+    h("h2", null, "Advanced"),
+    h(
+      "div",
+      { className: "row" },
+      h(
+        "div",
+        null,
+        showBaseNames
+          ? h(BaseNames, { baseNames })
+          : h("div", null, `Base name keys: ${baseNames.length}`),
+      ),
+      h(
+        "div",
+        null,
+        showTextEncoderKeys
+          ? h(TextEncoderKeys, { textEncoderKeys })
+          : h("div", null, `Text encoder keys: ${textEncoderKeys.length}`),
+      ),
+      h(
+        "div",
+        null,
+        showUnetKeys
+          ? h(UnetKeys, { unetKeys })
+          : h("div", null, `Unet keys: ${unetKeys.length}`),
+      ),
+      h(
+        "div",
+        null,
+        showAllKeys
+          ? h(AllKeys, { allKeys })
+          : h("div", null, `All keys: ${allKeys.length}`),
+      ),
+    ),
+    h(Statistics, { baseNames, filename }),
+  ];
+}
+
+let progress = 0;
+
+function Statistics({ baseNames, filename }) {
+  const [bases, setBases] = React.useState([]);
+
+  React.useEffect(() => {
+    if (baseNames.length === 0) {
+      return;
+    }
+
+    Promise.all(
+      baseNames.map(async (baseName) => {
+        return trySyncMessage(
+          { messageType: "norms", name: filename, baseName },
+          ["messageType", "baseName"],
+        ).then((resp) => {
+          progress += 1;
+          console.log("progress", progress / baseNames.length, resp);
+          return { baseName: resp.baseName, stat: resp.norms };
+        });
+      }),
+    ).then((bases) => {
+      progress = 0;
+      setBases(bases);
+    });
+  }, [baseNames]);
+
+  console.log("bases", bases);
+
+  // -0.0028378788847476244	0.0024839998222887516
+  //
+  // -2.8 2.4
+  // -28 24
+  // 2
+  //
+
+  return h("table", null, [
+    h("thead", null, [
+      h("th", null, "base name"),
+      h("th", null, "min"),
+      h("th", null, "max"),
+      h("th", null, "median"),
+      h("th", null, "std_dev"),
+    ]),
+    bases.map((base) => {
+      return h(StatisticRow, {
+        baseName: base.baseName,
+        min: base.stat.get("min"),
+        max: base.stat.get("max"),
+        median: base.stat.get("median"),
+        stdDev: base.stat.get("std_dev"),
+        filename,
+      });
+    }),
+  ]);
+}
+
+function StatisticRow({ baseName, min, max, median, stdDev, filename }) {
+  console.log("statistics row", {
+    baseName,
+    min,
+    max,
+    median,
+    stdDev,
+    filename,
+  });
+  return h(
+    "tr",
+    null,
+    h("td", null, baseName),
+    h("td", null, min.toPrecision(4)),
+    h("td", null, max.toPrecision(4)),
+    h("td", null, median.toPrecision(4)),
+    h("td", null, stdDev.toPrecision(4)),
+  );
+}
+
+function UnetKeys({ unetKeys }) {
+  return [
+    h("h3", null, "UNet keys"),
+    h(
+      "ul",
+      null,
+      unetKeys.map((unetKeys) => {
+        return h("li", null, unetKeys);
+      }),
+    ),
+  ];
+}
+function TextEncoderKeys({ textEncoderKeys }) {
+  return [
+    h("h3", null, "Text encoder keys"),
+    h(
+      "ul",
+      null,
+      textEncoderKeys.map((textEncoderKeys) => {
+        return h("li", null, textEncoderKeys);
+      }),
+    ),
+  ];
+}
+
+function BaseNames({ baseNames }) {
+  return [
+    h("h3", null, "Base names"),
+    h(
+      "ul",
+      null,
+      baseNames.map((baseName) => {
+        return h("li", null, baseName);
+      }),
+    ),
+  ];
+}
+
+function AllKeys({ allkeys }) {
+  return [
+    h("h3", null, "All keys"),
+    h(
+      "ul",
+      null,
+      allKeys.map((key) => {
+        return h("li", null, key);
+      }),
+    ),
+  ];
+}
+
 function Main({ metadata, filename }) {
   if (!metadata) {
-    return h("main", null, [h(Weight, { metadata, filename })]);
+    return h("main", null, [
+      h("div", null, "No metadata for this file"),
+      h(Headline, { filename }),
+      h(Weight, { metadata, filename }),
+      h(Advanced, { metadata, filename }),
+    ]);
   }
 
   return h("main", null, [
@@ -894,6 +1178,7 @@ function Main({ metadata, filename }) {
     h(Noise, { metadata }),
     h(Loss, { metadata }),
     h(Dataset, { metadata }),
+    h(Advanced, { metadata, filename }),
   ]);
 }
 
@@ -1003,14 +1288,12 @@ function NoMetadata({ filename }) {
 
 function Metadata({ metadata, filename }) {
   if (!metadata) {
-    return h("main", {}, h(NoMetadata, { filename }));
+    return h(Main, { metadata, filename });
   }
 
   return [
     h(Headline, { metadata, filename }),
     h(Header, { metadata, filename }),
-    // h("div", {}, "wtf"),
-    // h(Blocks, { metadata, buffer }),
     h(Main, { metadata, filename }),
   ];
 }
@@ -1130,7 +1413,6 @@ wasm_bindgen().then(() => {
 });
 
 async function handleMetadata(metadata, filename) {
-  console.log("HANDLE METADATA", filename);
   dropbox.classList.remove("box__open");
   dropbox.classList.add("box__closed");
   document.querySelector("#jumbo").classList.remove("jumbo__intro");
@@ -1169,8 +1451,6 @@ async function processFile(file) {
       // (we shouldn't hold on to the file handlers but just he metadata)
       files.set(file.name, file);
       mainFilename = e.data.filename;
-
-      console.log(":) :) MAIN FILENAME :) :) ", mainFilename);
 
       handleMetadata(e.data.metadata, file.name).then(() => {
         worker.postMessage({
@@ -1299,18 +1579,25 @@ function closeErrorMessage() {
   }
 }
 
-async function trySyncMessage(message) {
+async function trySyncMessage(message, matches = []) {
   return new Promise((resolve) => {
     worker.postMessage({ ...message, reply: true });
 
     const workerHandler = (e) => {
-      if (e.data.messageType === message.messageType) {
+      if (matches.length > 0) {
+        const hasMatches =
+          matches.filter((match) => e.data[match] === message[match]).length ===
+          matches.length;
+        // console.log("hasMatches", hasMatches);
+        if (hasMatches) {
+          worker.removeEventListener("message", workerHandler);
+          resolve(e.data);
+        }
+      } else if (e.data.messageType === message.messageType) {
         worker.removeEventListener("message", workerHandler);
         resolve(e.data);
       }
     };
-
-    console.log("Attaching sync message for ", message);
 
     worker.addEventListener("message", workerHandler);
   });
@@ -1347,7 +1634,3 @@ async function listenProgress(messageType) {
     });
   };
 }
-
-// async function getBlockWeights() {
-//   return ;
-// }
