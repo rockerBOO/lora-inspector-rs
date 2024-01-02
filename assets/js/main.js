@@ -963,7 +963,6 @@ function Advanced({ metadata, filename }) {
     trySyncMessage({ messageType: "base_names", name: filename }).then(
       (resp) => {
         resp.baseNames.sort();
-        console.log(resp.baseNames);
         setBaseNames(resp.baseNames);
       },
     );
@@ -971,7 +970,7 @@ function Advanced({ metadata, filename }) {
     trySyncMessage({ messageType: "text_encoder_keys", name: filename }).then(
       (resp) => {
         resp.textEncoderKeys.sort();
-        console.log(resp.textEncoderKeys);
+        console.log("text encoder keys", resp.textEncoderKeys);
         setTextEncoderKeys(resp.textEncoderKeys);
       },
     );
@@ -979,7 +978,7 @@ function Advanced({ metadata, filename }) {
     trySyncMessage({ messageType: "unet_keys", name: filename }).then(
       (resp) => {
         resp.unetKeys.sort();
-        console.log(resp.unetKeys);
+        console.log("unet keys", resp.unetKeys);
         setUnetKeys(resp.unetKeys);
       },
     );
@@ -1039,6 +1038,7 @@ function Statistics({ baseNames, filename }) {
       return;
     }
 
+    console.time("get norms");
     Promise.all(
       baseNames.map(async (baseName) => {
         return trySyncMessage(
@@ -1053,17 +1053,9 @@ function Statistics({ baseNames, filename }) {
     ).then((bases) => {
       progress = 0;
       setBases(bases);
+      console.timeEnd("get norms");
     });
   }, [baseNames]);
-
-  console.log("bases", bases);
-
-  // -0.0028378788847476244	0.0024839998222887516
-  //
-  // -2.8 2.4
-  // -28 24
-  // 2
-  //
 
   return h("table", null, [
     h("thead", null, [
@@ -1080,21 +1072,12 @@ function Statistics({ baseNames, filename }) {
         max: base.stat.get("max"),
         median: base.stat.get("median"),
         stdDev: base.stat.get("std_dev"),
-        filename,
       });
     }),
   ]);
 }
 
-function StatisticRow({ baseName, min, max, median, stdDev, filename }) {
-  console.log("statistics row", {
-    baseName,
-    min,
-    max,
-    median,
-    stdDev,
-    filename,
-  });
+function StatisticRow({ baseName, min, max, median, stdDev }) {
   return h(
     "tr",
     null,
