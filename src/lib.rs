@@ -6,6 +6,7 @@ use std::string::String;
 
 // use pest::Parser;
 use pest_derive::Parser;
+use wasm_bindgen::JsValue;
 
 #[derive(Parser)]
 #[grammar = "key.pest"]
@@ -22,6 +23,7 @@ mod network;
 mod norms;
 mod weight;
 mod worker;
+mod statistic;
 
 pub type Result<T> = std::result::Result<T, InspectorError>;
 
@@ -32,6 +34,8 @@ pub enum InspectorError {
     Io(io::Error),
     Load(String),
     Msg(String),
+    UnsupportedNetworkType,
+    SerdeWasmBindgenError(serde_wasm_bindgen::Error),
 }
 
 impl InspectorError {
@@ -65,18 +69,49 @@ impl From<io::Error> for InspectorError {
 impl fmt::Display for InspectorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InspectorError::Candle(e) => write!(f, "Candle Error "),
-            InspectorError::SafeTensor(_) => write!(f, "SafeTensor Error"),
-            InspectorError::Io(_) => write!(f, "IO Error"),
+            InspectorError::Candle(e) => write!(f, "Candle Error {:#?}", e),
+            InspectorError::SafeTensor(e) => write!(f, "SafeTensor Error {:#?}", e),
+            InspectorError::SerdeWasmBindgenError(e) => {
+                write!(f, "Serde WASM Bindgen error: {}", e)
+            }
+            InspectorError::Io(e) => write!(f, "IO Error: {:#?}", e),
             InspectorError::Load(e) => write!(f, "Load Error {}", e),
             InspectorError::Msg(e) => write!(f, "Error {}", e),
+            InspectorError::UnsupportedNetworkType => write!(f, "Unsupported network type"),
         }
+    }
+}
+
+impl Into<JsValue> for InspectorError {
+    fn into(self) -> JsValue {
+        self.into()
+    }
+}
+
+impl From<serde_wasm_bindgen::Error> for InspectorError {
+    fn from(value: serde_wasm_bindgen::Error) -> Self {
+        InspectorError::SerdeWasmBindgenError(value)
     }
 }
 
 pub fn get_base_name(name: &str) -> String {
     name.split('.')
-        .filter(|part| !matches!(*part, "weight" | "lora_up" | "lora_down" | "alpha"))
+        .filter(|part| {
+            !matches!(
+                *part,
+                "weight"
+                    | "lora_up"
+                    | "lora_down"
+                    | "lokr_w1"
+                    | "lokr_w2"
+                    | "hada_w1_a"
+                    | "hada_w1_b"
+                    | "hada_w2_a"
+                    | "oft_diag"
+                    | "hada_w2_b"
+                    | "alpha"
+            )
+        })
         .fold(String::new(), |acc, v| {
             if acc.is_empty() {
                 v.to_owned()
@@ -89,8 +124,8 @@ pub fn get_base_name(name: &str) -> String {
 #[cfg(test)]
 mod tests {
 
-    use std::fs;
     use pest::Parser;
+    use std::fs;
 
     use crate::{get_base_name, KeyParser, Rule};
 
@@ -102,6 +137,27 @@ mod tests {
         let base_name =
             get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_down.weight");
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.hada_w1_a");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.lokr_w1");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.oft_diag");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
 
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
