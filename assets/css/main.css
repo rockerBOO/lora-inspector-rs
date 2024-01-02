@@ -27,6 +27,39 @@ main {
   max-width: 100vw;
 }
 
+button {
+  background-color: var(--accent-bg-color);
+  color: var(--color);
+  min-height: 3em;
+  border: 2px solid var(--accent-color);
+  box-shadow: 3px 3px 5px black;
+  border-radius: 0.25em;
+	padding: 0 0.75em ;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 1rem;
+  /* max-width: 10em; */
+  /* text-shadow: 1px 1px black; */
+	transition: all ease-in-out 96ms;
+}
+
+button:hover,
+button:focus {
+	outline: 6px solid #bf0;
+	color: white;
+	font-weight: bold;
+  /* text-shadow: 1px 1px 5px white; */
+}
+
+button:active {
+	transform: translate3d(1px, 1px, 0);
+}
+
+h1 {
+  text-shadow: 2px 2px black;
+  animation: fade-in 1s ease-in-out;
+}
+
 .note {
   font-size: 0.8em;
 }
@@ -40,6 +73,7 @@ main {
   background-blend-mode: overlay;
   background-position: center;
   background-size: 50vw;
+	transition: outline 240ms ease-in;
 }
 
 .box__open {
@@ -93,6 +127,13 @@ main {
   outline: 2px dashed var(--accent-color);
   outline-offset: -10px;
 }
+
+.box.has-advanced-upload:hover,.box.has-advanced-upload:focus {
+	/* outline-width: 4px; */
+	outline-color: var(--fg-color);
+	/* outline-offset: -5px; */
+
+}
 .box.has-advanced-upload .box__dragndrop {
   display: inline;
 }
@@ -100,7 +141,7 @@ main {
   display: none;
 }
 .box.is-dragover {
-  background-color: grey;
+  background-color: #3f6648;
 }
 
 .box__input label {
@@ -137,23 +178,33 @@ main {
 .alpha {
   font-size: 2em;
   font-weight: bold;
+  text-shadow: 2px 2px black;
+  animation:
+    0.5s ease-in-out slide-in,
+    1s ease-in-out fade-in;
 }
 
 .hash {
   max-width: 10em;
-  overflow: scroll;
+  overflow: hidden;
 }
 
 .lr {
   font-size: 1.5em;
+  font-weight: bold;
+  text-shadow: 2px 2px black;
 }
 
 .number {
   font-size: 1.5em;
+  text-shadow: 2px 2px black;
+  animation:
+    0.5s ease-in-out slide-in,
+    1s ease-in-out fade-in;
 }
 
 .args {
-  overflow: scroll;
+  overflow: auto;
   max-height: 10em;
   word-break: break-all;
   max-width: 100%;
@@ -223,9 +274,19 @@ main {
   background-color: var(--accent-bg-color);
 }
 
+.headline {
+	display: grid;
+	grid-template-columns: 8fr auto;
+}
+
+
 /** 
 * BLOCK WEIGHTS
 **/
+
+.block-weights-container {
+	min-height: 5em;
+}
 
 .block-weights {
   display: grid;
@@ -257,7 +318,8 @@ button.primary {
   box-shadow: 3px 3px 5px black;
   border-radius: 0.5em;
   font-size: 1rem;
-  max-width: 10em;
+  padding: 0 1em;
+  min-width: 12em;
   cursor: pointer;
   font-family: monospace;
 }
@@ -290,6 +352,7 @@ button.primary:active {
 .ct-label {
   color: var(--color);
   font-size: 0.8em;
+  text-shadow: 1px 1px black;
 }
 
 text.ct-label {
@@ -305,4 +368,223 @@ text.ct-label {
 .ct-label.ct-vertical.ct-start {
   text-align: center;
   justify-content: center;
+}
+
+.loading-overlay {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: hsla(170, 80%, 0%, 0.8);
+}
+
+.loading-file {
+  animation:
+    fade-in 1s ease-in,
+    rotate 1s infinite ease-in-out;
+  user-select: none;
+}
+
+.error-overlay {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: hsla(170, 80%, 0%, 0.9);
+  animation: 240ms fade-in ease-in-out;
+}
+
+.error-block {
+  display: grid;
+  grid-gap: 1em;
+  grid-template-areas: "error", "close";
+  grid-auto-flow: column;
+  align-items: center;
+  background-color: hsla(170, 80%, 0%, 0.9);
+  padding: 1em;
+  border-radius: 0.5em;
+}
+
+.error-block button {
+  grid-area: "close";
+}
+
+.error {
+  color: red;
+  grid-area: "error";
+}
+
+.marquee {
+  width: 100%;
+  margin: 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.marquee span {
+  display: inline-block;
+  padding-left: 100%;
+  will-change: transform;
+  animation:
+    marquee 10s linear infinite,
+    fade-in-out 10s ease-in-out infinite;
+}
+
+.full-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	max-width: 100vw;
+	max-height: 100vh;
+	overflow: scroll;
+	scroll-padding-bottom: 1em;
+}
+
+.full-overlay pre {
+	max-width: 100%;
+	max-height: 100%;
+	margin: 0;
+	padding: 1em;
+}
+
+.action-overlay {
+	position: fixed;
+	top: 0;
+	right: 0;
+	padding: 1em;
+	display: grid;
+	grid-gap: 1em;
+	grid-auto-flow: column;
+}
+
+.bucket-infos {
+	display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
+}
+
+/* .download { */
+/**/
+/* } */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    filter: blur(24px) saturate(0%);
+  }
+
+  50% {
+    filter: blur(1px) saturate(100%);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0px) saturate(100%);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.8);
+  }
+
+  25% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translate3d(-2em, 0, 0);
+  }
+
+  25% {
+    transform: translate3d(-0.4em, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0em, 0, 0);
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0);
+  }
+
+  25% {
+    transform: rotate(0);
+  }
+
+  75% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes fade-in-out {
+  from {
+    opacity: 0;
+    filter: blur(24px) saturate(0%);
+  }
+
+  10% {
+    filter: blur(1px) saturate(100%);
+  }
+
+  50% {
+    opacity: 1;
+    filter: blur(0px) saturate(100%);
+  }
+  10% {
+    filter: blur(1px) saturate(100%);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(24px) saturate(0%);
+  }
+}
+
+@keyframes glitch {
+  30% {
+    transform: translate3d(0, 0, 0), rotate3d(0);
+  }
+  35% {
+    transform: translate3d(0, 5px, 0), rotate3d(2deg);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0), rotate3d(-2deg);
+  }
+  55% {
+    transform: translate3d(0, 0, 0), rotate3d(0);
+  }
 }
