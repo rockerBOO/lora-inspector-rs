@@ -933,9 +933,13 @@ function Subset({ subset, metadata }) {
 }
 
 function TagFrequency({ tagFrequency, metadata }) {
-  return Object.entries(tagFrequency)
-    .sort((a, b) => a[1] < b[1])
-    .map(([tag, count], i) => {
+  const [showMore, setShowMore] = React.useState(false);
+
+  const allTags = Object.entries(tagFrequency).sort((a, b) => a[1] < b[1]);
+  const sortedTags = showMore == false ? allTags.slice(0, 50) : allTags;
+
+  return [
+    sortedTags.map(([tag, count], i) => {
       const alt = i % 2 > 0 ? " alt-row" : "";
       return h(
         "div",
@@ -943,7 +947,32 @@ function TagFrequency({ tagFrequency, metadata }) {
         h("div", {}, count),
         h("div", {}, tag),
       );
-    });
+    }),
+    h(
+      "div",
+      null,
+      showMore === false && allTags.length > sortedTags.length
+        ? h(
+            "button",
+            {
+              onClick: () => {
+                setShowMore(true);
+              },
+            },
+            "Show more",
+          )
+        : showMore === true &&
+            h(
+              "button",
+              {
+                onClick: () => {
+                  setShowMore(false);
+                },
+              },
+              "Show less",
+            ),
+    ),
+  ];
 }
 
 function Advanced({ metadata, filename }) {

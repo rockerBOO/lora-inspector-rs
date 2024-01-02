@@ -248,6 +248,7 @@ async function getBaseNames(e) {
   const loraWorker = loraWorkers.get(name);
 
   const baseNames = loraWorker.base_names();
+	// baseNames.forEach(baseName => loraWorker.parse_key(baseName));
 
   return baseNames;
 }
