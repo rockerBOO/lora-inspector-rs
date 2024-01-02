@@ -1,11 +1,12 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use candle_core::{DType, Device};
-use web_sys::console;
 
 use crate::{
-    norms::{l1, l2, matrix_norm},
-    weight::{BufferedLoRAWeight, Weight, WeightKey},
+    metadata::Metadata,
+    network::NetworkType,
+    norms::{self, l1, l2, matrix_norm},
+    weight::{Alpha, BufferedLoRAWeight, Weight, WeightKey},
     InspectorError, Result,
 };
 
@@ -14,17 +15,22 @@ use crate::{
 pub struct LoRAFile {
     filename: String,
     weights: Option<BufferedLoRAWeight>,
+    scaled_weights: HashMap<String, candle_core::Tensor>,
+    metadata: Option<Metadata>,
 }
 
 const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
 
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: String) -> LoRAFile {
+        let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
         LoRAFile {
             filename,
             weights: BufferedLoRAWeight::new(buffer.to_vec())
                 .map(Some)
                 .unwrap_or_else(|_| None),
+            scaled_weights: HashMap::new(),
+            metadata: metadata.map(Some).unwrap_or_else(|_| None),
         }
     }
 
@@ -34,6 +40,20 @@ impl LoRAFile {
 
     pub fn filename(&self) -> String {
         self.filename.clone()
+    }
+
+    pub fn unet_keys(&self) -> Vec<String> {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.unet_keys())
+            .unwrap_or_default()
+    }
+
+    pub fn text_encoder_keys(&self) -> Vec<String> {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.text_encoder_keys())
+            .unwrap_or_default()
     }
 
     pub fn weight_keys(&self) -> Vec<String> {
@@ -50,7 +70,7 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn alphas(&self) -> HashSet<u32> {
+    pub fn alphas(&self) -> HashSet<Alpha> {
         self.weights
             .as_ref()
             .map(|weights| weights.alphas())
@@ -61,6 +81,13 @@ impl LoRAFile {
         self.weights
             .as_ref()
             .map(|weights| weights.dims())
+            .unwrap_or_default()
+    }
+
+    pub fn precision(&self) -> String {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.precision())
             .unwrap_or_default()
     }
 
@@ -78,51 +105,88 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
+    pub fn scaled<T: candle_core::WithDType>(
+        &mut self,
+        base_name: &str,
+        collection: Vec<norms::NormFn<T>>,
+        device: &Device,
+    ) -> Result<HashMap<String, Result<T>>> {
+        let scaled = self.scale_weight(base_name, device)?;
+        Ok(collection
+            .iter()
+            .map(|norm| (norm.name.to_owned(), (*norm.function)(scaled.clone())))
+            .fold(HashMap::new(), |mut acc, (k, t)| {
+                acc.insert(k, t);
+                acc
+            }))
+    }
+
     pub fn l2_norm<T: candle_core::WithDType>(
-        &self,
+        &mut self,
         base_name: &str,
         device: &Device,
     ) -> Result<T> {
-        match self.weights.as_ref() {
-            Some(weights) => weights
-                .scale_weight(base_name, device)
-                .map(|t| l2(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
-        }
+        self.scale_weight(base_name, device)
+            .and_then(|t| l2(&t.to_dtype(DType::F64)?))
     }
 
     pub fn l1_norm<T: candle_core::WithDType>(
-        &self,
+        &mut self,
         base_name: &str,
         device: &Device,
     ) -> Result<T> {
-        match self.weights.as_ref() {
-            Some(weights) => weights
-                .scale_weight(base_name, device)
-                .map(|t| l1(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
-        }
+        self.scale_weight(base_name, device)
+            .and_then(|t| l1(&t.to_dtype(DType::F64)?))
     }
 
     pub fn matrix_norm<T: candle_core::WithDType>(
-        &self,
+        &mut self,
         base_name: &str,
         device: &Device,
     ) -> Result<T> {
-        match self.weights.as_ref() {
-            Some(weights) => weights
-                .scale_weight(base_name, device)
-                .map(|t| matrix_norm(&t.to_dtype(DType::F64)?))?,
-            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
-        }
+        self.scale_weight(base_name, device)
+            .and_then(|t| matrix_norm(&t.to_dtype(DType::F64)?))
     }
 
-    // pub fn scale_weight(&self, name: &str, device: Device) -> Vec<String> {
-    //     self.weights
-    //         .as_ref()
-    //         .map(|weights| weights.scale_weight(name, device).ok())
-    //         .unwrap_or_default()
-    // }
+    pub fn scale_weight(
+        &mut self,
+        base_name: &str,
+        device: &Device,
+    ) -> Result<candle_core::Tensor> {
+        if let Some(tensor) = self.scaled_weights.get(base_name) {
+            return Ok(tensor.clone());
+        }
+
+        let scaled_weight = match self.weights.as_ref() {
+            Some(weights) => match self
+                .metadata
+                .as_ref()
+                .and_then(|metadata| metadata.network_type())
+            {
+                Some(NetworkType::LoRA) => Ok(weights.scale_lora_weight(base_name, device)?),
+                Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name, device)?),
+                Some(_) => Err(InspectorError::UnsupportedNetworkType),
+                None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
+            },
+            None => Err(InspectorError::Msg(WEIGHT_NOT_LOADED.to_string())),
+        };
+
+        let _ = scaled_weight.as_ref().is_ok_and(|scaled| {
+            self.scaled_weights
+                .insert(base_name.to_string(), scaled.clone())
+                .is_some()
+        });
+
+        scaled_weight
+
+        // match  {
+        //     Ok(scaled) => {
+        //         self.scaled_weights.insert(base_name.to_string(), scaled.clone());
+        //         scaled_weight
+        //     }
+        //     Err(e) => scaled_weight,
+        // };
+    }
 }
 
 #[cfg(test)]
@@ -144,7 +208,7 @@ mod tests {
 
     use candle_core::Device;
 
-    use crate::InspectorError;
+    use crate::{weight::Alpha, InspectorError};
 
     use super::LoRAFile;
 
@@ -382,7 +446,7 @@ mod tests {
         let filename = String::from(file);
         let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
         let mut compare_set = HashSet::new();
-        compare_set.insert(4);
+        compare_set.insert(Alpha(4.));
         assert_eq!(compare_set, lora_file.alphas());
 
         Ok(())

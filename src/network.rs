@@ -23,6 +23,7 @@ pub enum NetworkModule {
 pub enum NetworkType {
     LoRA,
     LoRAFA,
+    LoCon,
     LoHA,
     LoKr,
     IA3,
@@ -35,10 +36,6 @@ pub enum NetworkType {
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct NetworkArgs {
     pub algo: Option<String>,
-
-    #[serde(deserialize_with = "de_optional_bool_from_str")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rescale: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_f64_from_str_or_f64")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -61,9 +58,11 @@ pub struct NetworkArgs {
     pub conv_alpha: Option<f64>,
 
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_dims: Option<BlockUsizeSeq>,
 
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_alphas: Option<BlockUsizeSeq>,
 
     // #[serde(deserialize_with = "de_optional_vec_sequence_f64_from_str")]
@@ -80,6 +79,18 @@ pub struct NetworkArgs {
 
     // block_lr_zero_threshold=0.1
     pub drop_keys: Option<String>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_cp: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rescale: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constrain: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -272,17 +283,17 @@ impl FromStr for BlockUsizeSeq {
     }
 }
 
-fn de_optional_vec_sequence_f64_from_str<'de, D>(
-    deserializer: D,
-) -> Result<Option<BlockF64Seq>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    BlockF64Seq::from_str(&s)
-        .map(Some)
-        .map_err(de::Error::custom)
-}
+// fn de_optional_vec_sequence_f64_from_str<'de, D>(
+//     deserializer: D,
+// ) -> Result<Option<BlockF64Seq>, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     let s = String::deserialize(deserializer)?;
+//     BlockF64Seq::from_str(&s)
+//         .map(Some)
+//         .map_err(de::Error::custom)
+// }
 
 fn de_optional_vec_sequence_usize_from_str<'de, D>(
     deserializer: D,
@@ -323,24 +334,24 @@ where
     })
 }
 
-fn de_optional_lr_weight_from_str_or_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // let str = serde_json::Value::deserialize_str(deserializer);
-    // match deserializer.deserialize_str() {
-    //     Ok(_) => todo!(),
-    //     Err(_) => todo!(),
-    // }
-    Ok(match Value::deserialize(deserializer)? {
-        Value::String(s) => Some(s.parse().map_err(de::Error::custom)?),
-        Value::Number(num) => Some(
-            num.as_f64()
-                .ok_or_else(|| de::Error::custom("Invalid number"))?,
-        ),
-        _ => return Err(de::Error::custom("wrong type")),
-    })
-}
+// fn de_optional_lr_weight_from_str_or_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     // let str = serde_json::Value::deserialize_str(deserializer);
+//     // match deserializer.deserialize_str() {
+//     //     Ok(_) => todo!(),
+//     //     Err(_) => todo!(),
+//     // }
+//     Ok(match Value::deserialize(deserializer)? {
+//         Value::String(s) => Some(s.parse().map_err(de::Error::custom)?),
+//         Value::Number(num) => Some(
+//             num.as_f64()
+//                 .ok_or_else(|| de::Error::custom("Invalid number"))?,
+//         ),
+//         _ => return Err(de::Error::custom("wrong type")),
+//     })
+// }
 
 fn de_optional_usize_from_str<'de, D>(deserializer: D) -> Result<Option<usize>, D::Error>
 where
@@ -364,31 +375,31 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::File,
-        io::{self, Read},
-    };
+    // use std::{
+    //     fs::File,
+    //     io::{self, Read},
+    // };
 
-    macro_rules! assert_err {
-        ($expression:expr, $($pattern:tt)+) => {
-            match $expression {
-                $($pattern)+ => (),
-                ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
-            }
-        }
-    }
+    // macro_rules! assert_err {
+    //     ($expression:expr, $($pattern:tt)+) => {
+    //         match $expression {
+    //             $($pattern)+ => (),
+    //             ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
+    //         }
+    //     }
+    // }
 
     use super::*;
 
-    fn load_test_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "boo.safetensors";
-
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
+    // fn load_test_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "boo.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
 
     #[test]
     fn network_args() -> crate::Result<()> {
@@ -403,7 +414,8 @@ mod tests {
   "conv_block_alphas": "4,4,4,4,4,4,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8",
   "down_lr_weight": "0,0,0,0,0,0,0,1,1,1,1,1",
   "up_lr_weight": "1,1,1,1,0,0,0,0,0,0,0,0",
-  "mid_lr_weight": "1"
+  "mid_lr_weight": "1",
+    "conv_dim": "8", "conv_alpha": "4", "use_cp": "True", "algo": "loha"
 }"#;
 
         let network_args: Result<NetworkArgs, serde_json::Error> = serde_json::from_str(json);

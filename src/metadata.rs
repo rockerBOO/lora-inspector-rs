@@ -60,6 +60,7 @@ impl Metadata {
                     Some("lokr") => Some(NetworkType::LoKr),
                     Some("glora") => Some(NetworkType::GLora),
                     Some("glokr") => Some(NetworkType::GLoKr),
+                    Some("locon") => Some(NetworkType::LoCon),
                     Some(algo) => panic!("Invalid algo {}", algo),
                     None => todo!(),
                 }
@@ -137,7 +138,7 @@ mod tests {
     }
 
     fn load_test_no_type() -> Result<Vec<u8>, io::Error> {
-        let filename = "/mnt/900/lora/Colorful-V1.5-scaled.safetensors";
+        let filename = "/mnt/900/lora/sdxl_vanelreup.safetensors";
 
         let mut f = File::open(filename)?;
         let mut data = vec![];
@@ -183,7 +184,8 @@ mod tests {
 
     #[test]
     fn no_network_args() -> crate::Result<()> {
-        let buffer = load_test_file()?;
+        // let buffer = load_test_file()?;
+        let buffer = load_test_no_type()?;
         let metadata = Metadata::new_from_buffer(&buffer)?;
 
         // println!("{:#?}", metadata.metadata.clone().unwrap());
