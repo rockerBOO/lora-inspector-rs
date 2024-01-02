@@ -293,7 +293,7 @@ mod tests {
         // Arrange
         let buffer = load_test_file().unwrap();
         let filename = String::from("boo.safetensors");
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
         let base_name = "lora_unet_up_blocks_1_attentions_0_proj_in";
         let device = &Device::Cpu;
 
@@ -310,7 +310,7 @@ mod tests {
         // Arrange
         let buffer = load_test_file().unwrap();
         let filename = String::from("boo.safetensors");
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
         let base_name = "nonexistent_weight";
         let device = &Device::Cpu;
 
@@ -328,7 +328,7 @@ mod tests {
         // Arrange
         let buffer = load_test_file().unwrap();
         let filename = String::from("boo.safetensors");
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
         let base_name = "error_weight";
         let device = &Device::Cpu;
 
@@ -346,7 +346,7 @@ mod tests {
         // Arrange
         let buffer = load_test_file().unwrap();
         let filename = String::from("boo.safetensors");
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
         let base_name = "l1_error_weight";
         let device = &Device::Cpu;
 
@@ -363,7 +363,7 @@ mod tests {
     fn load_from_invalid_buffer() {
         // Arrange
         let filename = String::from("boo.safetensors");
-        let lora_file = LoRAFile::new_from_buffer(&[1_u8], filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&[1_u8], filename.clone());
         let base_name = "l1_error_weight";
         let device = &Device::Cpu;
 
@@ -395,7 +395,7 @@ mod tests {
         let file = "edgWar40KAdeptaSororitas.safetensors";
         let buffer = load_file(file)?;
         let filename = String::from(file);
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
+        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename.clone());
 
         assert_eq!(
             502.32165664434433,

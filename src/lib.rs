@@ -24,6 +24,7 @@ mod norms;
 mod weight;
 mod worker;
 mod statistic;
+mod parser;
 
 pub type Result<T> = std::result::Result<T, InspectorError>;
 
