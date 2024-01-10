@@ -2,6 +2,7 @@ use candle_core::{
     safetensors::{load_buffer, BufferedSafetensors, Load},
     DType, Device, Tensor,
 };
+
 use serde::{Deserialize, Serialize};
 use std::ops::Mul;
 use std::{
@@ -136,7 +137,8 @@ impl Weight for BufferedLoRAWeight {
                 safetensors::Dtype::F16 => "fp16".to_string(),
                 safetensors::Dtype::BF16 => "bf16".to_string(),
                 safetensors::Dtype::F32 => "fp32".to_string(),
-                _ => todo!(),
+                safetensors::Dtype::I64 => "i64".to_string(),
+                dtype => panic!("failed to find precision dtype: {:#?}", dtype),
             })
             .unwrap_or_default()
     }
@@ -150,16 +152,16 @@ impl Weight for BufferedLoRAWeight {
         let lora_down = format!("{}.lora_down.weight", base_name);
         let lora_alpha = format!("{}.alpha", base_name);
 
-        let up = self.buffered.get(&lora_up)?.load(device)?;
-        let down = self.buffered.get(&lora_down)?.load(device)?;
-        let alpha = self.buffered.get(&lora_alpha)?.load(device)?;
+        let up = self.buffered.get(&lora_up)?.load(device)?.detach()?;
+        let down = self.buffered.get(&lora_down)?.load(device)?.detach()?;
+        let alpha = self.buffered.get(&lora_alpha)?.load(device)?.detach()?;
 
         let dims = down.dims();
 
         let scale = alpha.to_dtype(DType::F64)?.to_scalar::<f64>()? / dims[0] as f64;
 
         if dims.len() == 2 {
-            up.matmul(&down)?.mul(scale)
+            up.matmul(&down)?.detach()?.mul(scale)?.detach()
         } else if dims[2] == 1 && dims[3] == 1 {
             up.squeeze(3)?
                 .squeeze(2)?
@@ -474,7 +476,7 @@ impl Weight for LoRAWeight {
                 DType::BF16 => "bf16".to_string(),
                 DType::F16 => "fp16".to_string(),
                 DType::F32 => "fp32".to_string(),
-                _ => todo!(),
+                dtype => panic!("Could not get the precision for dtype: {:#?}", dtype),
             })
     }
 

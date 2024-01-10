@@ -53,16 +53,16 @@ impl Metadata {
                 },
                 None => Some(NetworkType::LoRA),
             },
-            Some(NetworkModule::Lycoris) => self.network_args().and_then(|network_args| {
+            Some(NetworkModule::Lycoris) => self.network_args().map(|network_args| {
                 match network_args.algo.as_ref().map(|algo| algo.as_ref()) {
-                    Some("diag-oft") => Some(NetworkType::DiagOFT),
-                    Some("loha") => Some(NetworkType::LoHA),
-                    Some("lokr") => Some(NetworkType::LoKr),
-                    Some("glora") => Some(NetworkType::GLora),
-                    Some("glokr") => Some(NetworkType::GLoKr),
-                    Some("locon") => Some(NetworkType::LoCon),
+                    Some("diag-oft") => NetworkType::DiagOFT,
+                    Some("loha") => NetworkType::LoHA,
+                    Some("lokr") => NetworkType::LoKr,
+                    Some("glora") => NetworkType::GLora,
+                    Some("glokr") => NetworkType::GLoKr,
+                    Some("locon") => NetworkType::LoCon,
                     Some(algo) => panic!("Invalid algo {}", algo),
-                    None => todo!(),
+                    None => panic!("No algo found for lycoris"),
                 }
             }),
             Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
@@ -250,7 +250,6 @@ mod tests {
 
         Ok(())
     }
-
 
     #[test]
     fn no_meta_network_type() -> crate::Result<()> {
