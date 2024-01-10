@@ -234,7 +234,7 @@ impl<'de> Deserialize<'de> for LrWeight {
                 num.as_f64()
                     .ok_or_else(|| de::Error::custom("Invalid number"))?,
             ),
-            _ => todo!(),
+            value => panic!("Could not extract value: {:#?}", value),
         })
     }
 }
@@ -253,7 +253,7 @@ impl std::fmt::Display for ParseSeqError {
 pub struct BlockF64Seq(Vec<f64>);
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct BlockUsizeSeq(Vec<usize>);
+pub struct BlockUsizeSeq(pub Vec<usize>);
 
 impl FromStr for BlockF64Seq {
     type Err = ParseSeqError;

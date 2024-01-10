@@ -14,15 +14,25 @@ const { LoraWorker } = wasm_bindgen;
 let loraWorkers = new Map();
 
 function addWorker(name, worker) {
-  loraWorkers.insert(name, worker);
+  console.log("Adding worker ", name);
+  loraWorkers.set(name, worker);
+
+  return loraWorkers.get(name);
 }
 
 function removeWorker(workerName) {
+  console.log("Removing worker ", workerName);
   loraWorkers.remove(workerName);
 }
 
 function getWorker(workerName) {
-  return loraWorkers.get(workerName);
+  const loraWorker = loraWorkers.get(workerName);
+
+  if (!loraWorker) {
+    throw new Error(`Could not find worker ${workerName}`);
+  }
+
+  return loraWorker;
 }
 
 function init_wasm_in_worker() {
@@ -35,8 +45,11 @@ function init_wasm_in_worker() {
     onmessage = async (e) => {
       if (e.data.messageType === "file_upload") {
         // unload old workers for now...
-        loraWorkers.clear();
-        fileUploadHandler(e);
+        // console.log("Clearing workers");
+        // loraWorkers.clear();
+        fileUploadHandler(e).then(() => {
+          console.log("LoRA Workers: ", [...loraWorkers.keys()])
+        });
       } else if (e.data.messageType === "network_module") {
         getNetworkModule(e).then((networkModule) => {
           if (e.data.reply) {
@@ -68,6 +81,7 @@ function init_wasm_in_worker() {
         getWeightKeys(e);
       } else if (e.data.messageType === "keys") {
         getKeys(e).then((keys) => {
+          console.log(keys);
           if (e.data.reply) {
             self.postMessage({
               messageType: "keys",
@@ -102,30 +116,35 @@ function init_wasm_in_worker() {
             });
           }
         });
+      } else if (e.data.messageType === "scale_weights") {
+        scaleWeights(e).then((baseNames) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "scale_weights",
+            });
+          }
+        });
       } else if (e.data.messageType === "l2_norm") {
-				// We must lock if we are getting scaled weights 
-        await navigator.locks.request(`scaled-weights`, async (lock) => {
-					getL2Norms(e).then((norms) => {
-						if (e.data.reply) {
-							self.postMessage({
-								messageType: "l2_norm",
-								norms,
-							});
-						}
-					});
-				});
+        // We must lock if we are getting scaled weights
+
+        getL2Norms(e).then((norms) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "l2_norm",
+              norms,
+            });
+          }
+        });
       } else if (e.data.messageType === "norms") {
-				// We must lock if we are getting scaled weights 
-        await navigator.locks.request(`scaled-weights`, async (lock) => {
-          getNorms(e).then((norms) => {
-            if (e.data.reply) {
-              self.postMessage({
-                messageType: "norms",
-                norms,
-                baseName: e.data.baseName,
-              });
-            }
-          });
+        // We must lock if we are getting scaled weights
+        getNorms(e).then((norms) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "norms",
+              norms,
+              baseName: e.data.baseName,
+            });
+          }
         });
       } else if (e.data.messageType === "alpha_keys") {
         getAlphaKeys(e);
@@ -183,9 +202,7 @@ async function fileUploadHandler(e) {
   const buffer = await readFile(file);
 
   try {
-    loraWorkers.set(file.name, new LoraWorker(buffer, file.name));
-
-    const loraWorker = loraWorkers.get(file.name);
+    const loraWorker = addWorker(file.name, new LoraWorker(buffer, file.name));
 
     console.timeEnd("file_upload");
     self.postMessage({
@@ -194,6 +211,7 @@ async function fileUploadHandler(e) {
       metadata: loraWorker.metadata(),
     });
   } catch (err) {
+    console.error("Could not upload the LoRA", err)
     self.postMessage({
       messageType: "metadata_error",
       message: "could not parse the LoRA",
@@ -204,51 +222,53 @@ async function fileUploadHandler(e) {
 }
 
 async function getNetworkModule(e) {
-  const name = e.data.name;
-
-  const loraWorker = loraWorkers.get(name);
-
-  if (!loraWorker) {
-    throw new Error("No LoRA for this name " + name);
-  }
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.network_module();
 }
 
 async function getWeightKeys(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.weight_keys();
 }
 
 async function getKeys(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.keys();
 }
 
+async function scaleWeights(e) {
+  console.log("scaling weights...");
+  console.time("scale_weights");
+	// console.log(performance.memory);
+  await navigator.locks.request(`scaled-weights`, async (lock) => {
+    const name = e.data.name;
+
+    const loraWorker = loraWorkers.get(name);
+    loraWorker.scale_weights();
+    console.timeEnd("scale_weights");
+  });
+}
+
 async function getTextEncoderKeys(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.text_encoder_keys();
 }
 
 async function getUnetKeys(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.unet_keys();
 }
 
 async function getBaseNames(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   const baseNames = loraWorker.base_names();
-	// baseNames.forEach(baseName => loraWorker.parse_key(baseName));
+  // baseNames.forEach(baseName => loraWorker.parse_key(baseName));
 
   return baseNames;
 }
@@ -259,7 +279,9 @@ async function getNorms(e) {
   const loraWorker = loraWorkers.get(name);
   const baseName = e.data.baseName;
 
-  const scaled = loraWorker.scaled(baseName, [
+	console.log("Getting norm for ", baseName);
+
+  const scaled = loraWorker.norms(baseName, [
     "l1_norm",
     "l2_norm",
     "matrix_norm",
@@ -273,9 +295,14 @@ async function getNorms(e) {
 }
 
 async function getL2Norms(e) {
-  const name = e.data.name;
+  const loraWorker = getWorker(e.data.name);
 
-  const loraWorker = loraWorkers.get(name);
+  await navigator.locks.request(`scaled-weights`, async (lock) => {
+    const name = e.data.name;
+
+    const loraWorker = loraWorkers.get(name);
+    loraWorker.scale_weights();
+  });
 
   console.time("Calculating norms");
   console.log("Calculating l2 norms...");
@@ -376,36 +403,31 @@ async function getAlphaKeys(e) {
 }
 
 async function getAlphas(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return Array.from(loraWorker.alphas()).sort((a, b) => a > b);
 }
 
 async function getDims(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return Array.from(loraWorker.dims()).sort((a, b) => a > b);
 }
 
 async function getPrecision(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.precision();
 }
 
 async function getNetworkArgs(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.network_args();
 }
 
 async function getNetworkType(e) {
-  const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(e.data.name);
 
   return loraWorker.network_type();
 }

@@ -35,6 +35,7 @@ pub enum InspectorError {
     Io(io::Error),
     Load(String),
     Msg(String),
+    NotFound,
     UnsupportedNetworkType,
     SerdeWasmBindgenError(serde_wasm_bindgen::Error),
 }
@@ -79,13 +80,14 @@ impl fmt::Display for InspectorError {
             InspectorError::Load(e) => write!(f, "Load Error {}", e),
             InspectorError::Msg(e) => write!(f, "Error {}", e),
             InspectorError::UnsupportedNetworkType => write!(f, "Unsupported network type"),
+            InspectorError::NotFound => write!(f, "Not found"),
         }
     }
 }
 
-impl Into<JsValue> for InspectorError {
-    fn into(self) -> JsValue {
-        self.into()
+impl From<JsValue> for InspectorError {
+    fn from(value: JsValue) -> Self {
+        InspectorError::Msg(value.as_string().unwrap())
     }
 }
 

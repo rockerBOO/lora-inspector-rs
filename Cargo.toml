@@ -9,8 +9,8 @@ insta.opt-level = 3
 [lib]
 crate-type = ["cdylib"]
 
-[features]
-default = ["console_error_panic_hook"]
+# [features]
+# default = ["console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen = "0.2"
@@ -18,7 +18,7 @@ safetensors = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.4"
 serde_with = "3.4.0"
-console_error_panic_hook = { version = "0.1.6", optional = true }
+console_error_panic_hook = { version = "0.1.6" }
 # candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.2" }
 candle-core = { path = "/home/rockerboo/code/others/candle/candle-core", version = "0.3.2" }
 getrandom = { version = "0.2", features = ["js"] }
@@ -27,6 +27,7 @@ num = "0.4.1"
 # web-sys = { version = "0.3.65", features = ["console"] }
 pest = "2.6"
 pest_derive = "2.6"
+
 
 [dependencies.web-sys]
 version = "0.3.65"
@@ -51,8 +52,23 @@ features = [
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
+wasm-bindgen-futures = "0.4.39"
 insta = { version = "1.34.0", features = ["json"] }
 memmap2 = "0.9.0"
+
+[dev-dependencies.web-sys]
+version = "0.3.65"
+features = [
+  'Headers',
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
+  'Worker',
+  'Blob',
+  'Performance',
+  'Window'
+]
 
 [profile.release]
 lto = true
