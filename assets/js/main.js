@@ -38,6 +38,16 @@ function ModelSpec({ metadata }) {
 
       h(MetaAttribute, { name: "Tags", value: metadata.get("modelspec.tags") }),
     ]),
+
+    metadata.has("ss_training_comment") &&
+      h(
+        "div",
+        { className: "row space-apart" },
+        h(MetaAttribute, {
+          name: "Training comment",
+          value: metadata.get("ss_training_comment"),
+        }),
+      ),
   );
 }
 
@@ -268,6 +278,12 @@ function LRScheduler({ metadata }) {
         valueClassName: "lr number",
         value: metadata.get("ss_learning_rate"),
       }),
+      metadata.has("ss_lr_warmup_steps") &&
+        h(MetaAttribute, {
+          name: "Learning Rate",
+          valueClassName: "lr number",
+          value: metadata.get("ss_lr_warmup_steps"),
+        }),
       h(MetaAttribute, {
         name: "UNet Learning Rate",
         valueClassName: "lr number",
@@ -334,6 +350,17 @@ function Weight({ metadata, filename }) {
         name: "Precision",
         valueClassName: "number",
         value: precision,
+      }),
+      metadata.has("ss_full_fp16") &&
+        h(MetaAttribute, {
+          name: "Full fp16",
+          valueClassName: "number",
+          value: metadata.get("ss_full_fp16"),
+        }),
+      h(MetaAttribute, {
+        name: "CLIP Skip",
+        valueClassName: "number",
+        value: metadata.get("ss_clip_skip"),
       }),
       // h(MetaAttribute, {
       //   name: "Average vector magnitude, UNet + TE",
@@ -757,6 +784,11 @@ function Batch({ metadata }) {
 
   return h("div", { className: "row space-apart part3" }, [
     h(MetaAttribute, {
+      name: "Num train images",
+      valueClassName: "number",
+      value: metadata.get("ss_num_train_images"),
+    }),
+    h(MetaAttribute, {
       name: "Num batches per epoch",
       valueClassName: "number",
       value: metadata.get("ss_num_batches_per_epoch"),
@@ -770,10 +802,6 @@ function Batch({ metadata }) {
       name: "Gradient Accumulation Steps",
       valueClassName: "number",
       value: metadata.get("ss_gradient_accumulation_steps"),
-    }),
-    h(MetaAttribute, {
-      name: "Gradient Checkpointing",
-      value: metadata.get("ss_gradient_checkpointing"),
     }),
   ]);
 }
@@ -816,6 +844,10 @@ function MultiresNoise({ metadata }) {
 function Loss({ metadata }) {
   return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
+      name: "Gradient Checkpointing",
+      value: metadata.get("ss_gradient_checkpointing"),
+    }),
+    h(MetaAttribute, {
       name: "Debiased Estimation",
       valueClassName: "number",
       value: metadata.get("ss_debiased_estimation"),
@@ -829,11 +861,41 @@ function Loss({ metadata }) {
       name: "Zero Terminal SNR",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
-    h(MetaAttribute, {
-      name: "Masked Loss",
-      value: metadata.get("ss_masked_loss"),
-    }),
+    metadata.has("ss_masked_loss") &&
+      h(MetaAttribute, {
+        name: "Masked Loss",
+        value: metadata.get("ss_masked_loss"),
+      }),
   ]);
+}
+
+function CaptionDropout({ metadata }) {
+  return h(
+    "div",
+    { className: "row space-apart" },
+    h(MetaAttribute, {
+      name: "Max token length",
+      valueClassName: "number",
+      value: metadata.get("ss_max_token_length"),
+    }),
+
+    h(MetaAttribute, {
+      name: "Caption dropout rate",
+      valueClassName: "number",
+      value: metadata.get("ss_caption_dropout_rate"),
+    }),
+    h(MetaAttribute, {
+      name: "Caption dropout every n epochs",
+      valueClassName: "number",
+      value: metadata.get("ss_caption_dropout_every_n_epochs"),
+    }),
+
+    h(MetaAttribute, {
+      name: "Caption tag dropout rate",
+      valueClassName: "number",
+      value: metadata.get("ss_caption_tag_dropout_rate"),
+    }),
+  );
 }
 
 function Dataset({ metadata }) {
@@ -847,6 +909,7 @@ function Dataset({ metadata }) {
     "div",
     null,
     h("h2", null, "Dataset"),
+
     datasets.map((dataset) => {
       return h(Buckets, { dataset, metadata });
     }),
@@ -2552,6 +2615,7 @@ function Main({ metadata, filename }) {
     h(Batch, { metadata }),
     h(Noise, { metadata }),
     h(Loss, { metadata }),
+    h(CaptionDropout, { metadata }),
     h(Dataset, { metadata }),
     // h(Advanced, { metadata, filename }),
   ]);
