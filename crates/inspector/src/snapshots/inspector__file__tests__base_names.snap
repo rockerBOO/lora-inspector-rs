@@ -1,5 +1,5 @@
 ---
-source: src/file.rs
+source: crates/inspector/src/file.rs
 expression: base_names
 ---
 [

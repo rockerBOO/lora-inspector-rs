@@ -1,15 +1,15 @@
-use pest::Parser;
+// use pest::Parser;
 use std::collections::HashMap;
 use std::fmt;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-extern crate console_error_panic_hook;
+// extern crate console_error_panic_hook;
 
-use crate::file::LoRAFile;
-use crate::metadata::Metadata;
-use crate::network::NetworkModule;
-use crate::{norms, statistic, InspectorError, KeyParser, Rule};
+use inspector::file::LoRAFile;
+use inspector::metadata::Metadata;
+use inspector::network::NetworkModule;
+use inspector::{norms, InspectorError, statistic};
 use std::panic;
 
 #[wasm_bindgen]
@@ -91,29 +91,42 @@ impl LoraWorker {
         self.file.precision()
     }
 
-    pub fn parse_key(&self, parse_key: &str) {
-        let successful_parse = KeyParser::parse(Rule::key, parse_key);
-        if let Ok(pairs) = successful_parse {
-            console::log_1(&format!("{:#?}", pairs).into());
-        }
-    }
+    // pub fn parse_key(&self, parse_key: &str) {
+    //     let successful_parse = KeyParser::parse(Rule::key, parse_key);
+    //     if let Ok(pairs) = successful_parse {
+    //         console::log_1(&format!("{:#?}", pairs).into());
+    //     }
+    // }
 
-    pub fn scale_weights(&mut self) -> usize {
+    pub fn scale_weights(&mut self) -> Vec<String> {
         console_error_panic_hook::set_once();
 
         self.file
-            .base_names()
+            .scale_weights(&candle_core::Device::Cpu)
             .iter()
-            .filter_map(|base_name| {
-                match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
-                    Ok(ok) => Some(ok),
-                    Err(e) => {
-                        console::error_1(&format!("scale weight error: {:#?}", e).into());
-                        None
-                    }
+            .filter_map(|scaled| match scaled {
+                Ok(_) => None,
+                Err(e) => {
+                    console::error_1(&format!("scale weight error: {:#?}", e).into());
+                    Some(e.to_string())
                 }
             })
-            .count()
+            .collect()
+
+        //
+        // self.file
+        //     .base_names()
+        //     .iter()
+        //     .filter_map(|base_name| {
+        //         match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+        //             Ok(ok) => Some(ok),
+        //             Err(e) => {
+        //                 console::error_1(&format!("scale weight error: {:#?}", e).into());
+        //                 None
+        //             }
+        //         }
+        //     })
+        //     .count()
     }
 
     pub fn scale_weight(&mut self, base_name: &str) -> Result<bool, JsValue> {
@@ -303,6 +316,24 @@ mod tests {
         let _ = worker
             .scale_weight("lora_unet_down_blocks_1_resnets_1_conv2")
             .unwrap();
+
+        assert_eq!(
+            worker.l2_norm("lora_unet_down_blocks_1_resnets_1_conv2"),
+            Some(0.40116092442056206)
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn scale_weights() {
+        wasm_bindgen_test_configure!(run_in_browser);
+        let buffer = load_test_file(file("lora_unet_down_blocks_1_resnets_1_conv2.safetensors").as_str())
+            .await
+            .unwrap();
+
+        let mut worker =
+            LoraWorker::new_from_buffer(&buffer, "lora_unet_down_blocks_1_resnets_1_conv2.safetensors").expect("load from buffer");
+
+        worker.scale_weights();
 
         assert_eq!(
             worker.l2_norm("lora_unet_down_blocks_1_resnets_1_conv2"),
@@ -526,21 +557,6 @@ mod tests {
             .expect("load from buffer");
 
         assert!(worker.network_args().unwrap().is_object());
-        // assert_eq!(
-        //     worker.network_args().unwrap(),
-        //     serde_wasm_bindgen::to_value(&NetworkArgs {
-        //         dropout: Some(0.3),
-        //         block_dims: Some(BlockUsizeSeq(vec![
-        //             4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
-        //         ])),
-        //         block_alphas: Some(BlockUsizeSeq(vec![
-        //             16, 16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        //             32, 32, 32, 32, 32
-        //         ])),
-        //         ..Default::default()
-        //     })
-        //     .unwrap()
-        // );
     }
 
     #[wasm_bindgen_test]

@@ -1,6 +1,5 @@
-use std::collections::{HashMap, HashSet};
-
 use candle_core::{DType, Device};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     metadata::Metadata,
@@ -106,22 +105,6 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    // pub fn scaled<T: candle_core::WithDType>(
-    //     &mut self,
-    //     base_name: &str,
-    //     collection: Vec<norms::NormFn<T>>,
-    //     device: &Device,
-    // ) -> Result<HashMap<String, Result<T>>> {
-    //     let scaled = self.scale_weight(base_name, device)?;
-    //     Ok(collection
-    //         .iter()
-    //         .map(|norm| (norm.name.to_owned(), (*norm.function)(scaled.clone())))
-    //         .fold(HashMap::new(), |mut acc, (k, t)| {
-    //             acc.insert(k, t);
-    //             acc
-    //         }))
-    // }
-
     pub fn l2_norm<T: candle_core::WithDType>(&self, base_name: &str) -> Result<T> {
         self.scaled_weight(base_name)
             .ok_or_else(|| InspectorError::NotFound)
@@ -142,6 +125,16 @@ impl LoRAFile {
 
     pub fn scaled_weight(&self, base_name: &str) -> Option<&candle_core::Tensor> {
         self.scaled_weights.get(base_name)
+    }
+
+    pub fn scale_weights(
+        &mut self,
+        device: &candle_core::Device,
+    ) -> Vec<Result<candle_core::Tensor>> {
+        self.base_names()
+            .iter()
+            .map(|base_name| self.scale_weight(base_name, device))
+            .collect()
     }
 
     pub fn scale_weight(
@@ -285,6 +278,25 @@ mod tests {
         // Assert
         insta::assert_json_snapshot!(result.sort());
     }
+
+    // #[test]
+    // fn scale_weights() {
+    //     // Arrange
+    //     let buffer = load_test_file().unwrap();
+    //     let filename = "boo.safetensors";
+    //     let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename);
+    //     let base_name = "lora_unet_up_blocks_1_attentions_0_proj_in";
+    //     let device = &Device::Cpu;
+    //
+    //     lora_file.scale_weights(device);
+    //
+    //     // Act
+    //     let result = lora_file.l1_norm::<f64>(base_name);
+    //
+    //     // Assert
+    //     assert!(result.is_ok());
+    //     // Add assertions to verify that the norm result is correct
+    // }
 
     #[test]
     fn weight_norm_returns_norm_for_valid_weights() {
@@ -515,7 +527,7 @@ mod tests {
 
         Ok(())
     }
-    
+
     #[test]
     fn is_tensors_loaded() -> crate::Result<()> {
         let file = "boo.safetensors";
