@@ -1,7 +1,7 @@
 // The worker has its own scope and no direct access to functions/objects of the
 // global scope. We import the generated JS file to make `wasm_bindgen`
 // available which we need to initialize our Wasm code.
-importScripts("/pkg/lora_inspector_rs.js");
+importScripts("/pkg/lora_inspector_wasm.js");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
@@ -14,14 +14,14 @@ const { LoraWorker } = wasm_bindgen;
 let loraWorkers = new Map();
 
 function addWorker(name, worker) {
-  console.log("Adding worker ", name);
+  // console.log("Adding worker ", name);
   loraWorkers.set(name, worker);
 
   return loraWorkers.get(name);
 }
 
 function removeWorker(workerName) {
-  console.log("Removing worker ", workerName);
+  // console.log("Removing worker ", workerName);
   loraWorkers.remove(workerName);
 }
 
@@ -37,7 +37,7 @@ function getWorker(workerName) {
 
 function init_wasm_in_worker() {
   // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
-  wasm_bindgen("/pkg/lora_inspector_rs_bg.wasm").then(() => {
+  wasm_bindgen("/pkg/lora_inspector_wasm_bg.wasm").then(() => {
     onerror = (event) => {
       console.log("There is an error inside your worker!", event);
     };
@@ -47,9 +47,7 @@ function init_wasm_in_worker() {
         // unload old workers for now...
         // console.log("Clearing workers");
         // loraWorkers.clear();
-        fileUploadHandler(e).then(() => {
-          console.log("LoRA Workers: ", [...loraWorkers.keys()])
-        });
+        fileUploadHandler(e);
       } else if (e.data.messageType === "network_module") {
         getNetworkModule(e).then((networkModule) => {
           if (e.data.reply) {
@@ -81,7 +79,6 @@ function init_wasm_in_worker() {
         getWeightKeys(e);
       } else if (e.data.messageType === "keys") {
         getKeys(e).then((keys) => {
-          console.log(keys);
           if (e.data.reply) {
             self.postMessage({
               messageType: "keys",
@@ -121,6 +118,22 @@ function init_wasm_in_worker() {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weights",
+            });
+          }
+        });
+      } else if (e.data.messageType === "scale_weights_with_progress") {
+        iterScaleWeights(e).then((baseNames) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "scale_weights_with_progress",
+            });
+          }
+        });
+      } else if (e.data.messageType === "scale_weight") {
+        scaleWeight(e).then((baseNames) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "scale_weight",
             });
           }
         });
@@ -211,7 +224,7 @@ async function fileUploadHandler(e) {
       metadata: loraWorker.metadata(),
     });
   } catch (err) {
-    console.error("Could not upload the LoRA", err)
+    console.error("Could not upload the LoRA", err);
     self.postMessage({
       messageType: "metadata_error",
       message: "could not parse the LoRA",
@@ -242,13 +255,73 @@ async function getKeys(e) {
 async function scaleWeights(e) {
   console.log("scaling weights...");
   console.time("scale_weights");
-	// console.log(performance.memory);
-  await navigator.locks.request(`scaled-weights`, async (lock) => {
+  // console.log(performance.memory);
+  await navigator.locks.request(`scale-weights`, async (lock) => {
     const name = e.data.name;
 
     const loraWorker = loraWorkers.get(name);
     loraWorker.scale_weights();
     console.timeEnd("scale_weights");
+  });
+}
+
+async function iterScaleWeights(e) {
+  const name = e.data.name;
+  const loraWorker = loraWorkers.get(name);
+
+  await navigator.locks.request(`scale-weights`, async (lock) => {
+    const baseNames = loraWorker.base_names();
+    const totalCount = baseNames.length;
+
+    let currentCount = 0;
+
+    console.time("scale_weights");
+    await Promise.allSettled(
+      baseNames.map((baseName) => {
+        currentCount += 1;
+
+        try {
+          loraWorker.scale_weight(baseName);
+
+          self.postMessage({
+            messageType: "scale_weight_progress",
+            currentCount,
+            totalCount,
+            baseName: baseName,
+          });
+        } catch (e) {
+          console.error(e);
+          self.postMessage({
+            messageType: "scale_weight_progress",
+            currentCount,
+            totalCount,
+            baseName: baseName,
+          });
+        }
+      }),
+    ).then(() => {
+			console.log("Finished scaled weight progress")
+      self.postMessage({
+        messageType: "scale_weight_progress_finished",
+      });
+
+      console.time("scale_weights");
+    });
+  });
+}
+
+async function scaleWeight(e) {
+  console.log("scaling weight...");
+  console.time("scale_weight");
+  // console.log(performance.memory);
+  await navigator.locks.request(`scale-weights`, async (lock) => {
+    const name = e.data.name;
+    const baseName = e.data.baseName;
+
+    const loraWorker = loraWorkers.get(name);
+    loraWorker.scale_weight(baseName);
+
+    console.timeEnd("scale_weight");
   });
 }
 
@@ -279,7 +352,7 @@ async function getNorms(e) {
   const loraWorker = loraWorkers.get(name);
   const baseName = e.data.baseName;
 
-	console.log("Getting norm for ", baseName);
+  console.log("Getting norm for ", baseName);
 
   const scaled = loraWorker.norms(baseName, [
     "l1_norm",
@@ -287,8 +360,8 @@ async function getNorms(e) {
     "matrix_norm",
     "max",
     "min",
-    "std_dev",
-    "median",
+    // "std_dev",
+    // "median",
   ]);
 
   return scaled;
@@ -297,12 +370,12 @@ async function getNorms(e) {
 async function getL2Norms(e) {
   const loraWorker = getWorker(e.data.name);
 
-  await navigator.locks.request(`scaled-weights`, async (lock) => {
-    const name = e.data.name;
-
-    const loraWorker = loraWorkers.get(name);
-    loraWorker.scale_weights();
-  });
+  // await navigator.locks.request(`scaled-weights`, async (lock) => {
+  //   const name = e.data.name;
+  //
+  //   const loraWorker = loraWorkers.get(name);
+  //   loraWorker.scale_weights();
+  // });
 
   console.time("Calculating norms");
   console.log("Calculating l2 norms...");
@@ -322,10 +395,20 @@ async function getL2Norms(e) {
         totalCount,
         baseName: base_name,
       });
-      return [base_name, loraWorker.l2_norm(base_name)];
+
+      try {
+        return [base_name, loraWorker.l2_norm(base_name)];
+      } catch (e) {
+        console.error(e);
+        return [base_name, undefined];
+      }
     })
     .reduce(
       (acc, [base_name, norm]) => {
+        if (norm === undefined) {
+          return acc;
+        }
+
         // loraWorker.parse_key(key);
         const parts = parseSDKey(base_name);
 
@@ -354,26 +437,26 @@ async function getL2Norms(e) {
     );
 
   self.postMessage({
-    messageType: "l2_norm_progress_finished",
+    messageType: "l2_norms_progress_finished",
   });
 
-  console.log(
-    "weight_norms block",
-    Array.from(l2Norms["block"]).sort(([k, _], [k2, _v]) => {
-      return k > k2;
-    }),
-  );
-  console.log(
-    "weight_norms count",
-    Array.from(l2Norms["block_count"]).sort(([k, _], [k2, _v]) => {
-      return k > k2;
-    }),
-  );
+  // console.log(
+  //   "weight_norms block",
+  //   Array.from(l2Norms["block"]).sort(([k, _], [k2, _v]) => {
+  //     return k > k2;
+  //   }),
+  // );
+  // console.log(
+  //   "weight_norms count",
+  //   Array.from(l2Norms["block_count"]).sort(([k, _], [k2, _v]) => {
+  //     return k > k2;
+  //   }),
+  // );
   const norms = Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
     return k > k2;
   });
 
-  console.log("weight_norms mean", norms);
+  // console.log("weight_norms mean", norms);
   console.timeEnd("Calculating norms");
 
   // Split between TE and UNet

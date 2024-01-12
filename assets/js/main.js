@@ -211,9 +211,11 @@ function DiagOFTNetwork({ metadata }) {
 
 function LoRANetwork({ metadata }) {
   const [alphas, setAlphas] = React.useState([
-    metadata.get("ss_network_alpha"),
+    (metadata && metadata.get("ss_network_alpha")) ?? undefined,
   ]);
-  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
+  const [dims, setDims] = React.useState([
+    (metadata && metadata.get("ss_network_dim")) ?? undefined,
+  ]);
   React.useEffect(() => {
     trySyncMessage({ messageType: "alphas", name: mainFilename }).then(
       (resp) => {
@@ -347,6 +349,12 @@ function Weight({ metadata, filename }) {
 // Chart.defaults.font.size = 16;
 // Chart.defaults.font.family = "monospace";
 
+function scale_weight() {
+  // get base_names
+  // get scale weight
+  // get progress
+}
+
 function Blocks({ metadata, filename }) {
   // console.log("!!!! BLOCKS !!!!! METADATA FILENAME", filename);
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
@@ -361,6 +369,15 @@ function Blocks({ metadata, filename }) {
   const [currentBaseName, setCurrentBaseName] = React.useState("");
   const [canHaveBlockWeights, setCanHaveBlockWeights] = React.useState(false);
 
+  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
+  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
+    React.useState(0);
+  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
+
+  // setCurrentScaleWeightCount(value.currentCount);
+  // setTotalScaleWeightCount(value.totalCount);
+  // setScaleWeightProgress(value.currentCount / value.totalCount);
+
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
 
@@ -369,22 +386,29 @@ function Blocks({ metadata, filename }) {
       return;
     }
 
-    // const averageMagnitudes = get_average_magnitude_by_block(buffer);
-    // const averageStrength = get_average_strength_by_block(buffer);
-    //
-
     trySyncMessage({
-      messageType: "scale_weights",
+      messageType: "scale_weights_with_progress",
       name: filename,
       reply: true,
     }).then(() => {
       console.log("getting l2 norms...");
+
+      listenProgress("l2_norms_progress").then(async (getProgress) => {
+        while ((progress = await getProgress().next())) {
+          const value = progress.value;
+          setCurrentBaseName(value.baseName);
+          setCurrentCount(value.currentCount);
+          setTotalCount(value.totalCount);
+          setNormProgress(value.currentCount / value.totalCount);
+        }
+      });
+
       trySyncMessage({
         messageType: "l2_norm",
         name: filename,
         reply: true,
       }).then((resp) => {
-        console.log(resp);
+        // console.log(resp);
         // setTEMagBlocks(averageMagnitudes.get("text_encoder"));
         setTEMagBlocks(resp.norms.te);
         setUnetMagBlocks(resp.norms.unet);
@@ -403,7 +427,6 @@ function Blocks({ metadata, filename }) {
       name: filename,
       reply: true,
     }).then((resp) => {
-      console.log("network type", resp);
       if (
         resp.networkType === "LoRA" ||
         resp.networkType === "LoRAFA" ||
@@ -432,13 +455,16 @@ function Blocks({ metadata, filename }) {
 
     setStartTime(performance.now());
 
-    listenProgress("l2_norms_progress").then(async (getProgress) => {
+    listenProgress("scale_weight_progress").then(async (getProgress) => {
       while ((progress = await getProgress().next())) {
         const value = progress.value;
+        if (!value) {
+          break;
+        }
         setCurrentBaseName(value.baseName);
-        setCurrentCount(value.currentCount);
-        setTotalCount(value.totalCount);
-        setNormProgress(value.currentCount / value.totalCount);
+        setCurrentScaleWeightCount(value.currentCount);
+        setTotalScaleWeightCount(value.totalCount);
+        setScaleWeightProgress(value.currentCount / value.totalCount);
       }
     });
 
@@ -460,7 +486,7 @@ function Blocks({ metadata, filename }) {
           // dataset.map(([k, v]) => strBlocks.get(k)),
         ],
       };
-      console.log("chartdata", data);
+      // console.log("chartdata", data);
       const chart = new Chartist.Line(chartRef.current, data, {
         chartPadding: {
           right: 60,
@@ -527,11 +553,23 @@ function Blocks({ metadata, filename }) {
       });
     };
 
+    console.log("te blocks", teMagBlocks);
+    console.log("te str blocks", teStrBlocks);
     if (teMagBlocks.size > 0) {
-      makeChart(Array.from(teMagBlocks), teChartRef, teStrBlocks);
+      makeChart(
+        // We are removing elements that are 0 because they cause the chart to find them as undefined
+        Array.from(teMagBlocks).filter(([k, v]) => v["mean"] !== 0),
+        teChartRef,
+        teStrBlocks,
+      );
     }
     if (unetMagBlocks.size > 0) {
-      makeChart(Array.from(unetMagBlocks), unetChartRef, unetStrBlocks);
+      makeChart(
+        // We are removing elements that are 0 because they cause the chart to find them as undefined
+        Array.from(unetMagBlocks).filter(([k, v]) => v["mean"] !== 0),
+        unetChartRef,
+        unetStrBlocks,
+      );
     }
   }, [teMagBlocks, teStrBlocks, unetMagBlocks, unetStrBlocks]);
 
@@ -631,7 +669,27 @@ function Blocks({ metadata, filename }) {
     const perSecond = currentCount / (elapsedTime / 1_000);
 
     if (currentCount === 0) {
-      return h("div", null, "waiting for worker... please wait");
+      const elapsedTime = performance.now() - startTime;
+      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
+
+      const remaining =
+        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
+        elapsedTime * totalScaleWeightCount;
+      return h(
+        "div",
+        { className: "block-weights-container" },
+        h(
+          "span",
+          null,
+          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
+            2,
+          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
+            2,
+          )}it/s ${(remaining / 1_000_000).toFixed(
+            2,
+          )}s remaining ${currentBaseName} `,
+        ),
+      );
     }
 
     return h(
@@ -850,12 +908,12 @@ function Buckets({ dataset, metadata }) {
 }
 
 function BucketInfo({ metadata, dataset }) {
-	// No bucket info
+  // No bucket info
   if (!dataset["bucket_info"]) {
     return;
   }
 
-	// No buckets data
+  // No buckets data
   if (!dataset["bucket_info"]["buckets"]) {
     return;
   }
@@ -2480,7 +2538,7 @@ function Main({ metadata, filename }) {
       h("div", null, "No metadata for this file"),
       h(Headline, { filename }),
       h(Weight, { metadata, filename }),
-      h(Advanced, { metadata, filename }),
+      // h(Advanced, { metadata, filename }),
     ]);
   }
 
@@ -2495,7 +2553,7 @@ function Main({ metadata, filename }) {
     h(Noise, { metadata }),
     h(Loss, { metadata }),
     h(Dataset, { metadata }),
-    h(Advanced, { metadata, filename }),
+    // h(Advanced, { metadata, filename }),
   ]);
 }
 
@@ -2778,11 +2836,11 @@ async function processFile(file) {
         worker.postMessage({ messageType: "network_type", name: mainFilename });
         worker.postMessage({ messageType: "weight_keys", name: mainFilename });
         worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
-        trySyncMessage({ messageType: "keys", name: mainFilename }).then(
-          (keys) => {
-            console.log("keys", keys);
-          },
-        );
+        // trySyncMessage({ messageType: "keys", name: mainFilename }).then(
+        //   (keys) => {
+        //     console.log("keys", keys);
+        //   },
+        // );
         worker.postMessage({ messageType: "base_names", name: mainFilename });
         worker.postMessage({ messageType: "weight_norms", name: mainFilename });
         // worker.postMessage({ messageType: "alphas", name: mainFilename });
@@ -2924,17 +2982,35 @@ async function trySyncMessage(message, matches = []) {
   });
 }
 
+const listenProgressListeners = [];
+const listenProgressFinishedListeners = [];
+
 async function listenProgress(messageType) {
   let isFinished = false;
   function finishedWorkerHandler(e) {
+    console.log(
+      "FINISHED",
+      e.data,
+      e.data.messageType === `${messageType}_finished`,
+    );
     if (e.data.messageType === `${messageType}_finished`) {
       worker.removeEventListener("message", finishedWorkerHandler);
       isFinished = true;
-    } else {
-      // console.log("unhandled finished message", e.data);
+      listenProgressFinishedListeners.pop();
+      console.log(
+        "Remove finished worker",
+        listenProgressFinishedListeners.length,
+        isFinished,
+      );
     }
   }
 
+  listenProgressFinishedListeners.push(1);
+  console.log(
+    "Adding finished worker",
+    listenProgressFinishedListeners.length,
+    isFinished,
+  );
   worker.addEventListener("message", finishedWorkerHandler);
 
   return async function* listen() {
@@ -2947,10 +3023,19 @@ async function listenProgress(messageType) {
       function workerHandler(e) {
         if (e.data.messageType === messageType) {
           worker.removeEventListener("message", workerHandler);
+          listenProgressListeners.pop();
+          console.log(
+            "Remove worker",
+            messageType,
+            listenProgressListeners.length,
+            isFinished,
+          );
           resolve(e.data);
         }
       }
 
+      listenProgressListeners.push(1);
+      console.log("Adding worker", listenProgressListeners.length, isFinished);
       worker.addEventListener("message", workerHandler);
     });
   };
