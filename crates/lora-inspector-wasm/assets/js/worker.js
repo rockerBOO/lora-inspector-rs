@@ -2,27 +2,43 @@
 // global scope. We import the generated JS file to make `wasm_bindgen`
 // available which we need to initialize our Wasm code.
 importScripts("/pkg/lora_inspector_wasm.js");
+("use strict");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
-const { LoraWorker } = wasm_bindgen;
+const { LoraWorker, LoRAFile, BufferedLoRAWeight } = wasm_bindgen;
 
 // let clients = [];
 // let wasms = [];
 
+const files = new Map();
+
 // loraWorkers are specific objects that manage the LoRA file, buffer, and inspection.
-let loraWorkers = new Map();
+const loraWorkers = new Map();
+
+const loraWorkersRegistry = new FinalizationRegistry((key) => {
+  console.log("worker garbage controlled", key);
+  if (!loraWorkers.get(key)?.deref()) {
+    loraWorkers.delete(key);
+  }
+});
 
 function addWorker(name, worker) {
-  // console.log("Adding worker ", name);
+  console.log("Adding worker ", name);
   loraWorkers.set(name, worker);
 
-  return loraWorkers.get(name);
+  loraWorkersRegistry.register(worker, name);
+  return getWorker(name);
 }
 
 function removeWorker(workerName) {
-  // console.log("Removing worker ", workerName);
-  loraWorkers.remove(workerName);
+  const loraWorker = getWorker(workerName);
+
+	loraWorker.unload();
+  loraWorker.free();
+
+  loraWorkers.set(workerName, undefined);
+  loraWorkers.delete(workerName);
 }
 
 function getWorker(workerName) {
@@ -44,10 +60,15 @@ function init_wasm_in_worker() {
 
     onmessage = async (e) => {
       if (e.data.messageType === "file_upload") {
-        // unload old workers for now...
-        // console.log("Clearing workers");
-        // loraWorkers.clear();
         fileUploadHandler(e);
+      } else if (e.data.messageType === "unload") {
+        unloadWorker(e).then(() => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "is_available",
+            });
+          }
+        });
       } else if (e.data.messageType === "is_available") {
         if (e.data.reply) {
           self.postMessage({
@@ -215,9 +236,7 @@ async function readFile(file) {
   });
 }
 
-async function fileUploadHandler(e) {
-  console.time("file_upload");
-  const file = e.data.file;
+async function loadWorker(file) {
   const buffer = await readFile(file);
 
   try {
@@ -238,6 +257,17 @@ async function fileUploadHandler(e) {
       errorCode: 1,
     });
   }
+}
+
+async function fileUploadHandler(e) {
+  console.time("file_upload");
+  const file = e.data.file;
+  files.set(file.name, file);
+  loadWorker(file);
+}
+
+async function unloadWorker(e) {
+  removeWorker(e.data.name);
 }
 
 async function getNetworkModule(e) {
@@ -265,7 +295,7 @@ async function scaleWeights(e) {
   await navigator.locks.request(`scale-weights`, async (lock) => {
     const name = e.data.name;
 
-    const loraWorker = loraWorkers.get(name);
+    const loraWorker = getWorker(name);
     loraWorker.scale_weights();
     console.timeEnd("scale_weights");
   });
@@ -273,7 +303,7 @@ async function scaleWeights(e) {
 
 async function iterScaleWeights(e) {
   const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(name);
 
   await navigator.locks.request(`scale-weights`, async (lock) => {
     const baseNames = loraWorker.base_names();
@@ -324,7 +354,7 @@ async function scaleWeight(e) {
     const name = e.data.name;
     const baseName = e.data.baseName;
 
-    const loraWorker = loraWorkers.get(name);
+    const loraWorker = getWorker(name);
     loraWorker.scale_weight(baseName);
 
     console.timeEnd("scale_weight");
@@ -355,7 +385,7 @@ async function getBaseNames(e) {
 async function getNorms(e) {
   // console.log("getting norms", e.data);
   const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(name);
   const baseName = e.data.baseName;
 
   console.log("Getting norm for ", baseName);
@@ -486,7 +516,7 @@ async function getL2Norms(e) {
 
 async function getAlphaKeys(e) {
   const name = e.data.name;
-  const loraWorker = loraWorkers.get(name);
+  const loraWorker = getWorker(name);
 
   return loraWorker.alpha_keys();
 }

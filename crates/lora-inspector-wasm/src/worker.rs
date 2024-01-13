@@ -35,6 +35,10 @@ impl LoraWorker {
         metadata.map(|metadata| LoraWorker { metadata, file })
     }
 
+    pub fn unload(&mut self) {
+        self.file.unload()
+    }
+
     pub fn metadata(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
         serde_wasm_bindgen::to_value(&self.metadata.metadata)
     }

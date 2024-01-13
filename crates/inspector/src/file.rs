@@ -34,6 +34,11 @@ impl LoRAFile {
         }
     }
 
+    pub fn unload(&mut self) {
+        self.weights = None;
+        self.scaled_weights = HashMap::new();
+    }
+
     pub fn is_tensors_loaded(&self) -> bool {
         self.weights.is_some()
     }

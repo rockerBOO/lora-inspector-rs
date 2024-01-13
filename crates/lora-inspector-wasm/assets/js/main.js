@@ -1,3 +1,4 @@
+"use strict";
 const h = React.createElement;
 
 function Header({ metadata }) {
@@ -452,13 +453,8 @@ function Blocks({ metadata, filename }) {
         },
         filename,
       ).then((resp) => {
-        // console.log(resp);
-        // setTEMagBlocks(averageMagnitudes.get("text_encoder"));
         setTEMagBlocks(resp.norms.te);
         setUnetMagBlocks(resp.norms.unet);
-        //
-        // setTEStrBlocks(averageStrength.get("text_encoder"));
-        // setUnetStrBlocks(averageStrength.get("unet"));
       });
     });
 

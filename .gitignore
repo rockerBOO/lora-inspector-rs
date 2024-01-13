@@ -3,4 +3,6 @@
 pkg/
 pkg
 
+*.safetensors
+
 new.html
