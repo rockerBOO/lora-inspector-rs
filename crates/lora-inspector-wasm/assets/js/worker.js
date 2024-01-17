@@ -34,7 +34,7 @@ function addWorker(name, worker) {
 function removeWorker(workerName) {
   const loraWorker = getWorker(workerName);
 
-	loraWorker.unload();
+  loraWorker.unload();
   loraWorker.free();
 
   loraWorkers.set(workerName, undefined);
