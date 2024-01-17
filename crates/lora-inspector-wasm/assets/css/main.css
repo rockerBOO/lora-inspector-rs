@@ -477,6 +477,13 @@ text.ct-label {
 #te-architecture {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(17.5em, 1fr));
+	grid-gap: 0.5em;
+}
+
+#unet-architecture {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(17.5em, 1fr));
+	grid-gap: 0.5em;
 }
 
 .attention-layer {
@@ -491,6 +498,25 @@ text {
 }
 
 
+.attention-block, .resnet-block, .sampler-block {
+	background-color: var(--accent-bg-color);
+	/* border: 1px solid var(--accent-color); */
+	padding: 1em;
+	box-shadow: 0.1em 0.1em 0.1em black;
+}
+
+.resnet-block, .sampler-block {
+	display: grid;
+	justify-items: center;
+
+}
+
+.attention-block h3, .resnet-block h3, .sampler-block h3 {
+
+	margin: 0;
+	margin-bottom: 0.5em;
+	text-align:center;
+}
 
 /* .download { */
 /**/

@@ -258,6 +258,7 @@ function LoRANetwork({ metadata }) {
       name: "Network Alpha",
       valueClassName: "alpha",
       value: alphas
+        .filter((alpha) => alpha)
         .map((alpha) => {
           if (typeof alpha === "number") {
             return alpha.toPrecision(2);
@@ -402,6 +403,7 @@ function Blocks({ metadata, filename }) {
   const [normProgress, setNormProgress] = React.useState(0);
   const [currentCount, setCurrentCount] = React.useState(0);
   const [totalCount, setTotalCount] = React.useState(0);
+
   const [startTime, setStartTime] = React.useState(undefined);
   const [currentBaseName, setCurrentBaseName] = React.useState("");
   const [canHaveBlockWeights, setCanHaveBlockWeights] = React.useState(false);
@@ -435,6 +437,7 @@ function Blocks({ metadata, filename }) {
 
       listenProgress("l2_norms_progress", filename).then(
         async (getProgress) => {
+          let progress;
           while ((progress = await getProgress().next())) {
             const value = progress.value;
             setCurrentBaseName(value.baseName);
@@ -503,6 +506,7 @@ function Blocks({ metadata, filename }) {
 
     listenProgress("scale_weight_progress", filename).then(
       async (getProgress) => {
+        let progress;
         while ((progress = await getProgress().next())) {
           const value = progress.value;
           if (!value) {
@@ -1154,6 +1158,8 @@ function Advanced({ metadata, filename }) {
   const [allKeys, setAllKeys] = React.useState([]);
   const [showAllKeys, setShowAllKeys] = React.useState(false);
 
+  const advancedRef = React.createRef();
+
   React.useEffect(() => {
     trySyncMessage(
       { messageType: "base_names", name: filename },
@@ -1168,14 +1174,14 @@ function Advanced({ metadata, filename }) {
       filename,
     ).then((resp) => {
       resp.textEncoderKeys.sort();
-      console.log("text encoder keys", resp.textEncoderKeys);
+      // console.log("text encoder keys", resp.textEncoderKeys);
       setTextEncoderKeys(resp.textEncoderKeys);
     });
 
     trySyncMessage({ messageType: "unet_keys", name: filename }, filename).then(
       (resp) => {
         resp.unetKeys.sort();
-        console.log("unet keys", resp.unetKeys);
+        // console.log("unet keys", resp.unetKeys);
         setUnetKeys(resp.unetKeys);
       },
     );
@@ -1189,8 +1195,14 @@ function Advanced({ metadata, filename }) {
     );
   }, []);
 
+  if (DEBUG) {
+    React.useEffect(() => {
+      advancedRef.current.scrollIntoView({ behavior: "smooth" });
+    }, []);
+  }
+
   return [
-    h("h2", null, "Advanced"),
+    h("h2", { id: "advanced", ref: advancedRef }, "Advanced"),
     h(
       "div",
       { className: "row" },
@@ -1227,27 +1239,65 @@ function Advanced({ metadata, filename }) {
   ];
 }
 
-let progress = 0;
+const DEBUG = true;
 
 function Statistics({ baseNames, filename }) {
+  const [calcStatistics, setCalcStatistics] = React.useState(false);
+  const [hasStatistics, setHasStatistics] = React.useState(false);
   const [bases, setBases] = React.useState([]);
+  const [statisticProgress, setStatisticProgress] = React.useState(0);
+  const [currentCount, setCurrentCount] = React.useState(0);
+  const [totalCount, setTotalCount] = React.useState(0);
+
+  const [startTime, setStartTime] = React.useState(undefined);
+  const [currentBaseName, setCurrentBaseName] = React.useState("");
+
+  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
+  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
+    React.useState(0);
+  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
+
+  const [canHaveStatistics, setCanHaveStatistics] = React.useState(false);
 
   React.useEffect(() => {
+    if (!calcStatistics) {
+      return;
+    }
+
     if (baseNames.length === 0) {
       return;
     }
 
-    console.time("get norms");
-
+    console.time("scale weights");
     trySyncMessage(
       {
-        messageType: "scale_weights",
+        messageType: "scale_weights_with_progress",
         name: filename,
         reply: true,
       },
       filename,
     ).then(() => {
-      Promise.all(
+      console.timeEnd("scale weights");
+      console.log("Calculating statistics...");
+      console.time("get statistics");
+
+      // listenProgress("statistics_progress", filename).then(
+      //   async (getProgress) => {
+      //     let progress;
+      //     while ((progress = await getProgress().next())) {
+      //       const value = progress.value;
+      //       setCurrentBaseName(value.baseName);
+      //       setCurrentCount(value.currentCount);
+      //       setTotalCount(value.totalCount);
+      //       setNormProgress(value.currentCount / value.totalCount);
+      //     }
+      //   },
+      // );
+
+      setStartTime(performance.now());
+
+      let progress = 0;
+      Promise.allSettled(
         baseNames.map(async (baseName) => {
           return trySyncMessage(
             { messageType: "norms", name: filename, baseName },
@@ -1255,22 +1305,193 @@ function Statistics({ baseNames, filename }) {
             ["messageType", "baseName"],
           ).then((resp) => {
             progress += 1;
-            console.log("progress", progress / baseNames.length, resp);
+            // console.log("progress", progress / baseNames.length, resp);
+
+            setCurrentBaseName(resp.baseName);
+            setCurrentCount(progress);
+            setTotalCount(baseNames.length);
+            setStatisticProgress(progress / baseNames.length);
+
             return { baseName: resp.baseName, stat: resp.norms };
           });
         }),
-      ).then((bases) => {
+      ).then((results) => {
         progress = 0;
+        const bases = results
+          .filter((v) => v.status === "fulfilled")
+          .map((v) => v.value);
         setBases(bases);
-        console.timeEnd("get norms");
+        setHasStatistics(true);
+        console.timeEnd("get statistics");
       });
     });
-  }, [baseNames]);
+  }, [calcStatistics, baseNames]);
+
+  React.useEffect(() => {
+    if (!calcStatistics) {
+      return;
+    }
+
+    if (baseNames.length === 0) {
+      return;
+    }
+
+    setStartTime(performance.now());
+
+    listenProgress("scale_weight_progress", filename).then(
+      async (getProgress) => {
+        let progress;
+        while ((progress = await getProgress().next())) {
+          const value = progress.value;
+          if (!value) {
+            break;
+          }
+          setCurrentBaseName(value.baseName);
+          setCurrentScaleWeightCount(value.currentCount);
+          setTotalScaleWeightCount(value.totalCount);
+          setScaleWeightProgress(value.currentCount / value.totalCount);
+        }
+      },
+    );
+
+    return function cleanup() {};
+  }, [calcStatistics]);
+
+  React.useEffect(() => {
+    trySyncMessage(
+      {
+        messageType: "network_type",
+        name: filename,
+        reply: true,
+      },
+      filename,
+    ).then((resp) => {
+      if (
+        resp.networkType === "LoRA" ||
+        resp.networkType === "LoRAFA" ||
+        resp.networkType === "DyLoRA" ||
+        // Assuming networkType of none could have block weights
+        resp.networkType === undefined
+      ) {
+        setCanHaveStatistics(true);
+        trySyncMessage(
+          {
+            messageType: "precision",
+            name: filename,
+            reply: true,
+          },
+          filename,
+        ).then((resp) => {
+          if (resp.precision == "bf16") {
+            setCanHaveStatistics(false);
+          }
+        });
+      }
+    });
+  }, []);
+
+  if (canHaveStatistics && !hasStatistics && !calcStatistics) {
+    return h(
+      "div",
+      null,
+      h(
+        "button",
+        {
+          onClick: (e) => {
+            e.preventDefault();
+            setCalcStatistics(true);
+          },
+        },
+        "Calculate statistics",
+      ),
+    );
+  }
+
+  if (calcStatistics && !hasStatistics) {
+    const elapsedTime = performance.now() - startTime;
+    const remaining =
+      (elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount;
+    const perSecond = currentCount / (elapsedTime / 1_000);
+
+    if (currentCount === 0) {
+      const elapsedTime = performance.now() - startTime;
+      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
+
+      const remaining =
+        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
+        elapsedTime * totalScaleWeightCount;
+      return h(
+        "div",
+        { className: "block-weights-container" },
+        h(
+          "span",
+          null,
+          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
+            2,
+          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
+            2,
+          )}it/s ${(remaining / 1_000_000).toFixed(
+            2,
+          )}s remaining ${currentBaseName} `,
+        ),
+      );
+    }
+
+    return h(
+      "div",
+      { className: "block-weights-container" },
+      // { className: "marquee" },
+      h(
+        "span",
+        null,
+        `Loading statistics... ${(statisticProgress * 100).toFixed(
+          2,
+        )}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(
+          remaining / 1_000_000
+        ).toFixed(2)}s remaining ${currentBaseName} `,
+      ),
+    );
+  }
+
+  if (!canHaveStatistics) {
+    return h(
+      "div",
+      null,
+      "Statistics not supported for this network type or precision.",
+    );
+  }
 
   const teLayers = compileTextEncoderLayers(bases);
   const unetLayers = compileUnetLayers(bases);
 
   return [
+    DEBUG &&
+      h(
+        "div",
+        {
+          style: {
+            display: "grid",
+            justifyContent: "flex-end",
+          },
+        },
+        h(
+          "button",
+          {
+            onClick: () => {
+              console.log("teLayers", teLayers);
+              console.log("unetLayers", unetLayers);
+              console.log(
+                "bases",
+                bases.map((v) => ({
+                  ...v,
+                  stat: Object.fromEntries(v["stat"]),
+                })),
+              );
+            },
+          },
+          "debug stats",
+        ),
+      ),
     h("table", null, [
       h("thead", null, [
         h("th", null, "base name"),
@@ -1295,10 +1516,18 @@ function Statistics({ baseNames, filename }) {
         });
       }),
     ]),
+
+    teLayers.length > 0 &&
+      (h("div", null, h("h2", null, "Text Encoder Architecture")),
+      h(
+        "div",
+        { id: "te-architecture" },
+        h(TEArchitecture, { layers: teLayers }),
+      )),
+    h("div", null, h("h2", null, "UNet Architecture")),
     h(
       "div",
-      { id: "te-architecture" },
-      h(TEArchitecture, { layers: teLayers }),
+      { id: "unet-architecture" },
       h(UNetArchitecture, { layers: unetLayers }),
     ),
   ];
@@ -1446,23 +1675,20 @@ function compileTextEncoderLayers(bases) {
     /lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
   const layers = [];
-  console.log(bases);
 
   for (const i in bases) {
     const base = bases[i];
 
-    console.log(base);
     const match = base.baseName.match(re);
 
     if (match) {
-      console.log(match);
-
       const layerId = match.groups.layer_id;
       const layerType = match.groups.layer_type;
       const subType = match.groups.sub_type;
 
       const layerKey = layerType === "self_attn" ? "attn" : "mlp";
       let value;
+      let subKey;
 
       switch (subType) {
         case "k_proj":
@@ -1486,7 +1712,7 @@ function compileTextEncoderLayers(bases) {
           break;
 
         case "fc2":
-          subkey = "fc2";
+          subKey = "fc2";
           break;
       }
 
@@ -1504,8 +1730,6 @@ function compileTextEncoderLayers(bases) {
       }
     }
   }
-
-  console.log("te layers", layers);
 
   return layers;
 }
@@ -1651,307 +1875,154 @@ function compileUnetLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  // return {
-  //   down: {
-  //     0: {
-  //       proj_in: 0.7321300228392223,
-  //       attn1: {
-  //         k: 0.6722621767578187,
-  //         q: 0.6511781156757548,
-  //         v: 0.6935735581905126,
-  //         out: 0.6846320232540608,
-  //       },
-  //       attn2: {
-  //         k: 0.7510785980374958,
-  //         q: 0.554719090089995,
-  //         v: 0.7270581271746418,
-  //         out: 0.7135258603821074,
-  //       },
-  //       ff1: 1.8765097058983984,
-  //       ff2: 0.9652298770968581,
-  //       proj_out: 0.6100351393694301,
-  //     },
-  //     1: {
-  //       proj_in: 0.6103902379925027,
-  //       attn1: {
-  //         k: 0.6685348327312036,
-  //         q: 0.6257657583967223,
-  //         v: 0.683091543243205,
-  //         out: 0.6313789984122181,
-  //       },
-  //       attn2: {
-  //         k: 1.22194527828802,
-  //         q: 0.5774264755047156,
-  //         v: 0.8915744358899851,
-  //         out: 0.6449179921616967,
-  //       },
-  //       ff1: 2.1462326275738097,
-  //       ff2: 1.1291232337169568,
-  //       proj_out: 0.6268967044973203,
-  //     },
-  //     3: {
-  //       proj_in: 0.9355693016270011,
-  //       attn1: {
-  //         k: 0.9301549700214394,
-  //         q: 1.0379488970609958,
-  //         v: 1.009717654741764,
-  //         out: 1.0653500916892182,
-  //       },
-  //       attn2: {
-  //         k: 1.0423720420623361,
-  //         q: 0.9328001541579402,
-  //         v: 1.1016296534519077,
-  //         out: 1.1686387130358198,
-  //       },
-  //       ff1: 2.94134593620881,
-  //       ff2: 1.892295957667535,
-  //       proj_out: 1.0640601767412536,
-  //     },
-  //     4: {
-  //       proj_in: 1.0260377804008298,
-  //       attn1: {
-  //         k: 1.052193309234656,
-  //         q: 0.9831270253796603,
-  //         v: 0.9322223013871355,
-  //         out: 0.9069335757919067,
-  //       },
-  //       attn2: {
-  //         k: 0.7214671242828914,
-  //         q: 0.7140062490411764,
-  //         v: 0.842443850130627,
-  //         out: 0.9751807725222181,
-  //       },
-  //       ff1: 2.7088397982534853,
-  //       ff2: 1.693866276468733,
-  //       proj_out: 0.8965560703858975,
-  //     },
-  //     6: {
-  //       proj_in: 1.4359480819739419,
-  //       attn1: {
-  //         k: 1.7555674848632628,
-  //         q: 1.6421437644890886,
-  //         v: 1.6881824948501947,
-  //         out: 1.530827326205961,
-  //       },
-  //       attn2: {
-  //         k: 1.15386139350618,
-  //         q: 1.5777034864715769,
-  //         v: 1.3451804681553161,
-  //         out: 2.0736647183530126,
-  //       },
-  //       ff1: 5.236047713345741,
-  //       ff2: 3.3389863711246024,
-  //       proj_out: 1.7424620765042624,
-  //     },
-  //     7: {
-  //       proj_in: 1.5779324794139324,
-  //       attn1: {
-  //         k: 1.6173986815869084,
-  //         q: 1.6172507470878852,
-  //         v: 1.6295117437560875,
-  //         out: 1.7009819316725845,
-  //       },
-  //       attn2: {
-  //         k: 0.9193958945267028,
-  //         q: 0.9994320157543968,
-  //         v: 1.304004333276256,
-  //         out: 2.1059795752494024,
-  //       },
-  //       ff1: 4.100873698575432,
-  //       ff2: 3.0102936585498927,
-  //       proj_out: 1.5443294602815303,
-  //     },
-  //   },
-  //   mid: {
-  //     0: {
-  //       proj_in: 1.8603964180793588,
-  //       attn1: {
-  //         k: 1.65462106091712,
-  //         q: 2.3652007659495387,
-  //         v: 1.648676859436656,
-  //         out: 1.6479986650284224,
-  //       },
-  //       attn2: {
-  //         k: 1.4418991705038022,
-  //         q: 1.4558909665630113,
-  //         v: 1.1797608672857829,
-  //         out: 1.8903940229242242,
-  //       },
-  //       ff1: 6.080725607164155,
-  //       ff2: 3.7319773046131535,
-  //       proj_out: 2.264789768397898,
-  //     },
-  //   },
-  //   up: {
-  //     3: {
-  //       proj_in: 1.652029974755443,
-  //       attn1: {
-  //         k: 1.72240038562434,
-  //         q: 1.7011859946657355,
-  //         v: 1.7749363315623883,
-  //         out: 1.9749524450062552,
-  //       },
-  //       attn2: {
-  //         k: 1.0883090067106604,
-  //         q: 1.211465910951937,
-  //         v: 1.1754110696484705,
-  //         out: 1.6939734699518278,
-  //       },
-  //       ff1: 5.058069176902104,
-  //       ff2: 2.9329384409540786,
-  //       proj_out: 1.5600909292652805,
-  //     },
-  //     4: {
-  //       proj_in: 1.7350853670636872,
-  //       attn1: {
-  //         k: 1.7239140849805255,
-  //         q: 1.8391006483593777,
-  //         v: 1.599359850750919,
-  //         out: 1.929919388919021,
-  //       },
-  //       attn2: {
-  //         k: 1.2442431908742166,
-  //         q: 1.332739056335861,
-  //         v: 1.1531629787977997,
-  //         out: 1.8005189066512577,
-  //       },
-  //       ff1: 5.93332855665865,
-  //       ff2: 3.8249316869723895,
-  //       proj_out: 1.9275357354110783,
-  //     },
-  //     5: {
-  //       proj_in: 1.60750652461065,
-  //       attn1: {
-  //         k: 2.5105525270835267,
-  //         q: 2.739013924387776,
-  //         v: 1.6339389332378726,
-  //         out: 1.7795268583263455,
-  //       },
-  //       attn2: {
-  //         k: 1.6464602331538558,
-  //         q: 1.8375230508674993,
-  //         v: 1.25108014536182,
-  //         out: 1.867519626511994,
-  //       },
-  //       ff1: 6.160500872280232,
-  //       ff2: 3.337199267876231,
-  //       proj_out: 1.8795627221478142,
-  //     },
-  //     6: {
-  //       proj_in: 1.1198231032165755,
-  //       attn1: {
-  //         k: 1.0842911377179798,
-  //         q: 0.9159201719702058,
-  //         v: 1.01989556354772,
-  //         out: 1.17669655283065,
-  //       },
-  //       attn2: {
-  //         k: 0.8869824153564619,
-  //         q: 0.6690626544576774,
-  //         v: 0.8804039902713688,
-  //         out: 1.288608631335546,
-  //       },
-  //       ff1: 3.1397435588562628,
-  //       ff2: 1.8978276133719976,
-  //       proj_out: 0.9579104441348353,
-  //     },
-  //     7: {
-  //       proj_in: 1.1345287083438274,
-  //       attn1: {
-  //         k: 1.0463571336714181,
-  //         q: 1.142409765711616,
-  //         v: 1.0452099873430831,
-  //         out: 1.0520314648763995,
-  //       },
-  //       attn2: {
-  //         k: 0.9530294736210758,
-  //         q: 0.8692950519866015,
-  //         v: 0.9929179562789237,
-  //         out: 1.2108682649714024,
-  //       },
-  //       ff1: 2.953724294213194,
-  //       ff2: 1.6901417033233905,
-  //       proj_out: 1.1758144352304611,
-  //     },
-  //     8: {
-  //       proj_in: 1.1982013024938913,
-  //       attn1: {
-  //         k: 1.1022880685909286,
-  //         q: 1.2031060730919407,
-  //         v: 0.9777458175426541,
-  //         out: 0.9996915531165024,
-  //       },
-  //       attn2: {
-  //         k: 1.3256333962020932,
-  //         q: 0.9910017680027595,
-  //         v: 1.1635197355826374,
-  //         out: 1.022877715017238,
-  //       },
-  //       ff1: 2.789591080215707,
-  //       ff2: 1.9515492693478445,
-  //       proj_out: 0.9708795562758037,
-  //     },
-  //     9: {
-  //       proj_in: 0.5933071264684742,
-  //       attn1: {
-  //         k: 0.6052617076757603,
-  //         q: 0.6565792771989842,
-  //         v: 0.6162005816609448,
-  //         out: 0.6237161937945802,
-  //       },
-  //       attn2: {
-  //         k: 0.8634127072913751,
-  //         q: 0.7537407527236594,
-  //         v: 0.6707907101500438,
-  //         out: 0.6343704905116913,
-  //       },
-  //       ff1: 1.8907164902593363,
-  //       ff2: 1.0385923233363892,
-  //       proj_out: 0.5587854986961417,
-  //     },
-  //     10: {
-  //       proj_in: 0.6241509864380473,
-  //       attn1: {
-  //         k: 0.7197084646675959,
-  //         q: 0.606873170024349,
-  //         v: 0.6216814332599732,
-  //         out: 0.595516753098002,
-  //       },
-  //       attn2: {
-  //         k: 0.7361735510359417,
-  //         q: 0.5444455913384406,
-  //         v: 0.5662872874139346,
-  //         out: 0.6262802435334639,
-  //       },
-  //       ff1: 1.8499362225079872,
-  //       ff2: 1.011894669043252,
-  //       proj_out: 0.6056375734234015,
-  //     },
-  //     11: {
-  //       proj_in: 0.6251868405938613,
-  //       attn1: {
-  //         k: 0.5464932681496891,
-  //         q: 0.6686424567631964,
-  //         v: 1.0890761569618088,
-  //         out: 0.5960820383804658,
-  //       },
-  //       attn2: {
-  //         k: 0.9035756936601899,
-  //         q: 0.7792671889783575,
-  //         v: 1.1143997508429884,
-  //         out: 0.6788500439665865,
-  //       },
-  //       ff1: 1.8967438027164611,
-  //       ff2: 0.7291338396536455,
-  //       proj_out: 0.6559736128196422,
-  //     },
-  //   },
-  // };
+  return {
+    down: {
+      IN00: {
+        proj_in: 0.5835438035224952,
+        attn1: {
+          k: 0.7724846822186459,
+          q: 0.8470290780768107,
+          v: 0.5306325923819631,
+          out: 0.6966399804009704,
+        },
+        attn2: {
+          k: 2.820660007479423,
+          q: 1.1666530560013166,
+          v: 0.788413276490551,
+          out: 0.7739225866097094,
+        },
+        ff1: 2.8923656530518334,
+        ff2: 1.4149907236171593,
+        proj_out: 0.7232647789837462,
+        conv1: 0.7169271612272715,
+        conv2: 0.784292949111798,
+        time_emb_proj: 1.1519044797930735,
+      },
+      IN01: {
+        proj_in: 0.6407039401972426,
+        attn1: {
+          k: 0.7638138874376035,
+          q: 0.8438892577092059,
+          v: 0.5692621046551364,
+          out: 0.7930231090174562,
+        },
+        attn2: {
+          k: 1.8876336042150899,
+          q: 1.0693218042423827,
+          v: 1.3098261604459667,
+          out: 0.6458149416617049,
+        },
+        ff1: 2.586747191787799,
+        ff2: 1.4862982665952245,
+        proj_out: 0.8232362020418263,
+        conv1: 1.3327894552241408,
+        conv2: 1.3229192972339334,
+        time_emb_proj: 1.6733557758755002,
+      },
+      IN02: {
+        attn1: {},
+        attn2: {},
+        conv: 2.35427675751467,
+      },
+    },
+    mid: {},
+    up: {
+      OUT08: {
+        proj_in: 1.7769853066258527,
+        attn1: {
+          k: 4.772022244669916,
+          q: 4.008297087030857,
+          v: 2.1360581197918473,
+          out: 1.957634060338022,
+        },
+        attn2: {
+          k: 4.408301328593163,
+          q: 3.3735284340123792,
+          v: 1.4676879333177373,
+          out: 1.7915439777615563,
+        },
+        ff1: 9.172188318044737,
+        ff2: 3.638717008716509,
+        proj_out: 2.1340296767331397,
+        conv1: 6.416774669716237,
+        conv2: 3.1118551594311783,
+        conv_shortcut: 1.7328171138493016,
+        time_emb_proj: 5.685051613370558,
+        conv: 3.1030022051916775,
+      },
+      OUT09: {
+        proj_in: 0.7951332912669751,
+        attn1: {
+          k: 1.2786685525113588,
+          q: 1.4811242408744274,
+          v: 0.7510071869900969,
+          out: 0.9010832945689117,
+        },
+        attn2: {
+          k: 2.3476239220834954,
+          q: 1.44050725810973,
+          v: 0.8934114728460721,
+          out: 0.5778640528083228,
+        },
+        ff1: 3.3040693711947604,
+        ff2: 1.4768289033483628,
+        proj_out: 0.9967308251899586,
+        conv1: 3.056591979337983,
+        conv2: 1.2906941898525774,
+        conv_shortcut: 0.7425445422443783,
+        time_emb_proj: 1.924128192701365,
+      },
+      OUT10: {
+        proj_in: 0.6305214170387302,
+        attn1: {
+          k: 0.9343660072417308,
+          q: 1.013432606622726,
+          v: 0.6000705542423088,
+          out: 0.6296002281883292,
+        },
+        attn2: {
+          k: 2.8600073822587073,
+          q: 1.2318967798236578,
+          v: 0.6400245685661953,
+          out: 0.609398158974776,
+        },
+        ff1: 2.834280464365902,
+        ff2: 1.228979416115511,
+        proj_out: 0.8828615754836663,
+        conv1: 2.2751839253291393,
+        conv2: 0.9173411747213964,
+        conv_shortcut: 0.6309656205236726,
+        time_emb_proj: 2.824342966119458,
+      },
+      OUT11: {
+        proj_in: 0.5870043961700094,
+        attn1: {
+          k: 1.335164474060957,
+          q: 1.8194330761308897,
+          v: 0.794061194299154,
+          out: 0.6549539950277664,
+        },
+        attn2: {
+          k: 1.5748038833446982,
+          q: 1.3774989787665628,
+          v: 0.2612527544408402,
+          out: 0.4808003135439534,
+        },
+        ff1: 3.447681531040988,
+        ff2: 2.3266240441119534,
+        proj_out: 0.9813447720472999,
+        conv1: 1.4686158105766736,
+        conv2: 0.906270858910067,
+        conv_shortcut: 0.5799562447119877,
+        time_emb_proj: 3.145315279683768,
+      },
+    },
+  };
   const re =
     /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
   // const layers = [];
-  console.log(bases);
+  // console.log(bases);
 
   // console.log(
   //   "bases parsed",
@@ -2007,7 +2078,7 @@ function compileUnetLayers(bases) {
     let parsedKey = parseSDKey(base.baseName);
 
     // TODO need layer id
-    layer = ensureLayer(layer, parsedKey.idx);
+    layer = ensureLayer(layer, parsedKey.name);
 
     if (parsedKey.isAttention) {
       if (base.baseName.includes("attn1")) {
@@ -2051,12 +2122,10 @@ function compileUnetLayers(bases) {
       }
     } else if (parsedKey.isSampler) {
       if (base.baseName.includes("conv")) {
-        layer["conv"] = base.state.get("l2_norm");
+        layer["conv"] = base.stat.get("l2_norm");
       }
     }
   }
-
-  console.log("unet layers", layers);
 
   return layers;
 }
@@ -2181,6 +2250,26 @@ function TEArchitecture({ layers }) {
             },
             h("path", { d: "M0,0 V4 L2,2 Z", fill: "currentColor" }),
           ),
+          // h(
+          //   "filter",
+          //   { id: "filter1", x: 0, y: 0 },
+          //   h("feOffset", {
+          //     result: "offOut",
+          //     in: "SourceAlpha",
+          //     dx: 1,
+          //     dy: 1,
+          //   }),
+          //   h("feGaussianBlur", {
+          //     result: "blurOut",
+          //     in: "offOut",
+          //     stdDeviation: 1,
+          //   }),
+          //   h("feBlend", {
+          //     in: "SourceGraphic",
+          //     in2: "blurOut",
+          //     mode: "normal",
+          //   }),
+          // ),
         ),
         h(
           "g",
@@ -2190,16 +2279,16 @@ function TEArchitecture({ layers }) {
         ),
         h(
           "g",
-          { className: "attention-key", transform: "translate(125, 25)" },
-          h("text", { title: "Key", x: "1em" }, "Query"),
-          h("text", { title: "Key", y: "1.5em" }, attn.q.toPrecision(4)),
+          { className: "attention-query", transform: "translate(125, 25)" },
+          h("text", { title: "Query", x: "1em" }, "Query"),
+          h("text", { title: "Query", y: "1.5em" }, attn.q.toPrecision(4)),
         ),
 
         h(
           "g",
-          { className: "attention-key", transform: "translate(220, 25)" },
-          h("text", { title: "Key", x: "1em" }, "Value"),
-          h("text", { title: "Key", y: "1.5em" }, attn.v.toPrecision(4)),
+          { className: "attention-query", transform: "translate(220, 25)" },
+          h("text", { title: "Value", x: "1em" }, "Value"),
+          h("text", { title: "Value", y: "1.5em" }, attn.v.toPrecision(4)),
         ),
 
         h("path", {
@@ -2207,6 +2296,7 @@ function TEArchitecture({ layers }) {
           stroke: "currentColor",
           strokeWidth: 4,
           fill: "none",
+          // filter: "url(#filter1)",
           d: "M150,80, 150,100 150,100 ",
         }),
         h("path", {
@@ -2214,6 +2304,7 @@ function TEArchitecture({ layers }) {
           stroke: "currentColor",
           strokeWidth: 4,
           fill: "none",
+          // filter: "url(#filter1)",
           d: "M60,80 60,100, 150,100 150,120",
         }),
         h("path", {
@@ -2221,6 +2312,7 @@ function TEArchitecture({ layers }) {
           stroke: "currentColor",
           strokeWidth: 4,
           fill: "none",
+          // filter: "url(#filter1)",
           d: "M250,80, 250,200 150,200",
         }),
         h("path", {
@@ -2228,6 +2320,7 @@ function TEArchitecture({ layers }) {
           stroke: "currentColor",
           strokeWidth: 4,
           fill: "none",
+          // filter: "url(#filter1)",
           d: "M150,80, 150,100 150,100 ",
         }),
 
@@ -2300,39 +2393,106 @@ function TEArchitecture({ layers }) {
 function UNetArchitecture({ layers }) {
   return [
     Object.entries(layers.down).map(([id, layer]) => {
-      return h(
-        "div",
-        null,
-        h("h3", null, `down ${id}`),
-        layer.conv1 ? h(ResNet, layer) : h(CrossAttention, layer),
-      );
+      let conv;
+      if (layer.conv1) {
+        conv = h("div", { className: "resnet-block" }, [
+          h("h3", null, "ResNet Convolution"),
+          h(ResNet, layer),
+        ]);
+      }
+
+      let crossAttention;
+      if (Object.keys(layer.attn1).length > 0) {
+        crossAttention = h("div", { className: "attention-block" }, [
+          h("h3", null, "Cross Attention"),
+          h(CrossAttention, layer),
+        ]);
+      }
+
+      let sampler;
+      if (layer.conv) {
+        sampler = h("div", { className: "sampler-block" }, [
+          h("h3", null, "Down Sampler"),
+          h(Sampler, layer),
+        ]);
+      }
+
+      return h("div", null, h("h3", null, `down ${id}`), [
+        crossAttention,
+        conv,
+        sampler,
+      ]);
     }),
     Object.entries(layers.mid).map(([id, layer]) => {
-      return h(
-        "div",
-        null,
-        h("h3", null, `mid ${id}`),
-        layer.conv1 ? h(ResNet, layer) : h(CrossAttention, layer),
-      );
+      let conv;
+      if (layer.conv1) {
+        conv = h("div", { className: "resnet-block" }, [
+          h("h3", null, "ResNet Convolution"),
+          h(ResNet, layer),
+        ]);
+      }
+
+      let crossAttention;
+      if (Object.keys(layer.attn1).length > 0) {
+        crossAttention = h("div", { className: "attention-block" }, [
+          h("h3", null, "Cross Attention"),
+          h(CrossAttention, layer),
+        ]);
+      }
+
+      let sampler;
+      if (layer.conv) {
+        sampler = h("div", { className: "sampler-block" }, [
+          h("h3", null, "Sampler"),
+          h(Sampler, layer),
+        ]);
+      }
+      return h("div", null, h("h3", null, `mid ${id}`), [
+        crossAttention,
+        conv,
+        sampler,
+      ]);
     }),
     Object.entries(layers.up).map(([id, layer]) => {
-      return h(
-        "div",
-        null,
-        h("h3", null, `up ${id}`),
-        layer.conv1 ? h(ResNet, layer) : h(CrossAttention, layer),
-      );
+      let conv;
+      if (layer.conv1) {
+        conv = h("div", { className: "resnet-block" }, [
+          h("h3", null, "ResNet Convolution"),
+          h(ResNet, layer),
+        ]);
+      }
+
+      let crossAttention;
+      if (Object.keys(layer.attn1).length > 0) {
+        crossAttention = h("div", { className: "attention-block" }, [
+          h("h3", null, "Cross Attention"),
+          h(CrossAttention, layer),
+        ]);
+      }
+
+      let sampler;
+      if (layer.conv) {
+        sampler = h("div", { className: "sampler-block" }, [
+          h("h3", null, "Up Sampler"),
+          h(Sampler, layer),
+        ]);
+      }
+      return h("div", null, h("h3", null, `up ${id}`), [
+        crossAttention,
+        conv,
+        sampler,
+      ]);
     }),
   ];
 }
 
 function MultiLayerPerception({ fc1, fc2 }) {
-  console.log("MLP", fc1, fc2);
+  // console.log("MLP", fc1, fc2);
   return h("div", null, h("div", null, fc1), h("div", null, fc2));
 }
 
 function Attention({ k, q, v, out }) {
-  console.log("Attention", k, q, v, out);
+  // console.log("Attention", k, q, v, out);
   // k + q => softmax (*v) -> proj
   return h(
     "div",
@@ -2347,10 +2507,9 @@ function Attention({ k, q, v, out }) {
 }
 
 function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
-  console.log(proj_in, attn1, attn2, ff1, ff2, proj_out);
   return h(
     "svg",
-    { className: "cross-attention-layer", width: "18em", height: "930" },
+    { className: "cross-attention-layer", width: "18em", height: "915" },
     h(
       "defs",
       null,
@@ -2366,14 +2525,37 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
         },
         h("path", { d: "M0,0 V4 L2,2 Z", fill: "currentColor" }),
       ),
+      // h(
+      //   "filter",
+      //   { id: "filter1", x: 0, y: 0 },
+      //   h("feOffset", {
+      //     result: "offOut",
+      //     in: "SourceAlpha",
+      //     dx: 1,
+      //     dy: 1,
+      //   }),
+      //   h("feGaussianBlur", {
+      //     result: "blurOut",
+      //     in: "offOut",
+      //     stdDeviation: 1,
+      //   }),
+      //   h("feBlend", {
+      //     in: "SourceGraphic",
+      //     in2: "blurOut",
+      //     mode: "normal",
+      //   }),
+      // ),
     ),
     h(SimpleWeight, {
       groupProps: {
         className: "cross-attention-proj-in",
         transform: "translate(125, 25)",
       },
+      titleProps: {
+        x: "0em",
+      },
       title: "Proj in",
-      value: proj_in.toPrecision(4),
+      value: proj_in,
     }),
     h(
       Group,
@@ -2381,21 +2563,25 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
         className: "attention-flow proj-to-k-q-v",
         transform: "translate(60, 70)",
       },
-      h(Line, { d: "M100,0, 100,20" }),
-      h(Line, { d: "M0,20, 195,20" }),
-      h(LineEnd, { d: "M2,20, 2,30" }),
-      h(LineEnd, { d: "M100,20, 100,30" }),
-      h(LineEnd, { d: "M193,20, 193,30" }),
+      h(Line, { d: "M100,0, 100,10" }),
+      h(Line, { d: "M0,10, 195,10" }),
+      h(LineEnd, { d: "M2,10, 2,30" }),
+      h(LineEnd, { d: "M100,10, 100,30" }),
+      h(LineEnd, { d: "M193,10, 193,30" }),
     ),
     // self attention k q v
     h(
       Group,
       { className: "", transform: "translate(25, 130)" },
-      h(SimpleWeight, { title: "Key", value: attn1.k.toPrecision(4) }),
+      h(SimpleWeight, {
+        titleProps: { x: "1em" },
+        title: "Key",
+        value: attn1.k,
+      }),
       h(SimpleWeight, {
         groupProps: { transform: "translate(100, 0)" },
         title: "Query",
-        value: attn1.q.toPrecision(4),
+        value: attn1.q,
       }),
       h(Line, { d: "M45,45 45,60 135,60 135,45" }),
       h(LineEnd, { d: "M85,60 85,70" }),
@@ -2406,7 +2592,7 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
         transform: "translate(220, 130)",
       },
       title: "Value",
-      value: attn1.v.toPrecision(4),
+      value: attn1.v,
     }),
     // h(GText, { x: "0.5em", title: "Softmax" }, "Softmax"),
     // h(GText, { x: "0.5em", title: "Add + Norm" }, "Add + Norm"),
@@ -2454,17 +2640,18 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
     h(LineEnd, { className: "value-add-softmax", d: "M110,265 110,275" }),
 
     h(LineEnd, {
-      d: "M150,315, 310,315 310,565 190,565",
+      className: "out-to-norm",
+      d: "M150,315, 290,315 290,565 190,565",
     }),
-    h(LineEnd, { d: "M160,315, 160,395" }),
+    h(LineEnd, { className: "out-to-query", d: "M160,315, 160,395" }),
 
     // Cross attention from text encoder
 
     h(
       Group,
-      { transform: "translate(25, 375)" },
-      h(LineEnd, { d: "M0,10 225,10 225,20" }),
-      h(LineEnd, { d: "M35,10 35,20" }),
+      { className: "cross-attention-group", transform: "translate(25, 375)" },
+      h(LineEnd, { d: "M0,0 225,0 225,20" }),
+      h(LineEnd, { d: "M35,0 35,20" }),
     ),
 
     h(SimpleWeight, {
@@ -2472,8 +2659,11 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
         className: "attention-out",
         transform: "translate(75, 310)",
       },
+      titleProps: {
+        x: "1em",
+      },
       title: "Out",
-      value: attn1.out.toPrecision(4),
+      value: attn1.out,
     }),
 
     // CROSS ATTENTION
@@ -2485,8 +2675,11 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
           className: "attention-key",
           transform: "translate(25, 425)",
         },
+        titleProps: {
+          x: "1em",
+        },
         title: "Key",
-        value: attn2.k.toPrecision(4),
+        value: attn2.k,
       }),
 
       h(SimpleWeight, {
@@ -2495,7 +2688,7 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
           transform: "translate(125, 425)",
         },
         title: "Query",
-        value: attn2.q.toPrecision(4),
+        value: attn2.q,
       }),
 
       h(Line, { d: "M60,470 60,480 160,480 160,470" }),
@@ -2511,7 +2704,7 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
           className: "attention-value",
         },
         title: "Value",
-        value: attn2.v.toPrecision(4),
+        value: attn2.v,
       }),
       h(LineEnd, { d: "M30,40 30,115 -30,115" }),
     ),
@@ -2528,22 +2721,28 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
       groupProps: {
         transform: "translate(75, 590)",
       },
+      titleProps: {
+        x: "1em",
+      },
       title: "Out",
-      value: attn2.out.toPrecision(4),
+      value: attn2.out,
     }),
     h(WeightIn, {
       groupProps: {
         transform: "translate(75, 675)",
       },
+      titleProps: {
+        x: "-1em",
+      },
       title: "ff_net_0_proj",
-      value: ff1.toPrecision(4),
+      value: ff1,
     }),
     h(WeightIn, {
       groupProps: {
         transform: "translate(75, 760)",
       },
       title: "ff_net_2",
-      value: ff2.toPrecision(4),
+      value: ff2,
     }),
 
     h(WeightIn, {
@@ -2552,7 +2751,7 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
         transform: "translate(75, 840)",
       },
       title: "Proj out",
-      value: proj_out.toPrecision(4),
+      value: proj_out,
     }),
     // h(
     //   "g",
@@ -2564,12 +2763,103 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
 }
 
 function ResNet({ conv1, time_emb_proj, conv2, conv_shortcut }) {
-  return [
-    h(WeightIn, { title: "conv1 (3x3)", value: conv1 }),
-    h(WeightIn, { title: "time_emb_proj", value: time_emb_proj }),
-    h(WeightIn, { title: "conv2 (3x3)", value: conv2 }),
-    h(WeightIn, { title: "conv_shortcut", value: conv_shortcut }),
-  ];
+  return h(
+    "svg",
+    { className: "resnet-conv-layer", width: "7em", height: "340" },
+    h(
+      "defs",
+      null,
+      h(
+        "marker",
+        {
+          id: "head",
+          orient: "auto",
+          markerWidth: 3,
+          markerHeight: 4,
+          refX: "0.1",
+          refY: "2",
+        },
+        h("path", { d: "M0,0 V4 L2,2 Z", fill: "currentColor" }),
+      ),
+    ),
+    [
+      h(WeightIn, {
+        groupProps: {
+          transform: "translate(30, 0)",
+        },
+        titleProps: {
+          x: "0.5em",
+        },
+        title: "conv1",
+        value: conv1,
+      }),
+      h(WeightIn, {
+        groupProps: {
+          transform: "translate(30, 85)",
+        },
+        titleProps: {
+          x: "-1.4em",
+        },
+        title: "time_emb_proj",
+        value: time_emb_proj,
+      }),
+      h(WeightIn, {
+        groupProps: {
+          transform: "translate(30, 170)",
+        },
+        titleProps: {
+          x: "0.5em",
+        },
+        title: "conv2",
+        value: conv2,
+      }),
+      h(WeightIn, {
+        groupProps: {
+          transform: "translate(30, 255)",
+        },
+        titleProps: {
+          x: "-1.3em",
+        },
+        title: "conv_shortcut",
+        value: conv_shortcut,
+      }),
+    ],
+  );
+}
+
+function Sampler({ conv }) {
+  return h(
+    "svg",
+    { className: "sampler-layer", width: "4em", height: "85" },
+    h(
+      "defs",
+      null,
+      h(
+        "marker",
+        {
+          id: "head",
+          orient: "auto",
+          markerWidth: 3,
+          markerHeight: 4,
+          refX: "0.1",
+          refY: "2",
+        },
+        h("path", { d: "M0,0 V4 L2,2 Z", fill: "currentColor" }),
+      ),
+    ),
+    [
+      h(WeightIn, {
+        groupProps: {
+          transform: "translate(0, 0)",
+        },
+        titleProps: {
+          x: "0.75em",
+        },
+        title: "conv",
+        value: conv,
+      }),
+    ],
+  );
 }
 
 function Group(props) {
@@ -2582,20 +2872,25 @@ function Line({ d, ...rest }) {
     strokeWidth: 4,
     fill: "none",
     stroke: "currentColor",
+    // filter: "url(#filter1)",
     d,
     ...rest,
   });
 }
 
 function LineEnd(props) {
-  return h(Line, { markerEnd: "url(#head)", ...props });
+  return h(Line, {
+    markerEnd: "url(#head)",
+    // filter: "url(#filter1)",
+    ...props,
+  });
 }
 
 function GText({ children, groupProps, ...rest }) {
   return h("g", groupProps, h("text", rest, children));
 }
 
-function WeightIn({ groupProps, title, value }) {
+function WeightIn({ groupProps, titleProps, valueProps, title, value }) {
   return h(
     "g",
     groupProps,
@@ -2606,17 +2901,43 @@ function WeightIn({ groupProps, title, value }) {
       stroke: "currentColor",
       d: "M36,0 36,10",
     }),
-    h("text", { title: title, y: "2em" }, title),
-    h("text", { title: title, y: "3.5em" }, value),
+    h("text", { ...(titleProps ?? []), title: title, y: "2em" }, title),
+    h(
+      "text",
+      {
+        x: "0.5em",
+        y: "3.5em",
+        ...(valueProps ?? []),
+        title: title,
+      },
+      value?.toPrecision(4),
+    ),
   );
 }
 
-function SimpleWeight({ groupProps, title, value }) {
+function SimpleWeight({ groupProps, titleProps, valueProps, title, value }) {
   return h(
     "g",
-    groupProps,
-    h("text", { title: title }, title),
-    h("text", { title: title, y: "1.5em" }, value),
+    { className: title, ...groupProps },
+    h(
+      "text",
+      {
+        x: "0.5em",
+        ...(titleProps ?? []),
+        title: title,
+      },
+      title,
+    ),
+    h(
+      "text",
+      {
+        x: "0.5em",
+        y: "1.5em",
+        ...(valueProps ?? []),
+        title: title,
+      },
+      value?.toPrecision(4),
+    ),
   );
 }
 
@@ -2626,7 +2947,7 @@ function Main({ metadata, filename }) {
       h("div", null, "No metadata for this file"),
       h(Headline, { filename }),
       h(Weight, { metadata, filename }),
-      // h(Advanced, { metadata, filename }),
+      h(Advanced, { metadata, filename }),
     ]);
   }
 
@@ -2642,7 +2963,7 @@ function Main({ metadata, filename }) {
     h(Loss, { metadata }),
     h(CaptionDropout, { metadata }),
     h(Dataset, { metadata }),
-    // h(Advanced, { metadata, filename }),
+    h(Advanced, { metadata, filename }),
   ]);
 }
 

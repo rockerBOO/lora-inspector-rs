@@ -388,16 +388,14 @@ async function getNorms(e) {
   const loraWorker = getWorker(name);
   const baseName = e.data.baseName;
 
-  console.log("Getting norm for ", baseName);
-
   const scaled = loraWorker.norms(baseName, [
     "l1_norm",
     "l2_norm",
     "matrix_norm",
     "max",
     "min",
-    // "std_dev",
-    // "median",
+    "std_dev",
+    "median",
   ]);
 
   return scaled;
