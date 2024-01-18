@@ -717,6 +717,14 @@ function Blocks({ metadata, filename }) {
     const perSecond = currentCount / (elapsedTime / 1_000);
 
     if (currentCount === 0) {
+      if (scaleWeightProgress === 0) {
+        return h(
+          "div",
+          { className: "block-weights-container" },
+          "Waiting for worker, please wait...",
+        );
+      }
+
       const elapsedTime = performance.now() - startTime;
       const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
 
@@ -1243,7 +1251,7 @@ const DEBUG = true;
 
 function Statistics({ baseNames, filename }) {
   const [calcStatistics, setCalcStatistics] = React.useState(false);
-  const [hasStatistics, setHasStatistics] = React.useState(false);
+  const [hasStatistics, setHasStatistics] = React.useState(true);
   const [bases, setBases] = React.useState([]);
   const [statisticProgress, setStatisticProgress] = React.useState(0);
   const [currentCount, setCurrentCount] = React.useState(0);
@@ -1417,6 +1425,14 @@ function Statistics({ baseNames, filename }) {
       const elapsedTime = performance.now() - startTime;
       const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
 
+      if (scaleWeightProgress === 0) {
+        return h(
+          "div",
+          { className: "block-weights-container" },
+          "Waiting for worker, please wait...",
+        );
+      }
+
       const remaining =
         (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
         elapsedTime * totalScaleWeightCount;
@@ -1517,13 +1533,14 @@ function Statistics({ baseNames, filename }) {
       }),
     ]),
 
-    teLayers.length > 0 &&
-      (h("div", null, h("h2", null, "Text Encoder Architecture")),
+    teLayers.length > 0 && [
+      h("div", null, h("h2", null, "Text Encoder Architecture")),
       h(
         "div",
         { id: "te-architecture" },
         h(TEArchitecture, { layers: teLayers }),
-      )),
+      ),
+    ],
     h("div", null, h("h2", null, "UNet Architecture")),
     h(
       "div",
@@ -1537,140 +1554,152 @@ function compileTextEncoderLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  // return [
-  //   {
-  //     mlp: {
-  //       fc1: 0.03377176355576932,
-  //     },
-  //     attn: {
-  //       k: 0.027610311520416056,
-  //       out: 0.028784308961283214,
-  //       q: 0.022726607644713133,
-  //       v: 0.029905859105420967,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.030740709804336325,
-  //     },
-  //     attn: {
-  //       k: 0.025838870814149217,
-  //       out: 0.026656885389931807,
-  //       q: 0.02438057192364713,
-  //       v: 0.028050367227700285,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.028207526255732373,
-  //     },
-  //     attn: {
-  //       k: 0.023132593414098332,
-  //       out: 0.03283677896168791,
-  //       q: 0.027259484438444854,
-  //       v: 0.03544769447446601,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.03271818406172145,
-  //     },
-  //     attn: {
-  //       k: 0.02895878278258152,
-  //       out: 0.027551642200681088,
-  //       q: 0.0213135003023636,
-  //       v: 0.03100399919716222,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.036818285052332145,
-  //     },
-  //     attn: {
-  //       k: 0.029139543708589184,
-  //       out: 0.0327438007805441,
-  //       q: 0.029182852250562816,
-  //       v: 0.028927089216443012,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.033634944570086964,
-  //     },
-  //     attn: {
-  //       k: 0.031138590582916438,
-  //       out: 0.03115476570761682,
-  //       q: 0.023419985096103258,
-  //       v: 0.02843812513761224,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.03106017954275852,
-  //     },
-  //     attn: {
-  //       k: 0.023201234995261357,
-  //       out: 0.025009921446109664,
-  //       q: 0.03349966167986422,
-  //       v: 0.0289371964836586,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.03536504702850587,
-  //     },
-  //     attn: {
-  //       k: 0.02460080728650688,
-  //       out: 0.030828804324378137,
-  //       q: 0.029944200948548962,
-  //       v: 0.026303386135356772,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.03156469178192148,
-  //     },
-  //     attn: {
-  //       k: 0.026440982839927758,
-  //       out: 0.027864138614725913,
-  //       q: 0.02647334809395087,
-  //       v: 0.0323257080199173,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.028074173055168763,
-  //     },
-  //     attn: {
-  //       k: 0.03040033962525639,
-  //       out: 0.02454701439997252,
-  //       q: 0.028268590065174837,
-  //       v: 0.0326967754576092,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.028183648483636747,
-  //     },
-  //     attn: {
-  //       k: 0.02758406973382335,
-  //       out: 0.027762173771304233,
-  //       q: 0.02360335896072415,
-  //       v: 0.03246408533406295,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.02499392983027854,
-  //     },
-  //     attn: {
-  //       k: 0.022166229731455274,
-  //       out: 0.03004094724091072,
-  //       q: 0.027297408086285304,
-  //       v: 0.026541146306402648,
-  //     },
-  //   },
-  // ];
+  return [
+    {
+      mlp: {
+        fc1: 0.08874939821570828,
+        fc2: 0.05158995647743977,
+      },
+      attn: {
+        k: 0.04563352340448522,
+        out: 0.026101619710240453,
+        q: 0.046494255017048534,
+        v: 0.03780647423398955,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.12399202308592269,
+        fc2: 0.03210216086766441,
+      },
+      attn: {
+        k: 0.025577711354884597,
+        out: 0.026762534720483375,
+        q: 0.024220520916595146,
+        v: 0.04206973022947387,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.07114190129556483,
+        fc2: 0.03149272871458899,
+      },
+      attn: {
+        k: 0.04921840851517207,
+        out: 0.03451791010418351,
+        q: 0.04933284289751113,
+        v: 0.03181333654645837,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.09089861052045024,
+        fc2: 0.036574718216460855,
+      },
+      attn: {
+        k: 0.027225555334912124,
+        out: 0.035934416130131236,
+        q: 0.04121116314738675,
+        v: 0.02635890848588376,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.11041730547456188,
+        fc2: 0.03660948051587213,
+      },
+      attn: {
+        k: 0.02081813800317196,
+        out: 0.03266481012845906,
+        q: 0.03326618360212101,
+        v: 0.04313162519570171,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.09382505505569123,
+        fc2: 0.04881491512305284,
+      },
+      attn: {
+        k: 0.027084868460153178,
+        out: 0.02916151803845624,
+        q: 0.030878825945429452,
+        v: 0.03581210590498464,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.16926477249623614,
+        fc2: 0.060107987530549974,
+      },
+      attn: {
+        k: 0.021157331055974435,
+        out: 0.038227226907503555,
+        q: 0.02008383666415178,
+        v: 0.03220566378701195,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.18332479856218353,
+        fc2: 0.07735364019766472,
+      },
+      attn: {
+        k: 0.052471287828089935,
+        out: 0.04615887378544053,
+        q: 0.05866832936442163,
+        v: 0.05664404590023604,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.1707969344954549,
+        fc2: 0.09448986346023289,
+      },
+      attn: {
+        k: 0.030359661684254257,
+        out: 0.056143544527776396,
+        q: 0.025398295302331834,
+        v: 0.06037875987513326,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.17792257660064115,
+        fc2: 0.114627288229075,
+      },
+      attn: {
+        k: 0.03419246336571407,
+        out: 0.05962438148295599,
+        q: 0.07194235688840948,
+        v: 0.05362023547165919,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.20935853343383742,
+        fc2: 0.11889095484740982,
+      },
+      attn: {
+        k: 0.04287766335118002,
+        out: 0.0655448747177529,
+        q: 0.04876705274789889,
+        v: 0.07943745730205916,
+      },
+    },
+    {
+      mlp: {
+        fc1: 0.24074216424406336,
+        fc2: 0.11492956004568068,
+      },
+      attn: {
+        k: 0.028727625051787244,
+        out: 0.06771910506228172,
+        q: 0.02736007475905027,
+        v: 0.10721855772929091,
+      },
+    },
+  ];
   const re =
     /lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
@@ -2230,11 +2259,11 @@ function TEArchitecture({ layers }) {
   return layers.map(({ attn, mlp }, i) => {
     return h(
       "div",
-      null,
+      { className: "text-encoder-layer-block" },
       h("h3", null, `layer ${i + 1}`),
       h(
         "svg",
-        { className: "attention-layer", width: "17.5em", height: "480" },
+        { className: "attention-layer", width: "15.5em", height: "420" },
         h(
           "defs",
           null,
@@ -2271,218 +2300,168 @@ function TEArchitecture({ layers }) {
           //   }),
           // ),
         ),
-        h(
-          "g",
-          { className: "attention-key", transform: "translate(25, 25)" },
-          h("text", { title: "Key", x: "1em" }, "Key"),
-          h("text", { title: "Key", y: "1.5em" }, attn.k.toPrecision(4)),
-        ),
-        h(
-          "g",
-          { className: "attention-query", transform: "translate(125, 25)" },
-          h("text", { title: "Query", x: "1em" }, "Query"),
-          h("text", { title: "Query", y: "1.5em" }, attn.q.toPrecision(4)),
-        ),
+        h(SimpleWeight, {
+          groupProps: { transform: "translate(10, 25)" },
+          titleProps: { x: "1.5em" },
+          title: "Key",
+          value: attn.k,
+        }),
+        h(SimpleWeight, {
+          groupProps: { transform: "translate(100, 25)" },
+          titleProps: { x: "1em" },
+          title: "Query",
+          value: attn.q,
+        }),
+        h(SimpleWeight, {
+          groupProps: { transform: "translate(190, 25)" },
+          titleProps: { x: "1em" },
+          title: "Value",
+          value: attn.v,
+        }),
+
+        h(Line, { d: "M150,70, 150,80" }),
+        h(LineEnd, { d: "M50,70 50,80, 150,80 150,100" }),
+        h(Line, { d: "M230,70, 230,150 150,150" }),
+        h(Line, { d: "M150,80, 150,100 150,100 " }),
 
         h(
           "g",
-          { className: "attention-query", transform: "translate(220, 25)" },
-          h("text", { title: "Value", x: "1em" }, "Value"),
-          h("text", { title: "Value", y: "1.5em" }, attn.v.toPrecision(4)),
-        ),
-
-        h("path", {
-          markerEnd: "none",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          // filter: "url(#filter1)",
-          d: "M150,80, 150,100 150,100 ",
-        }),
-        h("path", {
-          markerEnd: "url(#head)",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          // filter: "url(#filter1)",
-          d: "M60,80 60,100, 150,100 150,120",
-        }),
-        h("path", {
-          markerEnd: "none",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          // filter: "url(#filter1)",
-          d: "M250,80, 250,200 150,200",
-        }),
-        h("path", {
-          markerEnd: "none",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          // filter: "url(#filter1)",
-          d: "M150,80, 150,100 150,100 ",
-        }),
-
-        h(
-          "g",
-          { transform: "translate(120, 150)" },
+          { transform: "translate(120, 130)" },
           h("text", null, "Softmax"),
         ),
 
-        h("path", {
-          markerEnd: "url(#head)",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          d: "M150,180, 150,220",
+        h(LineEnd, { d: "M150,140, 150,160" }),
+
+        h(SimpleWeight, {
+          groupProps: { transform: "translate(115, 200)" },
+          titleProps: { x: "1em" },
+          title: "out",
+          value: attn.out,
         }),
 
-        h(
-          "g",
-          { className: "attention-out", transform: "translate(125 250)" },
-          h("text", { title: "Out", x: "0.5em" }, "Out"),
-          h(
-            "text",
-            { title: "Out", x: "-0.5em", y: "1.5em" },
-            attn.out.toPrecision(4),
-          ),
-        ),
+        h(WeightIn, {
+          groupProps: { transform: "translate(115, 245)" },
+          titleProps: { x: "1em" },
+          title: "fc1",
+          value: mlp.fc1,
+        }),
 
-        h("path", {
-          markerEnd: "url(#head)",
-          stroke: "currentColor",
-          strokeWidth: 4,
-          fill: "none",
-          d: "M150,285, 150,290",
+        h(WeightIn, {
+          groupProps: { transform: "translate(115, 330)" },
+          titleProps: { x: "1em" },
+          title: "fc2",
+          value: mlp.fc2,
         }),
-        h(
-          "g",
-          { className: "mlp-fc1", transform: "translate(125, 320)" },
-          h("text", { title: "Key", x: "0.5em" }, "fc1"),
-          h(
-            "text",
-            { title: "Key", x: "-0.5em", y: "1.5em" },
-            mlp.fc1.toPrecision(4),
-          ),
-        ),
-        h("path", {
-          markerEnd: "url(#head)",
-          stroke: "none",
-          strokeWidth: 4,
-          fill: "currentColor",
-          d: "M150,355, 150,360",
-        }),
-        h(
-          "g",
-          { className: "mlp-fc1", transform: "translate(125, 390)" },
-          h("text", { title: "Key", x: "0.5em" }, "fc2"),
-          h(
-            "text",
-            { title: "Key", x: "-0.5em", y: "1.5em" },
-            mlp.fc2?.toPrecision(4),
-          ),
-        ),
       ),
-      // h(Attention, attn),
-      // h(MultiLayerPerception, mlp),
     );
   });
 }
 
 function UNetArchitecture({ layers }) {
   return [
-    Object.entries(layers.down).map(([id, layer]) => {
-      let conv;
-      if (layer.conv1) {
-        conv = h("div", { className: "resnet-block" }, [
-          h("h3", null, "ResNet Convolution"),
-          h(ResNet, layer),
-        ]);
-      }
+    h(
+      "div",
+			{ className: "unet-down", },
+      Object.entries(layers.down).map(([id, layer]) => {
+        let conv;
+        if (layer.conv1) {
+          conv = h("div", { className: "resnet-block" }, [
+            h("h3", null, "ResNet Convolution"),
+            h(ResNet, layer),
+          ]);
+        }
 
-      let crossAttention;
-      if (Object.keys(layer.attn1).length > 0) {
-        crossAttention = h("div", { className: "attention-block" }, [
-          h("h3", null, "Cross Attention"),
-          h(CrossAttention, layer),
-        ]);
-      }
+        let crossAttention;
+        if (Object.keys(layer.attn1).length > 0) {
+          crossAttention = h("div", { className: "attention-block" }, [
+            h("h3", null, "Cross Attention"),
+            h(CrossAttention, layer),
+          ]);
+        }
 
-      let sampler;
-      if (layer.conv) {
-        sampler = h("div", { className: "sampler-block" }, [
-          h("h3", null, "Down Sampler"),
-          h(Sampler, layer),
-        ]);
-      }
+        let sampler;
+        if (layer.conv) {
+          sampler = h("div", { className: "sampler-block" }, [
+            h("h3", null, "Down Sampler"),
+            h(Sampler, layer),
+          ]);
+        }
 
-      return h("div", null, h("h3", null, `down ${id}`), [
-        crossAttention,
-        conv,
-        sampler,
-      ]);
-    }),
-    Object.entries(layers.mid).map(([id, layer]) => {
-      let conv;
-      if (layer.conv1) {
-        conv = h("div", { className: "resnet-block" }, [
-          h("h3", null, "ResNet Convolution"),
-          h(ResNet, layer),
+        return h("div", null, h("h3", null, `down ${id}`), [
+          crossAttention,
+          conv,
+          sampler,
         ]);
-      }
+      }),
+    ),
+    h(
+      "div",
+			{ className: "unet-mid", },
+      Object.entries(layers.mid).map(([id, layer]) => {
+        let conv;
+        if (layer.conv1) {
+          conv = h("div", { className: "resnet-block" }, [
+            h("h3", null, "ResNet Convolution"),
+            h(ResNet, layer),
+          ]);
+        }
 
-      let crossAttention;
-      if (Object.keys(layer.attn1).length > 0) {
-        crossAttention = h("div", { className: "attention-block" }, [
-          h("h3", null, "Cross Attention"),
-          h(CrossAttention, layer),
-        ]);
-      }
+        let crossAttention;
+        if (Object.keys(layer.attn1).length > 0) {
+          crossAttention = h("div", { className: "attention-block" }, [
+            h("h3", null, "Cross Attention"),
+            h(CrossAttention, layer),
+          ]);
+        }
 
-      let sampler;
-      if (layer.conv) {
-        sampler = h("div", { className: "sampler-block" }, [
-          h("h3", null, "Sampler"),
-          h(Sampler, layer),
+        let sampler;
+        if (layer.conv) {
+          sampler = h("div", { className: "sampler-block" }, [
+            h("h3", null, "Sampler"),
+            h(Sampler, layer),
+          ]);
+        }
+        return h("div", null, h("h3", null, `mid ${id}`), [
+          crossAttention,
+          conv,
+          sampler,
         ]);
-      }
-      return h("div", null, h("h3", null, `mid ${id}`), [
-        crossAttention,
-        conv,
-        sampler,
-      ]);
-    }),
-    Object.entries(layers.up).map(([id, layer]) => {
-      let conv;
-      if (layer.conv1) {
-        conv = h("div", { className: "resnet-block" }, [
-          h("h3", null, "ResNet Convolution"),
-          h(ResNet, layer),
-        ]);
-      }
+      }),
+    ),
+    h(
+      "div",
+			{ className: "unet-up", },
+      Object.entries(layers.up).map(([id, layer]) => {
+        let conv;
+        if (layer.conv1) {
+          conv = h("div", { className: "resnet-block" }, [
+            h("h3", null, "ResNet Convolution"),
+            h(ResNet, layer),
+          ]);
+        }
 
-      let crossAttention;
-      if (Object.keys(layer.attn1).length > 0) {
-        crossAttention = h("div", { className: "attention-block" }, [
-          h("h3", null, "Cross Attention"),
-          h(CrossAttention, layer),
-        ]);
-      }
+        let crossAttention;
+        if (Object.keys(layer.attn1).length > 0) {
+          crossAttention = h("div", { className: "attention-block" }, [
+            h("h3", null, "Cross Attention"),
+            h(CrossAttention, layer),
+          ]);
+        }
 
-      let sampler;
-      if (layer.conv) {
-        sampler = h("div", { className: "sampler-block" }, [
-          h("h3", null, "Up Sampler"),
-          h(Sampler, layer),
+        let sampler;
+        if (layer.conv) {
+          sampler = h("div", { className: "sampler-block" }, [
+            h("h3", null, "Up Sampler"),
+            h(Sampler, layer),
+          ]);
+        }
+        return h("div", null, h("h3", null, `up ${id}`), [
+          crossAttention,
+          conv,
+          sampler,
         ]);
-      }
-      return h("div", null, h("h3", null, `up ${id}`), [
-        crossAttention,
-        conv,
-        sampler,
-      ]);
-    }),
+      }),
+    ),
   ];
 }
 
