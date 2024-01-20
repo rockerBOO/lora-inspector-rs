@@ -16,6 +16,11 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: 18
+    - name: Install rust
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    - name: Build WASM
+      run: wasm-pack build --target no-modules --out-dir pkg crates/lora-inspector-wasm --release
+      working-directory: ./
     - name: Install dependencies
       run: npm ci
     - name: Install Playwright Browsers
