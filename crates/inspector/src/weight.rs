@@ -337,7 +337,7 @@ impl Weight for BufferedLoRAWeight {
             .tensors()
             .iter()
             .fold(HashMap::new(), |mut acc, (k, t)| {
-                acc.insert(k.to_string(), t.shape().iter().cloned().collect());
+                acc.insert(k.to_string(), t.shape().to_vec());
                 acc
             })
     }

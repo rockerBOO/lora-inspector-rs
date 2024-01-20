@@ -155,12 +155,15 @@ h1 {
 
 .row {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  /* border-top: 10px solid red; */
-  /* border-bottom: 10px solid red; */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-gap: 1em;
 }
+
+/* @media (min-width: 10em) { */
+/*   .row { */
+/* 		grid-template-columns: intial; */
+/*   } */
+/* } */
 
 #results {
   margin: 1em;

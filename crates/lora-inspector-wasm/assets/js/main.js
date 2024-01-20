@@ -118,10 +118,16 @@ function VAE({ metadata }) {
   );
 }
 
-function MetaAttribute({ name, value, valueClassName, metadata }) {
+function MetaAttribute({
+  name,
+  value,
+  valueClassName,
+  metadata,
+  containerProps,
+}) {
   return h(
     "div",
-    {},
+    containerProps ?? null,
     h("div", { title: name, className: "caption" }, name),
     h("div", { title: name, className: valueClassName ?? "" }, value),
   );
@@ -176,10 +182,12 @@ function Network({ metadata, filename }) {
       "div",
       { className: "row space-apart" }, //
       h(MetaAttribute, {
+				containerProps: { id: "network-module" },
         name: "Network module",
         value: networkModule,
       }),
       h(MetaAttribute, {
+				containerProps: { id: "network-type" },
         name: "Network type",
         value: networkType,
       }),
@@ -195,7 +203,9 @@ function Network({ metadata, filename }) {
       { className: "row space-apart" },
       h(MetaAttribute, {
         name: "Network args",
+				containerProps: { id: "network-args", style: { gridColumn: "1 / span 6" } },
         valueClassName: "args",
+
         value: JSON.stringify(networkArgs),
       }),
     ),
@@ -251,11 +261,13 @@ function LoRANetwork({ metadata }) {
   return [
     h(MetaAttribute, {
       name: "Network Rank/Dimension",
+			containerProps: { id: "network-rank" },
       valueClassName: "rank",
       value: dims.join(", "),
     }),
     h(MetaAttribute, {
       name: "Network Alpha",
+			containerProps: { id: "network-alpha" },
       valueClassName: "alpha",
       value: alphas
         .filter((alpha) => alpha)
@@ -282,7 +294,12 @@ function LRScheduler({ metadata }) {
     h(
       "div",
       { className: "row space-apart" },
-      h(MetaAttribute, { name: "LR Scheduler", value: lrScheduler }),
+      h(MetaAttribute, {
+        name: "LR Scheduler",
+
+        containerProps: { style: { gridColumn: "1 / span 6" } },
+        value: lrScheduler,
+      }),
     ),
     h("div", { className: "row space-apart" }, [
       h(MetaAttribute, {
@@ -325,7 +342,7 @@ function Optimizer({ metadata }) {
 }
 
 function Weight({ metadata, filename }) {
-  const [precision, setPrecision] = React.useState("");
+  // const [precision, setPrecision] = React.useState("");
   // const [averageStrength, setAverageStrength] = React.useState(undefined);
   // const [averageMagnitude, setAverageMagnitude] = React.useState(undefined);
 
@@ -334,14 +351,14 @@ function Weight({ metadata, filename }) {
   //   setAverageMagnitude(get_average_magnitude(buffer));
   // }, []);
 
-  React.useEffect(() => {
-    trySyncMessage(
-      { messageType: "precision", name: mainFilename },
-      mainFilename,
-    ).then((resp) => {
-      setPrecision(resp.precision);
-    });
-  }, []);
+  // React.useEffect(() => {
+  //   trySyncMessage(
+  //     { messageType: "precision", name: mainFilename },
+  //     mainFilename,
+  //   ).then((resp) => {
+  //     setPrecision(resp.precision);
+  //   });
+  // }, []);
 
   if (!metadata) {
     return h(Blocks, { metadata, filename });
@@ -360,17 +377,6 @@ function Weight({ metadata, filename }) {
         value: metadata.get("ss_scale_weight_norms"),
       }),
       h(MetaAttribute, {
-        name: "Precision",
-        valueClassName: "number",
-        value: precision,
-      }),
-      metadata.has("ss_full_fp16") &&
-        h(MetaAttribute, {
-          name: "Full fp16",
-          valueClassName: "number",
-          value: metadata.get("ss_full_fp16"),
-        }),
-      h(MetaAttribute, {
         name: "CLIP Skip",
         valueClassName: "number",
         value: metadata.get("ss_clip_skip"),
@@ -381,8 +387,43 @@ function Weight({ metadata, filename }) {
       //   value: averageMagnitude?.toPrecision(4),
       // }),
     ]),
+    h(
+      "div",
+      { className: "row space-apart" },
+      h(Precision),
+      h(MetaAttribute, {
+        name: "Mixed precision",
+        valueClassName: "number",
+        value: metadata.get("ss_mixed_precision"),
+      }),
+      metadata.has("ss_full_fp16") &&
+        h(MetaAttribute, {
+          name: "Full fp16",
+          valueClassName: "number",
+          value: metadata.get("ss_full_fp16"),
+        }),
+    ),
     h(Blocks, { metadata, filename }),
   ];
+}
+
+function Precision({}) {
+  const [precision, setPrecision] = React.useState("");
+
+  React.useEffect(() => {
+    trySyncMessage(
+      { messageType: "precision", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setPrecision(resp.precision);
+    });
+  }, []);
+
+  return h(MetaAttribute, {
+    name: "Precision",
+    valueClassName: "number",
+    value: precision,
+  });
 }
 
 // CHART.JS DEFAULTS
@@ -433,8 +474,6 @@ function Blocks({ metadata, filename }) {
       },
       filename,
     ).then(() => {
-      console.log("getting l2 norms...");
-
       listenProgress("l2_norms_progress", filename).then(
         async (getProgress) => {
           let progress;
@@ -1247,11 +1286,11 @@ function Advanced({ metadata, filename }) {
   ];
 }
 
-const DEBUG = true;
+const DEBUG = new URLSearchParams(document.location.search).has("DEBUG");
 
 function Statistics({ baseNames, filename }) {
   const [calcStatistics, setCalcStatistics] = React.useState(false);
-  const [hasStatistics, setHasStatistics] = React.useState(true);
+  const [hasStatistics, setHasStatistics] = React.useState(false);
   const [bases, setBases] = React.useState([]);
   const [statisticProgress, setStatisticProgress] = React.useState(0);
   const [currentCount, setCurrentCount] = React.useState(0);
@@ -1554,152 +1593,152 @@ function compileTextEncoderLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  return [
-    {
-      mlp: {
-        fc1: 0.08874939821570828,
-        fc2: 0.05158995647743977,
-      },
-      attn: {
-        k: 0.04563352340448522,
-        out: 0.026101619710240453,
-        q: 0.046494255017048534,
-        v: 0.03780647423398955,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.12399202308592269,
-        fc2: 0.03210216086766441,
-      },
-      attn: {
-        k: 0.025577711354884597,
-        out: 0.026762534720483375,
-        q: 0.024220520916595146,
-        v: 0.04206973022947387,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.07114190129556483,
-        fc2: 0.03149272871458899,
-      },
-      attn: {
-        k: 0.04921840851517207,
-        out: 0.03451791010418351,
-        q: 0.04933284289751113,
-        v: 0.03181333654645837,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.09089861052045024,
-        fc2: 0.036574718216460855,
-      },
-      attn: {
-        k: 0.027225555334912124,
-        out: 0.035934416130131236,
-        q: 0.04121116314738675,
-        v: 0.02635890848588376,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.11041730547456188,
-        fc2: 0.03660948051587213,
-      },
-      attn: {
-        k: 0.02081813800317196,
-        out: 0.03266481012845906,
-        q: 0.03326618360212101,
-        v: 0.04313162519570171,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.09382505505569123,
-        fc2: 0.04881491512305284,
-      },
-      attn: {
-        k: 0.027084868460153178,
-        out: 0.02916151803845624,
-        q: 0.030878825945429452,
-        v: 0.03581210590498464,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.16926477249623614,
-        fc2: 0.060107987530549974,
-      },
-      attn: {
-        k: 0.021157331055974435,
-        out: 0.038227226907503555,
-        q: 0.02008383666415178,
-        v: 0.03220566378701195,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.18332479856218353,
-        fc2: 0.07735364019766472,
-      },
-      attn: {
-        k: 0.052471287828089935,
-        out: 0.04615887378544053,
-        q: 0.05866832936442163,
-        v: 0.05664404590023604,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.1707969344954549,
-        fc2: 0.09448986346023289,
-      },
-      attn: {
-        k: 0.030359661684254257,
-        out: 0.056143544527776396,
-        q: 0.025398295302331834,
-        v: 0.06037875987513326,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.17792257660064115,
-        fc2: 0.114627288229075,
-      },
-      attn: {
-        k: 0.03419246336571407,
-        out: 0.05962438148295599,
-        q: 0.07194235688840948,
-        v: 0.05362023547165919,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.20935853343383742,
-        fc2: 0.11889095484740982,
-      },
-      attn: {
-        k: 0.04287766335118002,
-        out: 0.0655448747177529,
-        q: 0.04876705274789889,
-        v: 0.07943745730205916,
-      },
-    },
-    {
-      mlp: {
-        fc1: 0.24074216424406336,
-        fc2: 0.11492956004568068,
-      },
-      attn: {
-        k: 0.028727625051787244,
-        out: 0.06771910506228172,
-        q: 0.02736007475905027,
-        v: 0.10721855772929091,
-      },
-    },
-  ];
+  // return [
+  //   {
+  //     mlp: {
+  //       fc1: 0.08874939821570828,
+  //       fc2: 0.05158995647743977,
+  //     },
+  //     attn: {
+  //       k: 0.04563352340448522,
+  //       out: 0.026101619710240453,
+  //       q: 0.046494255017048534,
+  //       v: 0.03780647423398955,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.12399202308592269,
+  //       fc2: 0.03210216086766441,
+  //     },
+  //     attn: {
+  //       k: 0.025577711354884597,
+  //       out: 0.026762534720483375,
+  //       q: 0.024220520916595146,
+  //       v: 0.04206973022947387,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.07114190129556483,
+  //       fc2: 0.03149272871458899,
+  //     },
+  //     attn: {
+  //       k: 0.04921840851517207,
+  //       out: 0.03451791010418351,
+  //       q: 0.04933284289751113,
+  //       v: 0.03181333654645837,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.09089861052045024,
+  //       fc2: 0.036574718216460855,
+  //     },
+  //     attn: {
+  //       k: 0.027225555334912124,
+  //       out: 0.035934416130131236,
+  //       q: 0.04121116314738675,
+  //       v: 0.02635890848588376,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.11041730547456188,
+  //       fc2: 0.03660948051587213,
+  //     },
+  //     attn: {
+  //       k: 0.02081813800317196,
+  //       out: 0.03266481012845906,
+  //       q: 0.03326618360212101,
+  //       v: 0.04313162519570171,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.09382505505569123,
+  //       fc2: 0.04881491512305284,
+  //     },
+  //     attn: {
+  //       k: 0.027084868460153178,
+  //       out: 0.02916151803845624,
+  //       q: 0.030878825945429452,
+  //       v: 0.03581210590498464,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.16926477249623614,
+  //       fc2: 0.060107987530549974,
+  //     },
+  //     attn: {
+  //       k: 0.021157331055974435,
+  //       out: 0.038227226907503555,
+  //       q: 0.02008383666415178,
+  //       v: 0.03220566378701195,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.18332479856218353,
+  //       fc2: 0.07735364019766472,
+  //     },
+  //     attn: {
+  //       k: 0.052471287828089935,
+  //       out: 0.04615887378544053,
+  //       q: 0.05866832936442163,
+  //       v: 0.05664404590023604,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.1707969344954549,
+  //       fc2: 0.09448986346023289,
+  //     },
+  //     attn: {
+  //       k: 0.030359661684254257,
+  //       out: 0.056143544527776396,
+  //       q: 0.025398295302331834,
+  //       v: 0.06037875987513326,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.17792257660064115,
+  //       fc2: 0.114627288229075,
+  //     },
+  //     attn: {
+  //       k: 0.03419246336571407,
+  //       out: 0.05962438148295599,
+  //       q: 0.07194235688840948,
+  //       v: 0.05362023547165919,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.20935853343383742,
+  //       fc2: 0.11889095484740982,
+  //     },
+  //     attn: {
+  //       k: 0.04287766335118002,
+  //       out: 0.0655448747177529,
+  //       q: 0.04876705274789889,
+  //       v: 0.07943745730205916,
+  //     },
+  //   },
+  //   {
+  //     mlp: {
+  //       fc1: 0.24074216424406336,
+  //       fc2: 0.11492956004568068,
+  //     },
+  //     attn: {
+  //       k: 0.028727625051787244,
+  //       out: 0.06771910506228172,
+  //       q: 0.02736007475905027,
+  //       v: 0.10721855772929091,
+  //     },
+  //   },
+  // ];
   const re =
     /lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
@@ -1744,6 +1783,7 @@ function compileTextEncoderLayers(bases) {
           subKey = "fc2";
           break;
       }
+			console.log(base, base.stat)
 
       if (!layers[layerId]) {
         layers[layerId] = {
@@ -1904,149 +1944,149 @@ function compileUnetLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  return {
-    down: {
-      IN00: {
-        proj_in: 0.5835438035224952,
-        attn1: {
-          k: 0.7724846822186459,
-          q: 0.8470290780768107,
-          v: 0.5306325923819631,
-          out: 0.6966399804009704,
-        },
-        attn2: {
-          k: 2.820660007479423,
-          q: 1.1666530560013166,
-          v: 0.788413276490551,
-          out: 0.7739225866097094,
-        },
-        ff1: 2.8923656530518334,
-        ff2: 1.4149907236171593,
-        proj_out: 0.7232647789837462,
-        conv1: 0.7169271612272715,
-        conv2: 0.784292949111798,
-        time_emb_proj: 1.1519044797930735,
-      },
-      IN01: {
-        proj_in: 0.6407039401972426,
-        attn1: {
-          k: 0.7638138874376035,
-          q: 0.8438892577092059,
-          v: 0.5692621046551364,
-          out: 0.7930231090174562,
-        },
-        attn2: {
-          k: 1.8876336042150899,
-          q: 1.0693218042423827,
-          v: 1.3098261604459667,
-          out: 0.6458149416617049,
-        },
-        ff1: 2.586747191787799,
-        ff2: 1.4862982665952245,
-        proj_out: 0.8232362020418263,
-        conv1: 1.3327894552241408,
-        conv2: 1.3229192972339334,
-        time_emb_proj: 1.6733557758755002,
-      },
-      IN02: {
-        attn1: {},
-        attn2: {},
-        conv: 2.35427675751467,
-      },
-    },
-    mid: {},
-    up: {
-      OUT08: {
-        proj_in: 1.7769853066258527,
-        attn1: {
-          k: 4.772022244669916,
-          q: 4.008297087030857,
-          v: 2.1360581197918473,
-          out: 1.957634060338022,
-        },
-        attn2: {
-          k: 4.408301328593163,
-          q: 3.3735284340123792,
-          v: 1.4676879333177373,
-          out: 1.7915439777615563,
-        },
-        ff1: 9.172188318044737,
-        ff2: 3.638717008716509,
-        proj_out: 2.1340296767331397,
-        conv1: 6.416774669716237,
-        conv2: 3.1118551594311783,
-        conv_shortcut: 1.7328171138493016,
-        time_emb_proj: 5.685051613370558,
-        conv: 3.1030022051916775,
-      },
-      OUT09: {
-        proj_in: 0.7951332912669751,
-        attn1: {
-          k: 1.2786685525113588,
-          q: 1.4811242408744274,
-          v: 0.7510071869900969,
-          out: 0.9010832945689117,
-        },
-        attn2: {
-          k: 2.3476239220834954,
-          q: 1.44050725810973,
-          v: 0.8934114728460721,
-          out: 0.5778640528083228,
-        },
-        ff1: 3.3040693711947604,
-        ff2: 1.4768289033483628,
-        proj_out: 0.9967308251899586,
-        conv1: 3.056591979337983,
-        conv2: 1.2906941898525774,
-        conv_shortcut: 0.7425445422443783,
-        time_emb_proj: 1.924128192701365,
-      },
-      OUT10: {
-        proj_in: 0.6305214170387302,
-        attn1: {
-          k: 0.9343660072417308,
-          q: 1.013432606622726,
-          v: 0.6000705542423088,
-          out: 0.6296002281883292,
-        },
-        attn2: {
-          k: 2.8600073822587073,
-          q: 1.2318967798236578,
-          v: 0.6400245685661953,
-          out: 0.609398158974776,
-        },
-        ff1: 2.834280464365902,
-        ff2: 1.228979416115511,
-        proj_out: 0.8828615754836663,
-        conv1: 2.2751839253291393,
-        conv2: 0.9173411747213964,
-        conv_shortcut: 0.6309656205236726,
-        time_emb_proj: 2.824342966119458,
-      },
-      OUT11: {
-        proj_in: 0.5870043961700094,
-        attn1: {
-          k: 1.335164474060957,
-          q: 1.8194330761308897,
-          v: 0.794061194299154,
-          out: 0.6549539950277664,
-        },
-        attn2: {
-          k: 1.5748038833446982,
-          q: 1.3774989787665628,
-          v: 0.2612527544408402,
-          out: 0.4808003135439534,
-        },
-        ff1: 3.447681531040988,
-        ff2: 2.3266240441119534,
-        proj_out: 0.9813447720472999,
-        conv1: 1.4686158105766736,
-        conv2: 0.906270858910067,
-        conv_shortcut: 0.5799562447119877,
-        time_emb_proj: 3.145315279683768,
-      },
-    },
-  };
+  // return {
+  //   down: {
+  //     IN00: {
+  //       proj_in: 0.5835438035224952,
+  //       attn1: {
+  //         k: 0.7724846822186459,
+  //         q: 0.8470290780768107,
+  //         v: 0.5306325923819631,
+  //         out: 0.6966399804009704,
+  //       },
+  //       attn2: {
+  //         k: 2.820660007479423,
+  //         q: 1.1666530560013166,
+  //         v: 0.788413276490551,
+  //         out: 0.7739225866097094,
+  //       },
+  //       ff1: 2.8923656530518334,
+  //       ff2: 1.4149907236171593,
+  //       proj_out: 0.7232647789837462,
+  //       conv1: 0.7169271612272715,
+  //       conv2: 0.784292949111798,
+  //       time_emb_proj: 1.1519044797930735,
+  //     },
+  //     IN01: {
+  //       proj_in: 0.6407039401972426,
+  //       attn1: {
+  //         k: 0.7638138874376035,
+  //         q: 0.8438892577092059,
+  //         v: 0.5692621046551364,
+  //         out: 0.7930231090174562,
+  //       },
+  //       attn2: {
+  //         k: 1.8876336042150899,
+  //         q: 1.0693218042423827,
+  //         v: 1.3098261604459667,
+  //         out: 0.6458149416617049,
+  //       },
+  //       ff1: 2.586747191787799,
+  //       ff2: 1.4862982665952245,
+  //       proj_out: 0.8232362020418263,
+  //       conv1: 1.3327894552241408,
+  //       conv2: 1.3229192972339334,
+  //       time_emb_proj: 1.6733557758755002,
+  //     },
+  //     IN02: {
+  //       attn1: {},
+  //       attn2: {},
+  //       conv: 2.35427675751467,
+  //     },
+  //   },
+  //   mid: {},
+  //   up: {
+  //     OUT08: {
+  //       proj_in: 1.7769853066258527,
+  //       attn1: {
+  //         k: 4.772022244669916,
+  //         q: 4.008297087030857,
+  //         v: 2.1360581197918473,
+  //         out: 1.957634060338022,
+  //       },
+  //       attn2: {
+  //         k: 4.408301328593163,
+  //         q: 3.3735284340123792,
+  //         v: 1.4676879333177373,
+  //         out: 1.7915439777615563,
+  //       },
+  //       ff1: 9.172188318044737,
+  //       ff2: 3.638717008716509,
+  //       proj_out: 2.1340296767331397,
+  //       conv1: 6.416774669716237,
+  //       conv2: 3.1118551594311783,
+  //       conv_shortcut: 1.7328171138493016,
+  //       time_emb_proj: 5.685051613370558,
+  //       conv: 3.1030022051916775,
+  //     },
+  //     OUT09: {
+  //       proj_in: 0.7951332912669751,
+  //       attn1: {
+  //         k: 1.2786685525113588,
+  //         q: 1.4811242408744274,
+  //         v: 0.7510071869900969,
+  //         out: 0.9010832945689117,
+  //       },
+  //       attn2: {
+  //         k: 2.3476239220834954,
+  //         q: 1.44050725810973,
+  //         v: 0.8934114728460721,
+  //         out: 0.5778640528083228,
+  //       },
+  //       ff1: 3.3040693711947604,
+  //       ff2: 1.4768289033483628,
+  //       proj_out: 0.9967308251899586,
+  //       conv1: 3.056591979337983,
+  //       conv2: 1.2906941898525774,
+  //       conv_shortcut: 0.7425445422443783,
+  //       time_emb_proj: 1.924128192701365,
+  //     },
+  //     OUT10: {
+  //       proj_in: 0.6305214170387302,
+  //       attn1: {
+  //         k: 0.9343660072417308,
+  //         q: 1.013432606622726,
+  //         v: 0.6000705542423088,
+  //         out: 0.6296002281883292,
+  //       },
+  //       attn2: {
+  //         k: 2.8600073822587073,
+  //         q: 1.2318967798236578,
+  //         v: 0.6400245685661953,
+  //         out: 0.609398158974776,
+  //       },
+  //       ff1: 2.834280464365902,
+  //       ff2: 1.228979416115511,
+  //       proj_out: 0.8828615754836663,
+  //       conv1: 2.2751839253291393,
+  //       conv2: 0.9173411747213964,
+  //       conv_shortcut: 0.6309656205236726,
+  //       time_emb_proj: 2.824342966119458,
+  //     },
+  //     OUT11: {
+  //       proj_in: 0.5870043961700094,
+  //       attn1: {
+  //         k: 1.335164474060957,
+  //         q: 1.8194330761308897,
+  //         v: 0.794061194299154,
+  //         out: 0.6549539950277664,
+  //       },
+  //       attn2: {
+  //         k: 1.5748038833446982,
+  //         q: 1.3774989787665628,
+  //         v: 0.2612527544408402,
+  //         out: 0.4808003135439534,
+  //       },
+  //       ff1: 3.447681531040988,
+  //       ff2: 2.3266240441119534,
+  //       proj_out: 0.9813447720472999,
+  //       conv1: 1.4686158105766736,
+  //       conv2: 0.906270858910067,
+  //       conv_shortcut: 0.5799562447119877,
+  //       time_emb_proj: 3.145315279683768,
+  //     },
+  //   },
+  // };
   const re =
     /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
@@ -2361,7 +2401,7 @@ function UNetArchitecture({ layers }) {
   return [
     h(
       "div",
-			{ className: "unet-down", },
+      { className: "unet-down" },
       Object.entries(layers.down).map(([id, layer]) => {
         let conv;
         if (layer.conv1) {
@@ -2396,7 +2436,7 @@ function UNetArchitecture({ layers }) {
     ),
     h(
       "div",
-			{ className: "unet-mid", },
+      { className: "unet-mid" },
       Object.entries(layers.mid).map(([id, layer]) => {
         let conv;
         if (layer.conv1) {
@@ -2430,7 +2470,7 @@ function UNetArchitecture({ layers }) {
     ),
     h(
       "div",
-			{ className: "unet-up", },
+      { className: "unet-up" },
       Object.entries(layers.up).map(([id, layer]) => {
         let conv;
         if (layer.conv1) {
@@ -2626,11 +2666,12 @@ function CrossAttention({ proj_in, attn1, attn2, ff1, ff2, proj_out }) {
 
     // Cross attention from text encoder
 
+    h(Group, { transform: "translate(0, 368)" }, h("text", null, "From TE")),
     h(
       Group,
-      { className: "cross-attention-group", transform: "translate(25, 375)" },
-      h(LineEnd, { d: "M0,0 225,0 225,20" }),
-      h(LineEnd, { d: "M35,0 35,20" }),
+      { className: "cross-attention-group", transform: "translate(0, 375)" },
+      h(LineEnd, { d: "M0,0 255,0 255,20" }),
+      h(LineEnd, { d: "M60,0 60,20" }),
     ),
 
     h(SimpleWeight, {
@@ -2925,6 +2966,10 @@ function Main({ metadata, filename }) {
     return h("main", null, [
       h("div", null, "No metadata for this file"),
       h(Headline, { filename }),
+      h("div", { className: "row space-apart" }, [
+        h(LoRANetwork, { metadata }),
+        h(Precision),
+      ]),
       h(Weight, { metadata, filename }),
       h(Advanced, { metadata, filename }),
     ]);

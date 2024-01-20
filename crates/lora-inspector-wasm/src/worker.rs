@@ -9,7 +9,7 @@ use web_sys::console;
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
 use inspector::network::NetworkModule;
-use inspector::{norms, InspectorError, statistic};
+use inspector::{norms, statistic, InspectorError};
 use std::panic;
 
 #[wasm_bindgen]
@@ -116,21 +116,10 @@ impl LoraWorker {
                 }
             })
             .collect()
+    }
 
-        //
-        // self.file
-        //     .base_names()
-        //     .iter()
-        //     .filter_map(|base_name| {
-        //         match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
-        //             Ok(ok) => Some(ok),
-        //             Err(e) => {
-        //                 console::error_1(&format!("scale weight error: {:#?}", e).into());
-        //                 None
-        //             }
-        //         }
-        //     })
-        //     .count()
+    pub fn shrink_scaled_to_fit(&mut self) {
+        self.file.shrink_scaled_to_fit();
     }
 
     pub fn scale_weight(&mut self, base_name: &str) -> Result<bool, JsValue> {
@@ -301,9 +290,7 @@ mod tests {
 
         let vec = JsFuture::from(resp.array_buffer()?).await?;
 
-        let uint8 = Uint8Array::new(&vec).to_vec();
-
-        Ok(uint8)
+        Ok(Uint8Array::new(&vec).to_vec())
     }
 
     #[wasm_bindgen_test]
@@ -330,12 +317,16 @@ mod tests {
     #[wasm_bindgen_test]
     async fn scale_weights() {
         wasm_bindgen_test_configure!(run_in_browser);
-        let buffer = load_test_file(file("lora_unet_down_blocks_1_resnets_1_conv2.safetensors").as_str())
-            .await
-            .unwrap();
+        let buffer =
+            load_test_file(file("lora_unet_down_blocks_1_resnets_1_conv2.safetensors").as_str())
+                .await
+                .unwrap();
 
-        let mut worker =
-            LoraWorker::new_from_buffer(&buffer, "lora_unet_down_blocks_1_resnets_1_conv2.safetensors").expect("load from buffer");
+        let mut worker = LoraWorker::new_from_buffer(
+            &buffer,
+            "lora_unet_down_blocks_1_resnets_1_conv2.safetensors",
+        )
+        .expect("load from buffer");
 
         worker.scale_weights();
 

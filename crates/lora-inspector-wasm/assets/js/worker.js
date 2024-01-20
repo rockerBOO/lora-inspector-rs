@@ -165,8 +165,6 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "l2_norm") {
-        // We must lock if we are getting scaled weights
-
         getL2Norms(e).then((norms) => {
           if (e.data.reply) {
             self.postMessage({
@@ -177,13 +175,22 @@ function init_wasm_in_worker() {
         });
       } else if (e.data.messageType === "norms") {
         // We must lock if we are getting scaled weights
-        getNorms(e).then((norms) => {
+        getNorms(e).then(([norms, error]) => {
           if (e.data.reply) {
-            self.postMessage({
-              messageType: "norms",
-              norms,
-              baseName: e.data.baseName,
-            });
+            if (error) {
+              self.postMessage({
+                messageType: "norms",
+                error,
+                norms,
+                baseName: e.data.baseName,
+              });
+            } else {
+              self.postMessage({
+                messageType: "norms",
+                norms,
+                baseName: e.data.baseName,
+              });
+            }
           }
         });
       } else if (e.data.messageType === "alpha_keys") {
@@ -296,8 +303,13 @@ async function scaleWeights(e) {
     const name = e.data.name;
 
     const loraWorker = getWorker(name);
-    loraWorker.scale_weights();
-    console.timeEnd("scale_weights");
+    try {
+      loraWorker.scale_weights();
+      console.timeEnd("scale_weights");
+    } catch (e) {
+      console.error(e);
+      console.timeEnd("scale_weights");
+    }
   });
 }
 
@@ -305,14 +317,14 @@ async function iterScaleWeights(e) {
   const name = e.data.name;
   const loraWorker = getWorker(name);
 
-  await navigator.locks.request(`scale-weights`, async (lock) => {
+  return await navigator.locks.request(`scale-weights`, async (lock) => {
     const baseNames = loraWorker.base_names();
     const totalCount = baseNames.length;
 
     let currentCount = 0;
 
     console.time("scale_weights");
-    await Promise.allSettled(
+    return Promise.all(
       baseNames.map((baseName) => {
         currentCount += 1;
 
@@ -325,23 +337,28 @@ async function iterScaleWeights(e) {
             totalCount,
             baseName: baseName,
           });
+
+          return [baseName, undefined];
         } catch (e) {
           console.error(e);
           self.postMessage({
             messageType: "scale_weight_progress",
+            error: e,
             currentCount,
             totalCount,
             baseName: baseName,
           });
+
+          return [baseName, e];
         }
       }),
-    ).then(() => {
-      console.log("Finished scaled weight progress");
+    ).then((results) => {
       self.postMessage({
         messageType: "scale_weight_progress_finished",
       });
 
-      console.time("scale_weights");
+      console.timeEnd("scale_weights");
+      return results;
     });
   });
 }
@@ -355,9 +372,14 @@ async function scaleWeight(e) {
     const baseName = e.data.baseName;
 
     const loraWorker = getWorker(name);
-    loraWorker.scale_weight(baseName);
 
-    console.timeEnd("scale_weight");
+    try {
+      loraWorker.scale_weight(baseName);
+      console.timeEnd("scale_weight");
+    } catch (e) {
+      console.error(e);
+      console.timeEnd("scale_weight");
+    }
   });
 }
 
@@ -388,31 +410,28 @@ async function getNorms(e) {
   const loraWorker = getWorker(name);
   const baseName = e.data.baseName;
 
-  const scaled = loraWorker.norms(baseName, [
-    "l1_norm",
-    "l2_norm",
-    "matrix_norm",
-    "max",
-    "min",
-    "std_dev",
-    "median",
-  ]);
+  try {
+    const scaled = loraWorker.norms(baseName, [
+      "l1_norm",
+      "l2_norm",
+      "matrix_norm",
+      "max",
+      "min",
+      "std_dev",
+      "median",
+    ]);
 
-  return scaled;
+    return [scaled, undefined];
+  } catch (e) {
+    console.error(e);
+    return [undefined, e];
+  }
 }
 
 async function getL2Norms(e) {
   const loraWorker = getWorker(e.data.name);
 
-  // await navigator.locks.request(`scaled-weights`, async (lock) => {
-  //   const name = e.data.name;
-  //
-  //   const loraWorker = loraWorkers.get(name);
-  //   loraWorker.scale_weights();
-  // });
-
   console.time("Calculating norms");
-  console.log("Calculating l2 norms...");
 
   const baseNames = loraWorker.base_names();
   const totalCount = baseNames.length;

@@ -128,6 +128,14 @@ impl LoRAFile {
             .and_then(|t| matrix_norm(&t.to_dtype(DType::F64)?))
     }
 
+    pub fn scaled_capacity(&self) -> usize {
+        self.scaled_weights.capacity()
+    }
+
+    pub fn shrink_scaled_to_fit(&mut self) {
+        self.scaled_weights.shrink_to_fit();
+    }
+
     pub fn scaled_weight(&self, base_name: &str) -> Option<&candle_core::Tensor> {
         self.scaled_weights.get(base_name)
     }
@@ -136,7 +144,8 @@ impl LoRAFile {
         &mut self,
         device: &candle_core::Device,
     ) -> Vec<Result<candle_core::Tensor>> {
-        self.base_names()
+        self
+            .base_names()
             .iter()
             .map(|base_name| self.scale_weight(base_name, device))
             .collect()
