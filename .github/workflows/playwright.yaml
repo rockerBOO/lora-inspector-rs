@@ -8,12 +8,14 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./crates/lora-inspector-wasm
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
         node-version: 18
-    - run: cd crates/lora-inspector-wasm
     - name: Install dependencies
       run: npm ci
     - name: Install Playwright Browsers
