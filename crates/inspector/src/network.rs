@@ -31,6 +31,7 @@ pub enum NetworkType {
     GLora,
     GLoKr,
     DiagOFT,
+    BOFT
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]

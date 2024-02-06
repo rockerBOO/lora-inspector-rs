@@ -56,6 +56,7 @@ impl Metadata {
             Some(NetworkModule::Lycoris) => self.network_args().map(|network_args| {
                 match network_args.algo.as_ref().map(|algo| algo.as_ref()) {
                     Some("diag-oft") => NetworkType::DiagOFT,
+                    Some("boft") => NetworkType::BOFT,
                     Some("loha") => NetworkType::LoHA,
                     Some("lokr") => NetworkType::LoKr,
                     Some("glora") => NetworkType::GLora,

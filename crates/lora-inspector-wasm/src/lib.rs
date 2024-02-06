@@ -6,6 +6,11 @@ use std::string::String;
 
 use web_sys::wasm_bindgen::JsValue;
 
+extern crate wee_alloc;
+
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 // use pest::Parser;
 // use pest_derive::Parser;
 // use wasm_bindgen::JsValue;

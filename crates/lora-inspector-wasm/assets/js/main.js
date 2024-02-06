@@ -182,12 +182,12 @@ function Network({ metadata, filename }) {
       "div",
       { className: "row space-apart" }, //
       h(MetaAttribute, {
-				containerProps: { id: "network-module" },
+        containerProps: { id: "network-module" },
         name: "Network module",
         value: networkModule,
       }),
       h(MetaAttribute, {
-				containerProps: { id: "network-type" },
+        containerProps: { id: "network-type" },
         name: "Network type",
         value: networkType,
       }),
@@ -203,7 +203,10 @@ function Network({ metadata, filename }) {
       { className: "row space-apart" },
       h(MetaAttribute, {
         name: "Network args",
-				containerProps: { id: "network-args", style: { gridColumn: "1 / span 6" } },
+        containerProps: {
+          id: "network-args",
+          style: { gridColumn: "1 / span 6" },
+        },
         valueClassName: "args",
 
         value: JSON.stringify(networkArgs),
@@ -261,13 +264,13 @@ function LoRANetwork({ metadata }) {
   return [
     h(MetaAttribute, {
       name: "Network Rank/Dimension",
-			containerProps: { id: "network-rank" },
+      containerProps: { id: "network-rank" },
       valueClassName: "rank",
       value: dims.join(", "),
     }),
     h(MetaAttribute, {
       name: "Network Alpha",
-			containerProps: { id: "network-alpha" },
+      containerProps: { id: "network-alpha" },
       valueClassName: "alpha",
       value: alphas
         .filter((alpha) => alpha)
@@ -1205,6 +1208,8 @@ function Advanced({ metadata, filename }) {
   const [allKeys, setAllKeys] = React.useState([]);
   const [showAllKeys, setShowAllKeys] = React.useState(false);
 
+  const [canHaveStatistics, setCanHaveStatistics] = React.useState(false);
+
   const advancedRef = React.createRef();
 
   React.useEffect(() => {
@@ -1240,6 +1245,39 @@ function Advanced({ metadata, filename }) {
         setAllKeys(resp.keys);
       },
     );
+  }, []);
+
+  React.useEffect(() => {
+    trySyncMessage(
+      {
+        messageType: "network_type",
+        name: filename,
+        reply: true,
+      },
+      filename,
+    ).then((resp) => {
+      if (
+        resp.networkType === "LoRA" ||
+        resp.networkType === "LoRAFA" ||
+        resp.networkType === "DyLoRA" ||
+        // Assuming networkType of none could have block weights
+        resp.networkType === undefined
+      ) {
+        setCanHaveStatistics(true);
+        trySyncMessage(
+          {
+            messageType: "precision",
+            name: filename,
+            reply: true,
+          },
+          filename,
+        ).then((resp) => {
+          if (resp.precision == "bf16") {
+            setCanHaveStatistics(false);
+          }
+        });
+      }
+    });
   }, []);
 
   if (DEBUG) {
@@ -1282,7 +1320,9 @@ function Advanced({ metadata, filename }) {
           : h("div", null, `All keys: ${allKeys.length}`),
       ),
     ),
-    h(Statistics, { baseNames, filename }),
+    !canHaveStatistics
+      ? h(BaseNames, { baseNames })
+      : h(Statistics, { baseNames, filename }),
   ];
 }
 
@@ -1303,8 +1343,6 @@ function Statistics({ baseNames, filename }) {
   const [currentScaleWeightCount, setCurrentScaleWeightCount] =
     React.useState(0);
   const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
-
-  const [canHaveStatistics, setCanHaveStatistics] = React.useState(false);
 
   React.useEffect(() => {
     if (!calcStatistics) {
@@ -1404,40 +1442,7 @@ function Statistics({ baseNames, filename }) {
     return function cleanup() {};
   }, [calcStatistics]);
 
-  React.useEffect(() => {
-    trySyncMessage(
-      {
-        messageType: "network_type",
-        name: filename,
-        reply: true,
-      },
-      filename,
-    ).then((resp) => {
-      if (
-        resp.networkType === "LoRA" ||
-        resp.networkType === "LoRAFA" ||
-        resp.networkType === "DyLoRA" ||
-        // Assuming networkType of none could have block weights
-        resp.networkType === undefined
-      ) {
-        setCanHaveStatistics(true);
-        trySyncMessage(
-          {
-            messageType: "precision",
-            name: filename,
-            reply: true,
-          },
-          filename,
-        ).then((resp) => {
-          if (resp.precision == "bf16") {
-            setCanHaveStatistics(false);
-          }
-        });
-      }
-    });
-  }, []);
-
-  if (canHaveStatistics && !hasStatistics && !calcStatistics) {
+  if (!hasStatistics && !calcStatistics) {
     return h(
       "div",
       null,
@@ -1505,14 +1510,6 @@ function Statistics({ baseNames, filename }) {
           remaining / 1_000_000
         ).toFixed(2)}s remaining ${currentBaseName} `,
       ),
-    );
-  }
-
-  if (!canHaveStatistics) {
-    return h(
-      "div",
-      null,
-      "Statistics not supported for this network type or precision.",
     );
   }
 
@@ -1783,7 +1780,7 @@ function compileTextEncoderLayers(bases) {
           subKey = "fc2";
           break;
       }
-			console.log(base, base.stat)
+      console.log(base, base.stat);
 
       if (!layers[layerId]) {
         layers[layerId] = {
