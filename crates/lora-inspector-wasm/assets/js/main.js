@@ -171,8 +171,10 @@ function Network({ metadata, filename }) {
 
   let networkOptions;
 
-  if (networkType === "DiagOFT") {
+  if (networkType === "DiagOFT" ) {
     networkOptions = h(DiagOFTNetwork, { metadata });
+	} else if (networkType === "BOFT") {
+    networkOptions = h(BOFTNetwork, { metadata });
   } else {
     networkOptions = h(LoRANetwork, { metadata });
   }
@@ -222,17 +224,38 @@ function Network({ metadata, filename }) {
 
 function DiagOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-  React.useEffect(() => {
-    trySyncMessage(
-      { messageType: "dims", name: mainFilename },
-      mainFilename,
-    ).then((resp) => {
-      setDims(resp.dims);
-    });
-  }, []);
+	console.log(dims);
+  // React.useEffect(() => {
+  //   trySyncMessage(
+  //     { messageType: "dims", name: mainFilename },
+  //     mainFilename,
+  //   ).then((resp) => {
+  //     setDims(resp.dims);
+  //   });
+  // }, []);
   return [
     h(MetaAttribute, {
       name: "Network blocks",
+      valueClassName: "rank",
+      value: dims.join(", "),
+    }),
+  ];
+}
+
+function BOFTNetwork({ metadata }) {
+  const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
+	console.log(dims);
+  // React.useEffect(() => {
+  //   trySyncMessage(
+  //     { messageType: "dims", name: mainFilename },
+  //     mainFilename,
+  //   ).then((resp) => {
+  //     setDims(resp.dims);
+  //   });
+  // }, []);
+  return [
+    h(MetaAttribute, {
+      name: "Network factor",
       valueClassName: "rank",
       value: dims.join(", "),
     }),
@@ -294,28 +317,27 @@ function LRScheduler({ metadata }) {
     : metadata.get("ss_lr_scheduler");
 
   return [
-    h(
-      "div",
-      { className: "row space-apart" },
+    h("div", { className: "row space-apart" }, [
       h(MetaAttribute, {
         name: "LR Scheduler",
 
-        containerProps: { style: { gridColumn: "1 / span 6" } },
+        containerProps: { style: { gridColumn: "1 / span 3" } },
         value: lrScheduler,
       }),
-    ),
+
+      metadata.has("ss_lr_warmup_steps") &&
+        h(MetaAttribute, {
+          name: "Warmup steps",
+          valueClassName: "lr number",
+          value: metadata.get("ss_lr_warmup_steps"),
+        }),
+    ]),
     h("div", { className: "row space-apart" }, [
       h(MetaAttribute, {
         name: "Learning Rate",
         valueClassName: "lr number",
         value: metadata.get("ss_learning_rate"),
       }),
-      metadata.has("ss_lr_warmup_steps") &&
-        h(MetaAttribute, {
-          name: "Learning Rate",
-          valueClassName: "lr number",
-          value: metadata.get("ss_lr_warmup_steps"),
-        }),
       h(MetaAttribute, {
         name: "UNet Learning Rate",
         valueClassName: "lr number",
