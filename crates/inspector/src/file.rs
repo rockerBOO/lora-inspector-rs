@@ -5,7 +5,7 @@ use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
-    weight::{Alpha, BufferedLoRAWeight, Weight, WeightKey},
+    weight::{BufferedLoRAWeight, Weight, WeightKey, self},
     InspectorError, Result,
 };
 
@@ -75,10 +75,17 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn alphas(&self) -> HashSet<Alpha> {
+    pub fn alphas(&self) -> HashSet<weight::Alpha> {
         self.weights
             .as_ref()
             .map(|weights| weights.alphas())
+            .unwrap_or_default()
+    }
+    
+    pub fn dora_scales(&self) -> HashSet<weight::DoRAScale> {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.dora_scales())
             .unwrap_or_default()
     }
 

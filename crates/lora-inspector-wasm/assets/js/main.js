@@ -143,6 +143,8 @@ function Network({ metadata, filename }) {
       ? JSON.parse(metadata.get("ss_network_args"))
       : null,
   );
+  const [weightDecomposition, setWeightDecomposition] = React.useState(null);
+  const [rankStabilized, setRankStabilized] = React.useState(false);
 
   // // TODO: date parsing isn't working right or the date is invalid
   // const trainingStart = new Date(Number.parseInt(metadata.get("ss_training_started_at"))).toLocaleString()
@@ -167,13 +169,25 @@ function Network({ metadata, filename }) {
     ).then((resp) => {
       setNetworkType(resp.networkType);
     });
+    trySyncMessage(
+      { messageType: "weight_decomposition", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setWeightDecomposition(resp.weightDecomposition);
+    });
+    trySyncMessage(
+      { messageType: "rank_stabilized", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setRankStabilized(resp.rankStabilized);
+    });
   }, []);
 
   let networkOptions;
 
-  if (networkType === "DiagOFT" ) {
+  if (networkType === "DiagOFT") {
     networkOptions = h(DiagOFTNetwork, { metadata });
-	} else if (networkType === "BOFT") {
+  } else if (networkType === "BOFT") {
     networkOptions = h(BOFTNetwork, { metadata });
   } else {
     networkOptions = h(LoRANetwork, { metadata });
@@ -198,6 +212,16 @@ function Network({ metadata, filename }) {
         name: "Network dropout",
         valueClassName: "number",
         value: metadata.get("ss_network_dropout"),
+      }),
+      h(MetaAttribute, {
+        name: "Weight decomposition (DoRA)",
+        valueClassName: "number",
+        value: weightDecomposition ?? "False",
+      }),
+      h(MetaAttribute, {
+        name: "Rank-stabilized",
+        valueClassName: "number",
+				value: rankStabilized ? "True" : "False",
       }),
     ),
     h(
@@ -224,7 +248,7 @@ function Network({ metadata, filename }) {
 
 function DiagOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-	console.log(dims);
+  console.log(dims);
   // React.useEffect(() => {
   //   trySyncMessage(
   //     { messageType: "dims", name: mainFilename },
@@ -244,7 +268,6 @@ function DiagOFTNetwork({ metadata }) {
 
 function BOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-	console.log(dims);
   // React.useEffect(() => {
   //   trySyncMessage(
   //     { messageType: "dims", name: mainFilename },
@@ -356,6 +379,8 @@ function Optimizer({ metadata }) {
   return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
       name: "Optimizer",
+
+      containerProps: { className: "span-3" },
       value: metadata.get("ss_optimizer"),
     }),
     h(MetaAttribute, {
@@ -3318,7 +3343,7 @@ async function processFile(file) {
   uploadTimeoutHandler = setTimeout(() => {
     cancel();
     addErrorMessage("Timeout loading LoRA. Try again.");
-  }, 5000);
+  }, 12000);
 
   function messageHandler(e) {
     // console.log('got message on main', e.data)

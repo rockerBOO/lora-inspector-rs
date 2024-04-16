@@ -15,7 +15,15 @@ pub enum NetworkModule {
     KohyaSSLoRA,
     KohyaSSLoRAFA,
     KohyaSSDyLoRA,
+    KohyaSSOFT,
     Lycoris,
+}
+
+#[wasm_bindgen]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub enum WeightDecomposition {
+    DoRA,
+    None,
 }
 
 #[wasm_bindgen]
@@ -30,8 +38,9 @@ pub enum NetworkType {
     DyLoRA,
     GLora,
     GLoKr,
+    OFT,
     DiagOFT,
-    BOFT
+    BOFT,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -87,11 +96,26 @@ pub struct NetworkArgs {
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_tucker: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dora_wd: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rs_lora: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rescale: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constrain: Option<f64>,
+
+    // #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -326,6 +350,7 @@ where
     //     Err(_) => todo!(),
     // }
     Ok(match Value::deserialize(deserializer)? {
+        Value::Null => None,
         Value::String(s) => Some(s.parse().map_err(de::Error::custom)?),
         Value::Number(num) => Some(
             num.as_f64()
@@ -370,6 +395,8 @@ where
     match s.as_str() {
         "True" => Ok(Some(true)),
         "False" => Ok(Some(false)),
+        "true" => Ok(Some(true)),
+        "false" => Ok(Some(false)),
         _ => Err(de::Error::custom("Could not parse to bool")),
     }
 }
@@ -402,10 +429,11 @@ mod tests {
     //     Ok(data)
     // }
 
+  // "dropout": "0.5",
     #[test]
     fn network_args() -> crate::Result<()> {
         let json = r#"{
-  "dropout": "0.5",
+  "dropout": null, 
   "rank_dropout": "0.4",
   "module_dropout": "0.1",
   "block_dims": "2,2,2,2,4,4,4,4,8,8,8,8,8,8,8,8,8,4,4,4,4,2,2,2,2",
@@ -415,8 +443,16 @@ mod tests {
   "conv_block_alphas": "4,4,4,4,4,4,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8",
   "down_lr_weight": "0,0,0,0,0,0,0,1,1,1,1,1",
   "up_lr_weight": "1,1,1,1,0,0,0,0,0,0,0,0",
+  "use_tucker": "false",
+  "dora_wd": "true",
+  "rs_lora": "true",
   "mid_lr_weight": "1",
-    "conv_dim": "8", "conv_alpha": "4", "use_cp": "True", "algo": "loha"
+    "conv_dim": "8", 
+    "conv_alpha": "4", 
+    "use_cp": "true", 
+    "algo": "loha",
+    "preset": "attn-only"
+    
 }"#;
 
         let network_args: Result<NetworkArgs, serde_json::Error> = serde_json::from_str(json);

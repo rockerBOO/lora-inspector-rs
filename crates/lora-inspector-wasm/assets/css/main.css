@@ -170,11 +170,15 @@ h1 {
 }
 
 .row div {
-  text-overflow: ellipsis;
+	overflow-wrap: anywhere;
 }
 
 .space-apart {
   justify-content: space-between;
+}
+
+.span-3 {
+	grid-column: 3/1;
 }
 
 .rank,

@@ -222,6 +222,33 @@ function init_wasm_in_worker() {
             });
           }
         });
+      } else if (e.data.messageType === "weight_decomposition") {
+        getWeightDecomposition(e).then((weightDecomposition) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "weight_decomposition",
+              weightDecomposition,
+            });
+          }
+        });
+      } else if (e.data.messageType === "rank_stabilized") {
+        getRankStabilized(e).then((rankStabilized) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "rank_stabilized",
+              rankStabilized,
+            });
+          }
+        });
+      } else if (e.data.messageType === "dora_scales") {
+        getDoraScales(e).then((doraScales) => {
+          if (e.data.reply) {
+            self.postMessage({
+              messageType: "dora_scales",
+              doraScales,
+            });
+          }
+        });
       }
     };
   });
@@ -542,6 +569,25 @@ async function getAlphas(e) {
   const loraWorker = getWorker(e.data.name);
 
   return Array.from(loraWorker.alphas()).sort((a, b) => a > b);
+}
+
+async function getWeightDecomposition(e) {
+  const loraWorker = getWorker(e.data.name);
+
+  return loraWorker.weight_decomposition();
+}
+
+async function getRankStabilized(e) {
+  const loraWorker = getWorker(e.data.name);
+
+  return loraWorker.rank_stabilized();
+}
+
+
+async function getDoraScales(e) {
+  const loraWorker = getWorker(e.data.name);
+
+  return Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
 }
 
 async function getDims(e) {

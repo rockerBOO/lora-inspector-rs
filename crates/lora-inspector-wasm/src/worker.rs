@@ -4,11 +4,11 @@ use std::fmt;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-// extern crate console_error_panic_hook;
+extern crate console_error_panic_hook;
 
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
-use inspector::network::NetworkModule;
+use inspector::network::{NetworkModule, WeightDecomposition};
 use inspector::{norms, statistic, InspectorError};
 use std::panic;
 
@@ -28,7 +28,8 @@ impl fmt::Display for LoraWorker {
 impl LoraWorker {
     #[wasm_bindgen(constructor)]
     pub fn new_from_buffer(buffer: &[u8], filename: &str) -> Result<LoraWorker, String> {
-        panic::set_hook(Box::new(console_error_panic_hook::hook));
+        // panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_error_panic_hook::set_once();
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
         let file = LoRAFile::new_from_buffer(buffer, filename);
 
@@ -78,6 +79,18 @@ impl LoraWorker {
             .collect()
     }
 
+    pub fn dora_scales(&self) -> Vec<JsValue> {
+        self.file
+            .dora_scales()
+            .into_iter()
+            .map(|dora_scale| {
+                serde_wasm_bindgen::to_value(&dora_scale).unwrap_or_else(|_v| {
+                    serde_wasm_bindgen::to_value("invalid dora_scale").unwrap()
+                })
+            })
+            .collect()
+    }
+
     pub fn dims(&self) -> Vec<u32> {
         self.file.dims().into_iter().collect()
     }
@@ -91,16 +104,22 @@ impl LoraWorker {
     }
 
     pub fn precision(&self) -> String {
-        panic::set_hook(Box::new(console_error_panic_hook::hook));
         self.file.precision()
     }
 
-    // pub fn parse_key(&self, parse_key: &str) {
-    //     let successful_parse = KeyParser::parse(Rule::key, parse_key);
-    //     if let Ok(pairs) = successful_parse {
-    //         console::log_1(&format!("{:#?}", pairs).into());
-    //     }
-    // }
+    pub fn weight_decomposition(&self) -> String {
+        self.metadata
+            .weight_decomposition()
+            .map(|decomposition_type| match decomposition_type {
+                WeightDecomposition::DoRA => "DoRA".to_string(),
+                WeightDecomposition::None => "False".to_string(),
+            })
+            .unwrap_or("False".to_string())
+    }
+
+    pub fn rank_stabilized(&self) -> bool {
+        self.metadata.rank_stabilized().unwrap_or(false)
+    }
 
     pub fn scale_weights(&mut self) -> Vec<String> {
         console_error_panic_hook::set_once();
@@ -243,6 +262,7 @@ impl LoraWorker {
             Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
             Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
+            Some(NetworkModule::KohyaSSOFT) => "kohya-ss/oft".to_owned(),
             None => "no_module_found".to_owned(),
         }
     }

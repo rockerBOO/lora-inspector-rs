@@ -38,6 +38,30 @@ impl PartialEq for Alpha {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[wasm_bindgen]
+pub struct DoRAScale(pub f32);
+
+impl Eq for DoRAScale {}
+
+impl DoRAScale {
+    fn canonicalize(&self) -> i64 {
+        (self.0 * 1024.0 * 1024.0).round() as i64
+    }
+}
+
+impl std::hash::Hash for DoRAScale {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+        self.canonicalize();
+    }
+}
+
+impl PartialEq for DoRAScale {
+    fn eq(&self, other: &DoRAScale) -> bool {
+        self.canonicalize() == other.canonicalize()
+    }
+}
+
 #[wasm_bindgen]
 pub struct BufferedLoRAWeight {
     buffered: BufferedSafetensors,
@@ -151,6 +175,7 @@ impl Weight for BufferedLoRAWeight {
         let lora_up = format!("{}.lora_up.weight", base_name);
         let lora_down = format!("{}.lora_down.weight", base_name);
         let lora_alpha = format!("{}.alpha", base_name);
+        let lora_dora_scale = format!("{}.dora_scale", base_name);
 
         let up = self.buffered.get(&lora_up)?.load(device)?.detach()?;
         let down = self.buffered.get(&lora_down)?.load(device)?.detach()?;
@@ -161,9 +186,14 @@ impl Weight for BufferedLoRAWeight {
         let scale = alpha.to_dtype(DType::F64)?.to_scalar::<f64>()? / dims[0] as f64;
 
         if dims.len() == 2 {
-            up.matmul(&down)?.detach()?.mul(scale)?.detach()
+            self.scale_dora_weight(&up, &lora_dora_scale, device)?
+                .matmul(&down)?
+                .detach()?
+                .mul(scale)?
+                .detach()
         } else if dims[2] == 1 && dims[3] == 1 {
-            up.squeeze(3)?
+            self.scale_dora_weight(&up, &lora_dora_scale, device)?
+                .squeeze(3)?
                 .squeeze(2)?
                 .matmul(&down.squeeze(3)?.squeeze(2)?)?
                 .unsqueeze(2)?
@@ -171,7 +201,13 @@ impl Weight for BufferedLoRAWeight {
                 .mul(scale)
         } else {
             down.permute((1, 0, 2, 3))?
-                .conv2d(&up, 0, 1, 1, 1)?
+                .conv2d(
+                    &self.scale_dora_weight(&up, &lora_dora_scale, &device)?,
+                    0,
+                    1,
+                    1,
+                    1,
+                )?
                 .permute((1, 0, 2, 3))?
                 .mul(scale)
         }
@@ -295,6 +331,29 @@ impl Weight for BufferedLoRAWeight {
         // return rebuild * scale
     }
 
+    fn scale_dora_weight(
+        &self,
+        weight: &Tensor,
+        lora_dora_scale: &str,
+        device: &candle_core::Device,
+    ) -> Result<Tensor, candle_core::Error> {
+
+        // self.dora_norm_dims = org_weight.dim() - 1
+        // weight_norm = (
+        //     weight.transpose(0, 1)
+        //     .reshape(weight.shape[1], -1)
+        //     .norm(dim=1, keepdim=True)
+        //     .reshape(weight.shape[1], *[1] * self.dora_norm_dims)
+        //     .transpose(0, 1)
+        // )
+        // if let Ok(dora_scale) = self.buffered.get(lora_dora_scale) {
+        //     weight.matmul(&dora_scale.load(device)?)?.detach()
+        // } else {
+        //     weight.detach()
+        // }
+        weight.detach()
+    }
+
     fn alphas(&self) -> HashSet<Alpha> {
         self.buffered
             .tensors()
@@ -311,6 +370,25 @@ impl Weight for BufferedLoRAWeight {
             .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
                 alphas.insert(Alpha(v));
                 alphas
+            })
+    }
+
+    fn dora_scales(&self) -> HashSet<DoRAScale> {
+        self.buffered
+            .tensors()
+            .iter()
+            .filter(|(k, _v)| k.contains("dora_scale"))
+            .filter_map(|(k, _v)| {
+                self.get(k)
+                    .unwrap()
+                    .to_dtype(DType::F32)
+                    .map(|v| v.to_scalar::<f32>())
+                    .unwrap()
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut scales: HashSet<DoRAScale>, v| {
+                scales.insert(DoRAScale(v));
+                scales
             })
     }
 
@@ -386,7 +464,15 @@ pub trait Weight {
         base_name: &str,
         device: &Device,
     ) -> Result<Tensor, candle_core::Error>;
+
+    fn scale_dora_weight(
+        &self,
+        weight: &Tensor,
+        lora_dora_scale: &str,
+        device: &candle_core::Device,
+    ) -> Result<Tensor, candle_core::Error>;
     fn alphas(&self) -> HashSet<Alpha>;
+    fn dora_scales(&self) -> HashSet<DoRAScale>;
     fn dims(&self) -> HashSet<u32>;
     fn shapes(&self) -> HashMap<String, Vec<usize>>;
 }
@@ -686,6 +772,19 @@ impl Weight for LoRAWeight {
         // return rebuild * scale
     }
 
+    fn scale_dora_weight(
+        &self,
+        weight: &Tensor,
+        lora_dora_scale: &str,
+        _device: &candle_core::Device,
+    ) -> Result<Tensor, candle_core::Error> {
+        if let Some(dora_scale) = self.tensors.get(lora_dora_scale) {
+            weight.matmul(dora_scale)?.detach()
+        } else {
+            weight.detach()
+        }
+    }
+
     fn alphas(&self) -> HashSet<Alpha> {
         self.tensors
             .iter()
@@ -699,6 +798,24 @@ impl Weight for LoRAWeight {
             .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
                 alphas.insert(Alpha(v));
                 alphas
+            })
+    }
+
+    fn dora_scales(&self) -> HashSet<DoRAScale> {
+        self.tensors
+            .iter()
+            .filter(|(k, _v)| k.contains("dora_scale"))
+            .filter_map(|(k, _v)| {
+                self.get(k)
+                    .unwrap()
+                    .to_dtype(DType::F32)
+                    .map(|v| v.to_scalar::<f32>())
+                    .unwrap()
+                    .ok()
+            })
+            .fold(HashSet::new(), |mut scales: HashSet<DoRAScale>, v| {
+                scales.insert(DoRAScale(v));
+                scales
             })
     }
 
@@ -932,11 +1049,37 @@ mod tests {
         }
     }
 
+    #[test]
+    fn empty_dora_scale_set() {
+        let buffer = load_test_file().unwrap();
+
+        // Arrange
+        let lora_weight = LoRAWeight::new(buffer).unwrap();
+
+        // Act
+        let scales = lora_weight.dora_scales();
+
+        assert_eq!(scales.len(), 0);
+    }
+
+    // #[test]
+    // fn has_dora_scale() {
+    //     let buffer = load_file("/mnt/900/lora/testing/women/women-2023-08-23-122633-56bab2a0.safetensors").unwrap();
+    //
+    //     // Arrange
+    //     let lora_weight = LoRAWeight::new(buffer).unwrap();
+    //
+    //     // Act
+    //     let scales = lora_weight.dora_scales();
+    //
+    //     assert_eq!(scales.len(), 1000);
+    // }
+
     // #[test]
     // fn weight_norm_handles_scale_weight_lorafa() {
     //     // Arrange
     //     let buffer = load_file(
-    //         "/mnt/900/lora/testing/nsfw/pov-blowjob-2023-12-24-210347-34204a47.safetensors",
+    //         "/mnt/900/lora/testing/woman.safetensors",
     //     )
     //     .unwrap();
     //

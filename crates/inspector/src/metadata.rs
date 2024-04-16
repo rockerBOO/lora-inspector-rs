@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 
-use crate::network::{NetworkArgs, NetworkModule, NetworkType};
+use crate::network::{NetworkArgs, NetworkModule, NetworkType, WeightDecomposition};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
@@ -62,39 +62,42 @@ impl Metadata {
                     Some("glora") => NetworkType::GLora,
                     Some("glokr") => NetworkType::GLoKr,
                     Some("locon") => NetworkType::LoCon,
+                    Some("lora") => NetworkType::LoRA,
                     Some(algo) => panic!("Invalid algo {}", algo),
-                    None => panic!("No algo found for lycoris"),
+                    // Defaults to LoRA
+                    None => NetworkType::LoRA,
                 }
             }),
             Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
+            Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
             None => None,
         }
     }
 
+    pub fn weight_decomposition(&self) -> Option<WeightDecomposition> {
+        self.network_args()
+            .map(|network_args| match network_args.dora_wd {
+                Some(true) => WeightDecomposition::DoRA,
+                _ => WeightDecomposition::None,
+            })
+    }
+
+    pub fn rank_stabilized(&self) -> Option<bool> {
+        self.network_args()
+            .map(|network_args| network_args.rs_lora.unwrap_or(false))
+    }
+
     pub fn network_module(&self) -> Option<NetworkModule> {
         match self.metadata.as_ref().map(|v| v.get("ss_network_module")) {
-            Some(Some(network_module)) => {
-                match network_module.as_str() {
-                    "networks.lora" => {
-                        // this is a Kohya network, probably
-                        Some(NetworkModule::KohyaSSLoRA)
-                    }
-                    "networks.lora_fa" => {
-                        // this is a Kohya network, probably
-                        Some(NetworkModule::KohyaSSLoRAFA)
-                    }
-                    "networks.dylora" => {
-                        // this is a Kohya network, probably
-                        Some(NetworkModule::KohyaSSDyLoRA)
-                    }
-                    "lycoris.kohya" => {
-                        // lycoris network module
-                        Some(NetworkModule::Lycoris)
-                    }
-                    _ => None,
-                }
-            }
+            Some(Some(network_module)) => match network_module.as_str() {
+                "networks.lora" => Some(NetworkModule::KohyaSSLoRA),
+                "networks.lora_fa" => Some(NetworkModule::KohyaSSLoRAFA),
+                "networks.dylora" => Some(NetworkModule::KohyaSSDyLoRA),
+                "networks.oft" => Some(NetworkModule::KohyaSSOFT),
+                "lycoris.kohya" => Some(NetworkModule::Lycoris),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -258,6 +261,16 @@ mod tests {
         let metadata = Metadata::new_from_buffer(&buffer)?;
 
         assert!(metadata.network_type().is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn no_weight_decomposition() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let metadata = Metadata::new_from_buffer(&buffer)?;
+
+        assert!(metadata.weight_decomposition().is_none());
 
         Ok(())
     }
