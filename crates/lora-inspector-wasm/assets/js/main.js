@@ -234,8 +234,7 @@ function Network({ metadata, filename }) {
           style: { gridColumn: "1 / span 6" },
         },
         valueClassName: "args",
-
-        value: JSON.stringify(networkArgs),
+				value: networkArgs ? JSON.stringify(networkArgs) : "None",
       }),
     ),
     // h("div", {}, [
@@ -963,12 +962,13 @@ function Loss({ metadata }) {
   return h("div", { className: "row space-apart" }, [
     h(MetaAttribute, {
       name: "Gradient Checkpointing",
+      valueClassName: "number",
       value: metadata.get("ss_gradient_checkpointing"),
     }),
     h(MetaAttribute, {
       name: "Debiased Estimation",
       valueClassName: "number",
-      value: metadata.get("ss_debiased_estimation"),
+      value: metadata.get("ss_debiased_estimation") ?? "False",
     }),
     h(MetaAttribute, {
       name: "Min SNR Gamma",
@@ -977,9 +977,10 @@ function Loss({ metadata }) {
     }),
     h(MetaAttribute, {
       name: "Zero Terminal SNR",
+      valueClassName: "number",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
-    metadata.has("ss_masked_loss") &&
+    metadata.has("ss_masked_loss") != undefined &&
       h(MetaAttribute, {
         name: "Masked Loss",
         value: metadata.get("ss_masked_loss"),

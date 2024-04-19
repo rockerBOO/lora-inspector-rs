@@ -55,6 +55,10 @@ pub struct NetworkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank_dropout: Option<f64>,
 
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank_dropout_scale: Option<bool>,
+
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub module_dropout: Option<f64>,
@@ -66,6 +70,10 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conv_alpha: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alpha: Option<f64>,
 
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -87,7 +95,6 @@ pub struct NetworkArgs {
     // #[serde(default, skip_serializing_if = "Option::is_none")]
     pub up_lr_weight: Option<LrWeight>,
 
-    // block_lr_zero_threshold=0.1
     pub drop_keys: Option<String>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
@@ -100,7 +107,23 @@ pub struct NetworkArgs {
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_scalar: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_conv_cp: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_conv_cp: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dora_wd: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight_decompose: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -108,11 +131,35 @@ pub struct NetworkArgs {
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rescale: Option<bool>,
+    pub rescaled: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constrain: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplier: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block_size: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub factor: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bypass_mode: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_matrix: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decompose_both: Option<bool>,
 
     // #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preset: Option<String>,
