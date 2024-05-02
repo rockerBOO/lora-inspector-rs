@@ -186,14 +186,9 @@ impl Weight for BufferedLoRAWeight {
         let scale = alpha.to_dtype(DType::F64)?.to_scalar::<f64>()? / dims[0] as f64;
 
         if dims.len() == 2 {
-            self.scale_dora_weight(&up, &lora_dora_scale, device)?
-                .matmul(&down)?
-                .detach()?
-                .mul(scale)?
-                .detach()
+            up.matmul(&down)?.detach()?.mul(scale)?.detach()
         } else if dims[2] == 1 && dims[3] == 1 {
-            self.scale_dora_weight(&up, &lora_dora_scale, device)?
-                .squeeze(3)?
+            up.squeeze(3)?
                 .squeeze(2)?
                 .matmul(&down.squeeze(3)?.squeeze(2)?)?
                 .unsqueeze(2)?
@@ -201,13 +196,7 @@ impl Weight for BufferedLoRAWeight {
                 .mul(scale)
         } else {
             down.permute((1, 0, 2, 3))?
-                .conv2d(
-                    &self.scale_dora_weight(&up, &lora_dora_scale, &device)?,
-                    0,
-                    1,
-                    1,
-                    1,
-                )?
+                .conv2d(&up, 0, 1, 1, 1)?
                 .permute((1, 0, 2, 3))?
                 .mul(scale)
         }
@@ -244,35 +233,30 @@ impl Weight for BufferedLoRAWeight {
             let t1 = t1.load(device)?;
 
             let t2 = self.buffered.get(&hada_t2)?.load(device)?;
-            let one = w1_a.matmul(&w1_b)?;
-            let two = w2_a.matmul(&w2_b)?;
 
-            let t1_w1 = t1.mul(one)?;
-            let t2_w2 = t2.mul(two)?;
+            let t1_transposed = t1.transpose(1, 2)?.reshape((0, 1))?;
+            let w1_a_transposed = w1_a.transpose(0, 1)?;
+            let w1_b_transposed = w1_b.transpose(0, 1)?;
 
-            t1_w1.matmul(&t2_w2)?.mul(scale)
+            let t2_transposed = t2.transpose(1, 2)?.reshape((0, 1))?;
+            let w2_a_transposed = w2_a.transpose(0, 1)?;
+            let w2_b_transposed = w2_b.transpose(0, 1)?;
+
+            let rebuild1 = t1_transposed
+                .matmul(&w1_a_transposed)?
+                .matmul(&w1_b_transposed)?;
+            let rebuild2 = t2_transposed
+                .matmul(&w2_a_transposed)?
+                .matmul(&w2_b_transposed)?;
+
+            // return rebuild1 * rebuild2 * scale
+            rebuild1.mul(rebuild2)?.mul(scale)
         } else {
             let one = w1_a.matmul(&w1_b)?;
             let two = w2_a.matmul(&w2_b)?;
 
             one.mul(two)?.mul(scale)
         }
-
-        // if dims.len() == 2 {
-        //     up.matmul(&down)?.mul(scale)
-        // } else if dims[2] == 1 && dims[3] == 1 {
-        //     up.squeeze(3)?
-        //         .squeeze(2)?
-        //         .matmul(&down.squeeze(3)?.squeeze(2)?)?
-        //         .unsqueeze(2)?
-        //         .unsqueeze(3)?
-        //         .mul(scale)
-        // } else {
-        //     down.permute((1, 0, 2, 3))?
-        //         .conv2d(&up, 0, 1, 1, 1)?
-        //         .permute((1, 0, 2, 3))?
-        //         .mul(scale)
-        // }
     }
 
     fn scale_lokr_weight(
@@ -329,29 +313,6 @@ impl Weight for BufferedLoRAWeight {
         // rebuild = torch.kron(w1, w2)
         //
         // return rebuild * scale
-    }
-
-    fn scale_dora_weight(
-        &self,
-        weight: &Tensor,
-        lora_dora_scale: &str,
-        device: &candle_core::Device,
-    ) -> Result<Tensor, candle_core::Error> {
-
-        // self.dora_norm_dims = org_weight.dim() - 1
-        // weight_norm = (
-        //     weight.transpose(0, 1)
-        //     .reshape(weight.shape[1], -1)
-        //     .norm(dim=1, keepdim=True)
-        //     .reshape(weight.shape[1], *[1] * self.dora_norm_dims)
-        //     .transpose(0, 1)
-        // )
-        // if let Ok(dora_scale) = self.buffered.get(lora_dora_scale) {
-        //     weight.matmul(&dora_scale.load(device)?)?.detach()
-        // } else {
-        //     weight.detach()
-        // }
-        weight.detach()
     }
 
     fn alphas(&self) -> HashSet<Alpha> {
@@ -465,12 +426,6 @@ pub trait Weight {
         device: &Device,
     ) -> Result<Tensor, candle_core::Error>;
 
-    fn scale_dora_weight(
-        &self,
-        weight: &Tensor,
-        lora_dora_scale: &str,
-        device: &candle_core::Device,
-    ) -> Result<Tensor, candle_core::Error>;
     fn alphas(&self) -> HashSet<Alpha>;
     fn dora_scales(&self) -> HashSet<DoRAScale>;
     fn dims(&self) -> HashSet<u32>;
@@ -772,19 +727,6 @@ impl Weight for LoRAWeight {
         // return rebuild * scale
     }
 
-    fn scale_dora_weight(
-        &self,
-        weight: &Tensor,
-        lora_dora_scale: &str,
-        _device: &candle_core::Device,
-    ) -> Result<Tensor, candle_core::Error> {
-        if let Some(dora_scale) = self.tensors.get(lora_dora_scale) {
-            weight.matmul(dora_scale)?.detach()
-        } else {
-            weight.detach()
-        }
-    }
-
     fn alphas(&self) -> HashSet<Alpha> {
         self.tensors
             .iter()
@@ -853,6 +795,8 @@ mod tests {
         io::{self, Read},
     };
 
+    use crate::norms;
+
     use super::*;
 
     fn load_test_file() -> Result<Vec<u8>, io::Error> {
@@ -885,6 +829,16 @@ mod tests {
 
     fn load_test_hada_block_file() -> Result<Vec<u8>, io::Error> {
         let filename = "./lora_unet_output_blocks_4_1_proj_in.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_dora_hada_block_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "dora_lora_unet_down_blocks_1_attentions_0_proj_in.safetensors";
 
         let mut f = File::open(filename)?;
         let mut data = vec![];
@@ -1004,7 +958,7 @@ mod tests {
     }
 
     #[test]
-    fn buffered_dims_scale_hada_weight_conv2d() {
+    fn buffered_dims_scale_hada_weight() {
         let buffer = load_test_hada_block_file().unwrap();
 
         // Arrange
@@ -1016,12 +970,73 @@ mod tests {
             lora_weight.scale_hada_weight("lora_unet_output_blocks_4_1_proj_in", &Device::Cpu)
         );
 
-        // Assert
         assert!(result.is_ok());
         let scaled_tensor = result.unwrap();
 
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            0.9683933
+        );
+
         // Verify that the tensor has the correct shape or dimensions
         assert_eq!(scaled_tensor.dims(), &[640, 640]);
+
+        // println!("Simple");
+        // println!("{:?}", crate::norms::l2::<f32>(&w1_a.to_dtype(DType::F32)?));
+        // println!("{:?}", crate::norms::l2::<f32>(&w1_b.to_dtype(DType::F32)?));
+
+        // println!(
+        //     "max {:#?}",
+        //     scaled_tensor
+        //         .flatten_all()
+        //         .unwrap()
+        //         .to_dtype(DType::F64)
+        //         .unwrap()
+        //         .to_vec0::<f64>()
+        //         .iter()
+        //         .copied()
+        //         .fold(0_f64, |acc, v| { acc.max(dbg!(v)) })
+        // );
+        // Verify that the tensor values are within an acceptable range
+        for value in scaled_tensor
+            .flatten_all()
+            .iter()
+            .take(10)
+            .filter_map(|v| v.to_dtype(DType::F64).and_then(|v| v.to_vec0::<i64>()).ok())
+        {
+            println!("{:#?}", value);
+            assert!((0_i64..=8_i64).contains(&value));
+            // println!("{:#?}", value);
+            // break;
+        }
+    }
+
+    #[test]
+    fn buffered_dims_dora_scale_hada_weight() {
+        let buffer = load_test_dora_hada_block_file().unwrap();
+
+        // Arrange
+        let lora_weight = BufferedLoRAWeight::new(buffer).unwrap();
+
+        // Act
+
+        let result = dbg!(lora_weight
+            .scale_hada_weight("lora_unet_down_blocks_1_attentions_0_proj_in", &Device::Cpu));
+
+        assert!(result.is_ok());
+        let scaled_tensor = result.unwrap();
+
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            0.9683933
+        );
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[640, 640]);
+
+        // println!("Simple");
+        // println!("{:?}", crate::norms::l2::<f32>(&w1_a.to_dtype(DType::F32)?));
+        // println!("{:?}", crate::norms::l2::<f32>(&w1_b.to_dtype(DType::F32)?));
 
         // println!(
         //     "max {:#?}",

@@ -8,3 +8,4 @@ edition.workspace = true
 
 [dependencies]
 inspector = { path = "../inspector" }
+candle-core = { workspace = true }

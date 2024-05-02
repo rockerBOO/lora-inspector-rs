@@ -476,7 +476,7 @@ mod tests {
     //     Ok(data)
     // }
 
-  // "dropout": "0.5",
+    // "dropout": "0.5",
     #[test]
     fn network_args() -> crate::Result<()> {
         let json = r#"{

@@ -142,6 +142,7 @@ impl LoraWorker {
     }
 
     pub fn scale_weight(&mut self, base_name: &str) -> Result<bool, JsValue> {
+        console_error_panic_hook::set_once();
         self.file
             .scale_weight(base_name, &candle_core::Device::Cpu)
             .map(|_t| true)
@@ -207,8 +208,8 @@ impl LoraWorker {
             })
             .collect::<Vec<norms::NormFn<f64>>>();
 
-        match self.file.scaled_weight(base_name) {
-            Some(scaled_weight) => Ok(serde_wasm_bindgen::to_value(
+        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+            Ok(scaled_weight) => Ok(serde_wasm_bindgen::to_value(
                 &normative_funcs
                     .iter()
                     .map(|norm_fn| {
@@ -219,7 +220,7 @@ impl LoraWorker {
                     })
                     .collect::<HashMap<String, f64>>(),
             )?),
-            None => Err(JsValue::from_str(&format!(
+            Err(_) => Err(JsValue::from_str(&format!(
                 "could not get scaled weights for {}",
                 base_name
             ))),
@@ -227,33 +228,64 @@ impl LoraWorker {
     }
 
     pub fn l1_norm(&self, base_name: &str) -> Option<f64> {
-        self.file
-            .l1_norm(base_name)
-            .map_err(|e| {
-                console::error_1(&format!("L1 norm for {} Error: {:#?}", base_name, e).into());
-                e
-            })
-            .ok()
+        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+            Ok(scaled_weight) => self
+                .file
+                .l1_norm(&scaled_weight)
+                .map_err(|e| {
+                    console::error_1(&format!("L1 norm for {} Error: {:#?}", base_name, e).into());
+                    e
+                })
+                .ok(),
+            Err(e) => {
+                console::error_1(
+                    &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),
+                );
+                None
+            }
+        }
     }
 
     pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
-        self.file
-            .l2_norm(base_name)
-            .map_err(|e| {
-                console::error_1(&format!("L2 norm for {} Error: {:#?}", base_name, e).into());
-                e
-            })
-            .ok()
+        console_error_panic_hook::set_once();
+        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+            Ok(scaled_weight) => self
+                .file
+                .l2_norm(&scaled_weight)
+                .map_err(|e| {
+                    console::error_1(&format!("L2 norm for {} Error: {:#?}", base_name, e).into());
+                    e
+                })
+                .ok(),
+            Err(e) => {
+                console::error_1(
+                    &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),
+                );
+                None
+            }
+        }
     }
 
     pub fn matrix_norm(&self, base_name: &str) -> Option<f64> {
-        self.file
-            .matrix_norm(base_name)
-            .map_err(|e| {
-                console::error_1(&format!("Matrix norm for {} Error: {:#?}", base_name, e).into());
-                e
-            })
-            .ok()
+        console_error_panic_hook::set_once();
+        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+            Ok(scaled_weight) => self
+                .file
+                .matrix_norm(&scaled_weight)
+                .map_err(|e| {
+                    console::error_1(
+                        &format!("Matrix norm for {} Error: {:#?}", base_name, e).into(),
+                    );
+                    e
+                })
+                .ok(),
+            Err(e) => {
+                console::error_1(
+                    &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),
+                );
+                None
+            }
+        }
     }
 
     pub fn network_module(&self) -> String {

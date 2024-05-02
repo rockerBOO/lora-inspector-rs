@@ -5,7 +5,7 @@ use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
-    weight::{BufferedLoRAWeight, Weight, WeightKey, self},
+    weight::{self, BufferedLoRAWeight, Weight, WeightKey},
     InspectorError, Result,
 };
 
@@ -81,7 +81,7 @@ impl LoRAFile {
             .map(|weights| weights.alphas())
             .unwrap_or_default()
     }
-    
+
     pub fn dora_scales(&self) -> HashSet<weight::DoRAScale> {
         self.weights
             .as_ref()
@@ -117,22 +117,16 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn l2_norm<T: candle_core::WithDType>(&self, base_name: &str) -> Result<T> {
-        self.scaled_weight(base_name)
-            .ok_or_else(|| InspectorError::NotFound)
-            .and_then(|t| l2(&t.to_dtype(DType::F64)?))
+    pub fn l2_norm<T: candle_core::WithDType>(&self, t: &candle_core::Tensor) -> Result<T> {
+        l2(&t.to_dtype(DType::F64)?)
     }
 
-    pub fn l1_norm<T: candle_core::WithDType>(&self, base_name: &str) -> Result<T> {
-        self.scaled_weight(base_name)
-            .ok_or_else(|| InspectorError::NotFound)
-            .and_then(|t| l1(&t.to_dtype(DType::F64)?))
+    pub fn l1_norm<T: candle_core::WithDType>(&self, t: &candle_core::Tensor) -> Result<T> {
+        l1(&t.to_dtype(DType::F64)?)
     }
 
-    pub fn matrix_norm<T: candle_core::WithDType>(&self, base_name: &str) -> Result<T> {
-        self.scaled_weight(base_name)
-            .ok_or_else(|| InspectorError::NotFound)
-            .and_then(|t| matrix_norm(&t.to_dtype(DType::F64)?))
+    pub fn matrix_norm<T: candle_core::WithDType>(&self, t: &candle_core::Tensor) -> Result<T> {
+        matrix_norm(&t.to_dtype(DType::F64)?)
     }
 
     pub fn scaled_capacity(&self) -> usize {
@@ -143,31 +137,23 @@ impl LoRAFile {
         self.scaled_weights.shrink_to_fit();
     }
 
-    pub fn scaled_weight(&self, base_name: &str) -> Option<&candle_core::Tensor> {
-        self.scaled_weights.get(base_name)
-    }
+    // pub fn scaled_weight(&self, base_name: &str) -> Option<&candle_core::Tensor> {
+    //     self.scaled_weights.get(base_name)
+    // }
 
-    pub fn scale_weights(
-        &mut self,
-        device: &candle_core::Device,
-    ) -> Vec<Result<candle_core::Tensor>> {
-        self
-            .base_names()
+    pub fn scale_weights(&self, device: &candle_core::Device) -> Vec<Result<candle_core::Tensor>> {
+        self.base_names()
             .iter()
             .map(|base_name| self.scale_weight(base_name, device))
             .collect()
     }
 
-    pub fn scale_weight(
-        &mut self,
-        base_name: &str,
-        device: &Device,
-    ) -> Result<candle_core::Tensor> {
-        if let Some(tensor) = self.scaled_weights.get(base_name) {
-            return Ok(tensor.clone());
-        }
+    pub fn scale_weight(&self, base_name: &str, device: &Device) -> Result<candle_core::Tensor> {
+        // if let Some(tensor) = self.scaled_weights.get(base_name) {
+        //     return Ok(tensor.clone());
+        // }
 
-        let scaled_weight = match self.weights.as_ref() {
+        match self.weights.as_ref() {
             Some(weights) => match self
                 .metadata
                 .as_ref()
@@ -182,15 +168,15 @@ impl LoRAFile {
             None => Err(InspectorError::Msg(
                 "Weight not loaded. Load the weight first.".to_string(),
             )),
-        };
+        }
 
-        let _ = scaled_weight.as_ref().is_ok_and(|scaled| {
-            self.scaled_weights
-                .insert(base_name.to_string(), scaled.clone())
-                .is_some()
-        });
+        // let _ = scaled_weight.as_ref().is_ok_and(|scaled| {
+        //     self.scaled_weights
+        //         .insert(base_name.to_string(), scaled.clone())
+        //         .is_some()
+        // });
 
-        scaled_weight
+        // scaled_weight
 
         // match  {
         //     Ok(scaled) => {
@@ -300,63 +286,6 @@ mod tests {
         insta::assert_json_snapshot!(result.sort());
     }
 
-    // #[test]
-    // fn scale_weights() {
-    //     // Arrange
-    //     let buffer = load_test_file().unwrap();
-    //     let filename = "boo.safetensors";
-    //     let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename);
-    //     let base_name = "lora_unet_up_blocks_1_attentions_0_proj_in";
-    //     let device = &Device::Cpu;
-    //
-    //     lora_file.scale_weights(device);
-    //
-    //     // Act
-    //     let result = lora_file.l1_norm::<f64>(base_name);
-    //
-    //     // Assert
-    //     assert!(result.is_ok());
-    //     // Add assertions to verify that the norm result is correct
-    // }
-
-    #[test]
-    fn weight_norm_returns_norm_for_valid_weights() {
-        // Arrange
-        let buffer = load_test_file().unwrap();
-        let filename = "boo.safetensors";
-        let mut lora_file = LoRAFile::new_from_buffer(&buffer, filename);
-        let base_name = "lora_unet_up_blocks_1_attentions_0_proj_in";
-        let device = &Device::Cpu;
-
-        lora_file
-            .scale_weight(base_name, device)
-            .expect("scale weight");
-
-        // Act
-        let result = lora_file.l1_norm::<f64>(base_name);
-
-        // Assert
-        assert!(result.is_ok());
-        // Add assertions to verify that the norm result is correct
-    }
-
-    #[test]
-    fn weight_norm_returns_error_for_missing_weights() {
-        // Arrange
-        let buffer = load_test_file().unwrap();
-        let filename = "boo.safetensors";
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename);
-        let base_name = "nonexistent_weight";
-
-        // Act
-        let result = lora_file.l1_norm::<f64>(base_name);
-
-        // Assert
-        assert!(result.is_err());
-
-        assert_err!(result, Err(InspectorError::NotFound));
-    }
-
     #[test]
     fn weight_norm_handles_scale_weight_error() {
         // Arrange
@@ -364,31 +293,12 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&buffer, filename);
         let base_name = "error_weight";
+        let device = &Device::Cpu;
 
-        // Act
-        let result = lora_file.l1_norm::<f64>(base_name);
-
-        // Assert
-        assert!(result.is_err());
-
-        assert_err!(result, Err(InspectorError::NotFound));
-    }
-
-    #[test]
-    fn weight_norm_handles_l1_norm_error() {
-        // Arrange
-        let buffer = load_test_file().unwrap();
-        let filename = "boo.safetensors";
-        let lora_file = LoRAFile::new_from_buffer(&buffer, filename);
-        let base_name = "l1_error_weight";
-
-        // Act
-        let result = lora_file.l1_norm::<f64>(base_name);
+        let result = lora_file.scale_weight(base_name, device);
 
         // Assert
         assert!(result.is_err());
-
-        assert_err!(result, Err(InspectorError::NotFound));
     }
 
     #[test]
@@ -397,62 +307,40 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&[1_u8], filename);
         let base_name = "l1_error_weight";
+        let device = &Device::Cpu;
 
-        // Act
-        let result = lora_file.l1_norm::<f64>(base_name);
-
-        // Assert
-        assert!(result.is_err());
-        assert_err!(result, Err(InspectorError::NotFound));
-
-        // Act
-        let result = lora_file.l2_norm::<f64>(base_name);
+        let result = lora_file.scale_weight(base_name, device);
 
         // Assert
         assert!(result.is_err());
-        assert_err!(result, Err(InspectorError::NotFound));
-
-        // Act
-        let result = lora_file.matrix_norm::<f64>(base_name);
-
-        // Assert
-        assert!(result.is_err());
-        assert_err!(result, Err(InspectorError::NotFound));
     }
 
     #[test]
     fn weight_load_no_metadata() -> crate::Result<()> {
-        let device = &Device::Cpu;
         let file = "edgWar40KAdeptaSororitas.safetensors";
         let buffer = load_file(file)?;
-        let mut lora_file = LoRAFile::new_from_buffer(&buffer, file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file);
 
-        lora_file
-            .scale_weight(
-                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
-                device,
-            )
-            .expect("scale weight");
+        let device = &Device::Cpu;
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+
+        let scaled_weight = lora_file
+            .scale_weight(base_name, device)
+            .expect("could not scale weight");
 
         assert_eq!(
             502.32165664434433,
-            lora_file.l1_norm::<f64>(
-                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
-            )?
+            lora_file.l1_norm::<f64>(&scaled_weight)?
         );
 
         assert_eq!(
             0.7227786684427061,
-            lora_file.l2_norm::<f64>(
-                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
-            )?
+            lora_file.l2_norm::<f64>(&scaled_weight)?
         );
 
         assert_eq!(
             0.7227786684427061,
-            lora_file.matrix_norm::<f64>(
-                "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj",
-            )?
+            lora_file.matrix_norm::<f64>(&scaled_weight)?
         );
 
         Ok(())

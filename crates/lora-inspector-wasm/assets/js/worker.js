@@ -174,7 +174,6 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "norms") {
-        // We must lock if we are getting scaled weights
         getNorms(e).then(([norms, error]) => {
           if (e.data.reply) {
             if (error) {
@@ -477,9 +476,12 @@ async function getL2Norms(e) {
       });
 
       try {
-        return [base_name, loraWorker.l2_norm(base_name)];
+        console.log(base_name, "norm");
+        const norm = loraWorker.l2_norm(base_name);
+        return [base_name, norm];
       } catch (e) {
-        console.error(e);
+        
+        console.error(base_name, e);
         return [base_name, undefined];
       }
     })
@@ -532,6 +534,7 @@ async function getL2Norms(e) {
   //     return k > k2;
   //   }),
   // );
+  console.log(l2Norms);
   const norms = Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
     return k > k2;
   });
