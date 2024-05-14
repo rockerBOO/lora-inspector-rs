@@ -476,7 +476,6 @@ async function getL2Norms(e) {
       });
 
       try {
-        console.log(base_name, "norm");
         const norm = loraWorker.l2_norm(base_name);
         return [base_name, norm];
       } catch (e) {
@@ -590,7 +589,11 @@ async function getRankStabilized(e) {
 async function getDoraScales(e) {
   const loraWorker = getWorker(e.data.name);
 
-  return Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
+  const doraScales =  Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
+
+  console.log("dora scales", doraScales);
+
+  return doraScales;
 }
 
 async function getDims(e) {

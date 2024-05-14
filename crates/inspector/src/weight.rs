@@ -110,10 +110,12 @@ impl WeightKey for BufferedLoRAWeight {
         let hada = &mut self.keys_by_key("hada_w1");
         let lokr = &mut self.keys_by_key("lokr_w1");
         let oft_diag = &mut self.keys_by_key("oft_diag");
+        let oft_blocks = &mut self.keys_by_key("oft_block");
         let mut keys = self.keys_by_key("weight");
         keys.append(hada);
         keys.append(lokr);
         keys.append(oft_diag);
+        keys.append(oft_blocks);
 
         keys
     }
@@ -175,8 +177,6 @@ impl Weight for BufferedLoRAWeight {
         let lora_up = format!("{}.lora_up.weight", base_name);
         let lora_down = format!("{}.lora_down.weight", base_name);
         let lora_alpha = format!("{}.alpha", base_name);
-        let lora_dora_scale = format!("{}.dora_scale", base_name);
-
         let up = self.buffered.get(&lora_up)?.load(device)?.detach()?;
         let down = self.buffered.get(&lora_down)?.load(device)?.detach()?;
         let alpha = self.buffered.get(&lora_alpha)?.load(device)?.detach()?;
@@ -334,23 +334,24 @@ impl Weight for BufferedLoRAWeight {
             })
     }
 
-    fn dora_scales(&self) -> HashSet<DoRAScale> {
+    fn dora_scales(&self) -> Vec<Vec<f32>> {
         self.buffered
             .tensors()
             .iter()
             .filter(|(k, _v)| k.contains("dora_scale"))
             .filter_map(|(k, _v)| {
-                self.get(k)
+                match self
+                    .get(k)
                     .unwrap()
                     .to_dtype(DType::F32)
-                    .map(|v| v.to_scalar::<f32>())
-                    .unwrap()
-                    .ok()
+                    .map(|v| v.to_vec1::<f32>())
+                {
+                    Ok(s) => s.ok(),
+                    // TODO: maybe highlight error states and not use filter_map?
+                    Err(e) => None,
+                }
             })
-            .fold(HashSet::new(), |mut scales: HashSet<DoRAScale>, v| {
-                scales.insert(DoRAScale(v));
-                scales
-            })
+            .collect()
     }
 
     fn dims(&self) -> HashSet<u32> {
@@ -427,7 +428,7 @@ pub trait Weight {
     ) -> Result<Tensor, candle_core::Error>;
 
     fn alphas(&self) -> HashSet<Alpha>;
-    fn dora_scales(&self) -> HashSet<DoRAScale>;
+    fn dora_scales(&self) -> Vec<Vec<f32>>;
     fn dims(&self) -> HashSet<u32>;
     fn shapes(&self) -> HashMap<String, Vec<usize>>;
 }
@@ -743,22 +744,23 @@ impl Weight for LoRAWeight {
             })
     }
 
-    fn dora_scales(&self) -> HashSet<DoRAScale> {
+    fn dora_scales(&self) -> Vec<Vec<f32>> {
         self.tensors
             .iter()
             .filter(|(k, _v)| k.contains("dora_scale"))
             .filter_map(|(k, _v)| {
-                self.get(k)
+                match self
+                    .get(k)
                     .unwrap()
                     .to_dtype(DType::F32)
-                    .map(|v| v.to_scalar::<f32>())
-                    .unwrap()
-                    .ok()
+                    .map(|v| v.to_vec1::<f32>())
+                {
+                    Ok(s) => s.ok(),
+                    // TODO: maybe highlight error states and not use filter_map?
+                    Err(e) => None,
+                }
             })
-            .fold(HashSet::new(), |mut scales: HashSet<DoRAScale>, v| {
-                scales.insert(DoRAScale(v));
-                scales
-            })
+            .collect()
     }
 
     fn dims(&self) -> HashSet<u32> {

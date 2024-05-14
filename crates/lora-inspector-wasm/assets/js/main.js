@@ -515,15 +515,6 @@ function Blocks({ metadata, filename }) {
   const [currentBaseName, setCurrentBaseName] = React.useState("");
   const [canHaveBlockWeights, setCanHaveBlockWeights] = React.useState(false);
 
-  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
-  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
-    React.useState(0);
-  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
-
-  // setCurrentScaleWeightCount(value.currentCount);
-  // setTotalScaleWeightCount(value.totalCount);
-  // setScaleWeightProgress(value.currentCount / value.totalCount);
-
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
 
@@ -532,15 +523,7 @@ function Blocks({ metadata, filename }) {
       return;
     }
 
-    // trySyncMessage(
-    //   {
-    //     messageType: "scale_weights_with_progress",
-    //     name: filename,
-    //     reply: true,
-    //   },
-    //   filename,
-    // ).then(() => {
-    // });
+    setStartTime(performance.now());
 
     listenProgress("l2_norms_progress", filename).then(async (getProgress) => {
       let progress;
@@ -600,32 +583,6 @@ function Blocks({ metadata, filename }) {
       }
     });
   }, []);
-
-  // React.useEffect(() => {
-  //   if (!hasBlockWeights) {
-  //     return;
-  //   }
-  //
-  //   setStartTime(performance.now());
-  //
-  //   listenProgress("scale_weight_progress", filename).then(
-  //     async (getProgress) => {
-  //       let progress;
-  //       while ((progress = await getProgress().next())) {
-  //         const value = progress.value;
-  //         if (!value) {
-  //           break;
-  //         }
-  //         setCurrentBaseName(value.baseName);
-  //         setCurrentScaleWeightCount(value.currentCount);
-  //         setTotalScaleWeightCount(value.totalCount);
-  //         setScaleWeightProgress(value.currentCount / value.totalCount);
-  //       }
-  //     },
-  //   );
-  //
-  //   return function cleanup() {};
-  // }, [hasBlockWeights]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -830,38 +787,6 @@ function Blocks({ metadata, filename }) {
     const remaining =
       (elapsedTime * totalCount) / normProgress - elapsedTime * totalCount;
     const perSecond = currentCount / (elapsedTime / 1_000);
-
-    if (currentCount === 0) {
-      if (scaleWeightProgress === 0) {
-        return h(
-          "div",
-          { className: "block-weights-container" },
-          "Waiting for worker, please wait...",
-        );
-      }
-
-      const elapsedTime = performance.now() - startTime;
-      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
-
-      const remaining =
-        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
-        elapsedTime * totalScaleWeightCount;
-      return h(
-        "div",
-        { className: "block-weights-container" },
-        h(
-          "span",
-          null,
-          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
-            2,
-          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
-            2,
-          )}it/s ${(remaining / 1_000_000).toFixed(
-            2,
-          )}s remaining ${currentBaseName} `,
-        ),
-      );
-    }
 
     return h(
       "div",
@@ -1218,11 +1143,11 @@ function Subset({ subset, metadata }) {
       valueClassName: "",
     }),
     h(MetaAttribute, {
-      name: "Flip aug",
+      name: "Flip augmentation",
       ...tf(subset["flip_aug"], false),
     }),
     h(MetaAttribute, {
-      name: "Color aug",
+      name: "Color augmentation",
       ...tf(subset["color_aug"], false),
     }),
     h(MetaAttribute, {
@@ -1231,11 +1156,10 @@ function Subset({ subset, metadata }) {
       valueClassName: "number",
     }),
     h(MetaAttribute, {
-      name: "Is reg",
+      name: "Is regularization",
       ...tf(subset["is_reg"], false),
     }),
     h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
-    // caption_prefix, caption_suffix, keep_tokens_separator, secondary_separator, enable_wildcard
     h(MetaAttribute, {
       name: "Keep tokens",
       value: subset["keep_tokens"],
@@ -1243,32 +1167,37 @@ function Subset({ subset, metadata }) {
     }),
     "keep_tokens_separator" in subset &&
       h(MetaAttribute, {
-        name: "keep tokens separator",
+        name: "Keep tokens separator",
         value: subset["keep_tokens_separator"],
+      }),
+    "caption_separator" in subset &&
+      h(MetaAttribute, {
+        name: "Caption separator",
+        value: subset["caption_separator"],
       }),
     "secondary_separator" in subset &&
       h(MetaAttribute, {
-        name: "secondary separator",
+        name: "Secondary separator",
         value: subset["secondary_separator"],
       }),
     "enable_wildcard" in subset &&
       h(MetaAttribute, {
-        name: "enable wildcard",
-        value: subset["enable_wildcard"],
+        name: "Enable wildcard",
+        ...tf(subset["enable_wildcard"], false),
       }),
     "shuffle_caption" in subset &&
       h(MetaAttribute, {
-        name: "shuffle caption",
+        name: "Shuffle caption",
         ...tf(subset["shuffle_caption"], false),
       }),
     "caption_prefix" in subset &&
       h(MetaAttribute, {
-        name: "caption prefix",
+        name: "Caption prefix",
         value: subset["caption_prefix"],
       }),
     "caption_suffix" in subset &&
       h(MetaAttribute, {
-        name: "caption suffix",
+        name: "Caption suffix",
         value: subset["caption_suffix"],
       }),
   );
@@ -1463,10 +1392,10 @@ function Statistics({ baseNames, filename }) {
   const [startTime, setStartTime] = React.useState(undefined);
   const [currentBaseName, setCurrentBaseName] = React.useState("");
 
-  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
-  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
-    React.useState(0);
-  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
+  // const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
+  // const [currentScaleWeightCount, setCurrentScaleWeightCount] =
+  //   React.useState(0);
+  // const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
 
   React.useEffect(() => {
     if (!calcStatistics) {
@@ -1478,62 +1407,62 @@ function Statistics({ baseNames, filename }) {
     }
 
     console.time("scale weights");
-    trySyncMessage(
-      {
-        messageType: "scale_weights_with_progress",
-        name: filename,
-        reply: true,
-      },
-      filename,
-    ).then(() => {
-      console.timeEnd("scale weights");
-      console.log("Calculating statistics...");
-      console.time("get statistics");
+    // trySyncMessage(
+    //   {
+    //     messageType: "scale_weights_with_progress",
+    //     name: filename,
+    //     reply: true,
+    //   },
+    //   filename,
+    // ).then(() => {
+    console.timeEnd("scale weights");
+    console.log("Calculating statistics...");
+    console.time("get statistics");
 
-      // listenProgress("statistics_progress", filename).then(
-      //   async (getProgress) => {
-      //     let progress;
-      //     while ((progress = await getProgress().next())) {
-      //       const value = progress.value;
-      //       setCurrentBaseName(value.baseName);
-      //       setCurrentCount(value.currentCount);
-      //       setTotalCount(value.totalCount);
-      //       setNormProgress(value.currentCount / value.totalCount);
-      //     }
-      //   },
-      // );
+    setStartTime(performance.now());
 
-      setStartTime(performance.now());
+    // listenProgress("statistics_progress", filename)
+    //   .then(async (getProgress) => {
+    //     let progress;
+    //     while ((progress = await getProgress().next())) {
+    //       const value = progress.value;
+    //       setCurrentBaseName(value.baseName);
+    //       setCurrentCount(value.currentCount);
+    //       setTotalCount(value.totalCount);
+    //       setNormProgress(value.currentCount / value.totalCount);
+    //     }
+    //   })
+    //   .then(() => {
+        let progress = 0;
+        Promise.allSettled(
+          baseNames.map(async (baseName) => {
+            return trySyncMessage(
+              { messageType: "norms", name: filename, baseName },
+              filename,
+              ["messageType", "baseName"],
+            ).then((resp) => {
+              progress += 1;
+              // console.log("progress", progress / baseNames.length, resp);
 
-      let progress = 0;
-      Promise.allSettled(
-        baseNames.map(async (baseName) => {
-          return trySyncMessage(
-            { messageType: "norms", name: filename, baseName },
-            filename,
-            ["messageType", "baseName"],
-          ).then((resp) => {
-            progress += 1;
-            // console.log("progress", progress / baseNames.length, resp);
+              setCurrentBaseName(resp.baseName);
+              setCurrentCount(progress);
+              setTotalCount(baseNames.length);
+              setStatisticProgress(progress / baseNames.length);
 
-            setCurrentBaseName(resp.baseName);
-            setCurrentCount(progress);
-            setTotalCount(baseNames.length);
-            setStatisticProgress(progress / baseNames.length);
-
-            return { baseName: resp.baseName, stat: resp.norms };
-          });
-        }),
-      ).then((results) => {
-        progress = 0;
-        const bases = results
-          .filter((v) => v.status === "fulfilled")
-          .map((v) => v.value);
-        setBases(bases);
-        setHasStatistics(true);
-        console.timeEnd("get statistics");
-      });
-    });
+              return { baseName: resp.baseName, stat: resp.norms };
+            });
+          }),
+        ).then((results) => {
+          progress = 0;
+          const bases = results
+            .filter((v) => v.status === "fulfilled")
+            .map((v) => v.value);
+          setBases(bases);
+          setHasStatistics(true);
+          console.timeEnd("get statistics");
+        });
+      // });
+    // });
   }, [calcStatistics, baseNames]);
 
   React.useEffect(() => {
@@ -1589,37 +1518,37 @@ function Statistics({ baseNames, filename }) {
       (elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount;
     const perSecond = currentCount / (elapsedTime / 1_000);
 
-    if (currentCount === 0) {
-      const elapsedTime = performance.now() - startTime;
-      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
-
-      if (scaleWeightProgress === 0) {
-        return h(
-          "div",
-          { className: "block-weights-container" },
-          "Waiting for worker, please wait...",
-        );
-      }
-
-      const remaining =
-        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
-        elapsedTime * totalScaleWeightCount;
-      return h(
-        "div",
-        { className: "block-weights-container" },
-        h(
-          "span",
-          null,
-          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
-            2,
-          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
-            2,
-          )}it/s ${(remaining / 1_000_000).toFixed(
-            2,
-          )}s remaining ${currentBaseName} `,
-        ),
-      );
-    }
+    // if (currentCount === 0) {
+    //   const elapsedTime = performance.now() - startTime;
+    //   const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
+    //
+    //   if (scaleWeightProgress === 0) {
+    //     return h(
+    //       "div",
+    //       { className: "block-weights-container" },
+    //       "Waiting for worker, please wait...",
+    //     );
+    //   }
+    //
+    //   const remaining =
+    //     (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
+    //     elapsedTime * totalScaleWeightCount;
+    //   return h(
+    //     "div",
+    //     { className: "block-weights-container" },
+    //     h(
+    //       "span",
+    //       null,
+    //       `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
+    //         2,
+    //       )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
+    //         2,
+    //       )}it/s ${(remaining / 1_000_000).toFixed(
+    //         2,
+    //       )}s remaining ${currentBaseName} `,
+    //     ),
+    //   );
+    // }
 
     return h(
       "div",

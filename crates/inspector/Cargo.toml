@@ -20,3 +20,4 @@ serde-wasm-bindgen = "0.4"
 [dev-dependencies]
 insta = { version = "1.34.0", features = ["json"] }
 memmap2 = "0.9.0"
+

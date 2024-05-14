@@ -163,6 +163,18 @@ pub struct NetworkArgs {
 
     // #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preset: Option<String>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_lr_ratio: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_text_encoder_lr_ratio: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_unet_lr_ratio: Option<f64>,
 }
 
 #[derive(Debug, Clone)]

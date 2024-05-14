@@ -82,7 +82,7 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    pub fn dora_scales(&self) -> HashSet<weight::DoRAScale> {
+    pub fn dora_scales(&self) -> Vec<Vec<f32>> {
         self.weights
             .as_ref()
             .map(|weights| weights.dora_scales())
