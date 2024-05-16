@@ -149,9 +149,9 @@ pub struct NetworkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multiplier: Option<f64>,
 
-    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub block_size: Option<f64>,
+    pub block_size: Option<usize>,
 
     #[serde(deserialize_with = "de_optional_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -160,6 +160,10 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bypass_mode: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub train_norm: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
