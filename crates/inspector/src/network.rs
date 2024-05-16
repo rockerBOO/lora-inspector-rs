@@ -36,7 +36,7 @@ pub enum NetworkType {
     LoKr,
     IA3,
     DyLoRA,
-    GLora,
+    GLoRA,
     GLoKr,
     OFT,
     DiagOFT,
@@ -82,6 +82,14 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_alphas: Option<BlockUsizeSeq>,
+
+    #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conv_block_dims: Option<BlockUsizeSeq>,
+
+    #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conv_block_alphas: Option<BlockUsizeSeq>,
 
     // #[serde(deserialize_with = "de_optional_vec_sequence_f64_from_str")]
     // #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -145,9 +153,9 @@ pub struct NetworkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_size: Option<f64>,
 
-    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub factor: Option<f64>,
+    pub factor: Option<usize>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

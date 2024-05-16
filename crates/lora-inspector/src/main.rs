@@ -10,7 +10,7 @@ fn main() -> Result<()> {
     f.read_to_end(&mut data)?;
 
     let metadata = metadata::Metadata::new_from_buffer(data.as_slice()).map_err(|e| e.to_string());
-    let mut file = file::LoRAFile::new_from_buffer(data.as_slice(), filename);
+    let mut file = file::LoRAFile::new_from_buffer(data.as_slice(), filename, &candle_core::Device::Cpu);
 
     let base_names = file.base_names();
 
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         // "min",
         // "std_dev",
         // "median",
-        let scale_weight = file.scale_weight(base_name, &device).unwrap().to_dtype(candle_core::DType::F64).unwrap();
+        let scale_weight = file.scale_weight(base_name).unwrap().to_dtype(candle_core::DType::F64).unwrap();
         println!(
             "{:?} {:?}",
             base_name,
@@ -41,7 +41,7 @@ fn main() -> Result<()> {
         println!("{:?}", norms::max(&scale_weight));
         println!(
             "{:?}",
-            norms::min(&file.scale_weight(base_name, &device).unwrap())
+            norms::min(&file.scale_weight(base_name).unwrap())
         );
     });
 

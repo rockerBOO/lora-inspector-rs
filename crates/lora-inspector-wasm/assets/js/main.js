@@ -136,6 +136,9 @@ function MetaAttribute({
   name,
   value,
   valueClassName,
+  secondary,
+  secondaryName,
+  secondaryClassName,
   metadata,
   containerProps,
 }) {
@@ -143,7 +146,36 @@ function MetaAttribute({
     "div",
     containerProps ?? null,
     h("div", { title: name, className: "caption" }, name),
-    h("div", { title: name, className: valueClassName ?? "" }, value),
+    h(
+      "div",
+      { className: "meta-attribute-value" },
+      h("div", { title: name, className: valueClassName ?? "" }, value),
+
+      secondary &&
+        h(
+          "div",
+          { className: "secondary" },
+          h(
+            "div",
+            { title: secondaryName, className: "caption secondary-name" },
+            secondaryName,
+          ),
+          h(
+            "div",
+            { title: name, className: secondaryClassName ?? "" },
+            secondary,
+          ),
+        ),
+    ),
+  );
+}
+
+function supportsDoRA(networkType) {
+  return (
+    networkType === "LoRA" ||
+    networkType === "LoHa" ||
+    networkType === "LoRAFA" ||
+    networkType === "LoKr"
   );
 }
 
@@ -227,11 +259,12 @@ function Network({ metadata, filename }) {
         valueClassName: "number",
         value: metadata.get("ss_network_dropout"),
       }),
-      h(MetaAttribute, {
-        name: "Weight decomposition (DoRA)",
-        valueClassName: "number",
-        value: weightDecomposition ?? "False",
-      }),
+      supportsDoRA(networkType) &&
+        h(MetaAttribute, {
+          name: "Weight decomposition (DoRA)",
+          valueClassName: "number",
+          value: weightDecomposition ?? "False",
+        }),
       h(MetaAttribute, {
         name: "Rank-stabilized",
         valueClassName: "number",
@@ -564,6 +597,7 @@ function Blocks({ metadata, filename }) {
         resp.networkType === "LoRA" ||
         resp.networkType === "LoRAFA" ||
         resp.networkType === "DyLoRA" ||
+        resp.networkType === "GLoRA" ||
         // Assuming networkType of none could have block weights
         resp.networkType === undefined
       ) {
@@ -883,32 +917,30 @@ function Noise({ metadata }) {
   return h(
     "div",
     { className: "row space-apart" },
-    h(MetaAttribute, {
-      name: "IP noise gamma",
-      valueClassName: "number",
-      value: metadata.get("ss_ip_noise_gamma"),
-    }),
-    metadata.get("ss_ip_noise_gamma_random_strength") != undefined &&
       h(MetaAttribute, {
-        name: "IP noise gamma random strength",
+        name: "IP noise gamma",
         valueClassName: "number",
-        value: metadata.get("ss_ip_noise_gamma_random_strength")
-          ? "True"
-          : "False",
+        value: metadata.get("ss_ip_noise_gamma"),
+        ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+					secondaryName: "Random strength:",
+          secondary: metadata.get("ss_ip_noise_gamma_random_strength")
+            ? "True"
+            : "False",
+          // secondaryClassName: "number",
+        }),
       }),
     h(MetaAttribute, {
       name: "Noise offset",
       valueClassName: "number",
       value: metadata.get("ss_noise_offset"),
-    }),
-    metadata.get("ss_noise_offset_random_strength") != undefined &&
-      h(MetaAttribute, {
-        name: "Noise offset random strength",
-        valueClassName: "number",
-        value: metadata.get("ss_noise_offset_random_strength")
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+				secondaryName: "Random strength:",
+        secondary: metadata.get("ss_noise_offset_random_strength")
           ? "True"
           : "False",
+        // secondaryClassName: "number",
       }),
+    }),
     h(MetaAttribute, {
       name: "Adaptive noise scale",
       valueClassName: "number",
@@ -1433,35 +1465,35 @@ function Statistics({ baseNames, filename }) {
     //     }
     //   })
     //   .then(() => {
-        let progress = 0;
-        Promise.allSettled(
-          baseNames.map(async (baseName) => {
-            return trySyncMessage(
-              { messageType: "norms", name: filename, baseName },
-              filename,
-              ["messageType", "baseName"],
-            ).then((resp) => {
-              progress += 1;
-              // console.log("progress", progress / baseNames.length, resp);
+    let progress = 0;
+    Promise.allSettled(
+      baseNames.map(async (baseName) => {
+        return trySyncMessage(
+          { messageType: "norms", name: filename, baseName },
+          filename,
+          ["messageType", "baseName"],
+        ).then((resp) => {
+          progress += 1;
+          // console.log("progress", progress / baseNames.length, resp);
 
-              setCurrentBaseName(resp.baseName);
-              setCurrentCount(progress);
-              setTotalCount(baseNames.length);
-              setStatisticProgress(progress / baseNames.length);
+          setCurrentBaseName(resp.baseName);
+          setCurrentCount(progress);
+          setTotalCount(baseNames.length);
+          setStatisticProgress(progress / baseNames.length);
 
-              return { baseName: resp.baseName, stat: resp.norms };
-            });
-          }),
-        ).then((results) => {
-          progress = 0;
-          const bases = results
-            .filter((v) => v.status === "fulfilled")
-            .map((v) => v.value);
-          setBases(bases);
-          setHasStatistics(true);
-          console.timeEnd("get statistics");
+          return { baseName: resp.baseName, stat: resp.norms };
         });
-      // });
+      }),
+    ).then((results) => {
+      progress = 0;
+      const bases = results
+        .filter((v) => v.status === "fulfilled")
+        .map((v) => v.value);
+      setBases(bases);
+      setHasStatistics(true);
+      console.timeEnd("get statistics");
+    });
+    // });
     // });
   }, [calcStatistics, baseNames]);
 

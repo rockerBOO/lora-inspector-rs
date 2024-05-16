@@ -59,7 +59,7 @@ impl Metadata {
                     Some("boft") => NetworkType::BOFT,
                     Some("loha") => NetworkType::LoHA,
                     Some("lokr") => NetworkType::LoKr,
-                    Some("glora") => NetworkType::GLora,
+                    Some("glora") => NetworkType::GLoRA,
                     Some("glokr") => NetworkType::GLoKr,
                     Some("locon") => NetworkType::LoCon,
                     Some("lora") => NetworkType::LoRA,

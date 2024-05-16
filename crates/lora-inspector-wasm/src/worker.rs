@@ -31,7 +31,7 @@ impl LoraWorker {
         // panic::set_hook(Box::new(console_error_panic_hook::hook));
         console_error_panic_hook::set_once();
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
-        let file = LoRAFile::new_from_buffer(buffer, filename);
+        let file = LoRAFile::new_from_buffer(buffer, filename, &candle_core::Device::Cpu);
 
         metadata.map(|metadata| LoraWorker { metadata, file })
     }
@@ -79,18 +79,18 @@ impl LoraWorker {
             .collect()
     }
 
-    pub fn dora_scales(&self) -> Vec<JsValue> {
-        self.file
-            .dora_scales()
-            .into_iter()
-            .map(|dora_scale| {
-                serde_wasm_bindgen::to_value(&dora_scale).unwrap_or_else(|_v| {
-                    serde_wasm_bindgen::to_value("invalid dora_scale").unwrap()
-                })
-            })
-            .collect()
-    }
-
+    // pub fn dora_scales(&self) -> Vec<JsValue> {
+    //     self.file
+    //         .dora_scales()
+    //         .into_iter()
+    //         .map(|dora_scale| {
+    //             serde_wasm_bindgen::to_value(&dora_scale).unwrap_or_else(|_v| {
+    //                 serde_wasm_bindgen::to_value("invalid dora_scale").unwrap()
+    //             })
+    //         })
+    //         .collect()
+    // }
+    //
     pub fn dims(&self) -> Vec<u32> {
         self.file.dims().into_iter().collect()
     }
@@ -104,7 +104,10 @@ impl LoraWorker {
     }
 
     pub fn precision(&self) -> String {
-        self.file.precision()
+        self.file
+            .precision()
+            .map(|v| format!("{v}"))
+            .unwrap_or_default()
     }
 
     pub fn weight_decomposition(&self) -> String {
@@ -144,7 +147,7 @@ impl LoraWorker {
     pub fn scale_weight(&mut self, base_name: &str) -> Result<bool, JsValue> {
         console_error_panic_hook::set_once();
         self.file
-            .scale_weight(base_name, &candle_core::Device::Cpu)
+            .scale_weight(base_name)
             .map(|_t| true)
             .map_err(|e| JsValue::from_str(e.to_string().as_str()))
     }
@@ -208,7 +211,7 @@ impl LoraWorker {
             })
             .collect::<Vec<norms::NormFn<f64>>>();
 
-        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+        match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => Ok(serde_wasm_bindgen::to_value(
                 &normative_funcs
                     .iter()
@@ -228,7 +231,7 @@ impl LoraWorker {
     }
 
     pub fn l1_norm(&self, base_name: &str) -> Option<f64> {
-        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+        match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
                 .file
                 .l1_norm(&scaled_weight)
@@ -248,7 +251,7 @@ impl LoraWorker {
 
     pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
         console_error_panic_hook::set_once();
-        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+        match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
                 .file
                 .l2_norm(&scaled_weight)
@@ -268,7 +271,7 @@ impl LoraWorker {
 
     pub fn matrix_norm(&self, base_name: &str) -> Option<f64> {
         console_error_panic_hook::set_once();
-        match self.file.scale_weight(base_name, &candle_core::Device::Cpu) {
+        match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
                 .file
                 .matrix_norm(&scaled_weight)

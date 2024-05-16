@@ -530,6 +530,23 @@ text {
   text-align: center;
 }
 
+.meta-attribute-value {
+
+	display: flex;
+	gap: 1em;
+	align-items: center;
+}
+
+.secondary {
+	display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.secondary-name {
+	opacity: 0.6;
+}
+
 /* .download { */
 /**/
 /* } */
