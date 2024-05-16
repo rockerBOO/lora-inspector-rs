@@ -89,7 +89,7 @@ impl LoRAFile {
     //         .unwrap_or_default()
     // }
 
-    pub fn dims(&self) -> HashSet<u32> {
+    pub fn dims(&self) -> HashSet<usize> {
         self.weights
             .as_ref()
             .map(|weights| weights.dims())
@@ -140,7 +140,7 @@ impl LoRAFile {
     //     self.scaled_weights.get(base_name)
     // }
 
-    pub fn scale_weights(&self, device: &candle_core::Device) -> Vec<Result<candle_core::Tensor>> {
+    pub fn scale_weights(&self) -> Vec<Result<candle_core::Tensor>> {
         self.base_names()
             .iter()
             .map(|base_name| self.scale_weight(base_name))

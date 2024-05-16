@@ -51,14 +51,18 @@ function getWorker(workerName) {
   return loraWorker;
 }
 
+console.log("WORK?!");
+
 function init_wasm_in_worker() {
   // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
   wasm_bindgen("/pkg/lora_inspector_wasm_bg.wasm").then(() => {
+		console.log("worker!");
     onerror = (event) => {
       console.log("There is an error inside your worker!", event);
     };
 
     onmessage = async (e) => {
+			console.log(e.data);
       if (e.data.messageType === "file_upload") {
         fileUploadHandler(e);
       } else if (e.data.messageType === "unload") {
@@ -195,6 +199,7 @@ function init_wasm_in_worker() {
       } else if (e.data.messageType === "alpha_keys") {
         getAlphaKeys(e);
       } else if (e.data.messageType === "dims") {
+				console.log("GET DIMS??");
         getDims(e).then((dims) => {
           if (e.data.reply) {
             self.postMessage({
@@ -598,6 +603,9 @@ async function getDoraScales(e) {
 
 async function getDims(e) {
   const loraWorker = getWorker(e.data.name);
+
+
+	console.log("DIMS", loraWorker.dims());
 
   return Array.from(loraWorker.dims()).sort((a, b) => a > b);
 }

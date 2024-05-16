@@ -175,7 +175,8 @@ function supportsDoRA(networkType) {
     networkType === "LoRA" ||
     networkType === "LoHa" ||
     networkType === "LoRAFA" ||
-    networkType === "LoKr"
+    networkType === "LoKr" ||
+    networkType === "GLoRA"
   );
 }
 
@@ -235,6 +236,8 @@ function Network({ metadata, filename }) {
     networkOptions = h(DiagOFTNetwork, { metadata });
   } else if (networkType === "BOFT") {
     networkOptions = h(BOFTNetwork, { metadata });
+  } else if (networkType === "LoKr") {
+    networkOptions = h(LoKrNetwork, { metadata });
   } else {
     networkOptions = h(LoRANetwork, { metadata });
   }
@@ -246,11 +249,13 @@ function Network({ metadata, filename }) {
       h(MetaAttribute, {
         containerProps: { id: "network-module" },
         name: "Network module",
+        valueClassName: "attribute",
         value: networkModule,
       }),
       h(MetaAttribute, {
         containerProps: { id: "network-type" },
         name: "Network type",
+        valueClassName: "attribute",
         value: networkType,
       }),
       networkOptions,
@@ -259,6 +264,7 @@ function Network({ metadata, filename }) {
         valueClassName: "number",
         value: metadata.get("ss_network_dropout"),
       }),
+
       supportsDoRA(networkType) &&
         h(MetaAttribute, {
           name: "Weight decomposition (DoRA)",
@@ -269,6 +275,12 @@ function Network({ metadata, filename }) {
         name: "Rank-stabilized",
         valueClassName: "number",
         value: rankStabilized ? "True" : "False",
+      }),
+
+      h(MetaAttribute, {
+        name: "Gradient Checkpointing",
+        valueClassName: "number",
+        value: metadata.get("ss_gradient_checkpointing"),
       }),
     ),
     h(
@@ -294,15 +306,14 @@ function Network({ metadata, filename }) {
 
 function DiagOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-  console.log(dims);
-  // React.useEffect(() => {
-  //   trySyncMessage(
-  //     { messageType: "dims", name: mainFilename },
-  //     mainFilename,
-  //   ).then((resp) => {
-  //     setDims(resp.dims);
-  //   });
-  // }, []);
+  React.useEffect(() => {
+    trySyncMessage(
+      { messageType: "dims", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
   return [
     h(MetaAttribute, {
       name: "Network blocks",
@@ -314,19 +325,38 @@ function DiagOFTNetwork({ metadata }) {
 
 function BOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-  // React.useEffect(() => {
-  //   trySyncMessage(
-  //     { messageType: "dims", name: mainFilename },
-  //     mainFilename,
-  //   ).then((resp) => {
-  //     setDims(resp.dims);
-  //   });
-  // }, []);
+  React.useEffect(() => {
+    trySyncMessage(
+      { messageType: "dims", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
   return [
     h(MetaAttribute, {
       name: "Network factor",
       valueClassName: "rank",
       value: dims.join(", "),
+    }),
+  ];
+}
+
+function LoKrNetwork({ metadata }) {
+  return [
+    h(MetaAttribute, {
+      name: "Network Rank/Dimension",
+      containerProps: { id: "network-rank" },
+      valueClassName: "rank",
+      value: metadata.get("ss_network_dim"),
+      key: "network-rank",
+    }),
+    h(MetaAttribute, {
+      name: "Network Alpha",
+      containerProps: { id: "network-alpha" },
+      valueClassName: "alpha",
+      value: metadata.get("ss_network_alpha"),
+      key: "network-alpha",
     }),
   ];
 }
@@ -403,18 +433,20 @@ function LRScheduler({ metadata }) {
         valueClassName: "lr number",
         value: metadata.get("ss_lr_warmup_steps"),
       }),
+    (metadata.get("ss_unet_lr") === "None" ||
+      metadata.get("ss_text_encoder_lr") === "None") &&
+      h(MetaAttribute, {
+        name: "Learning rate",
+        valueClassName: "lr number",
+        value: metadata.get("ss_learning_rate"),
+      }),
     h(MetaAttribute, {
-      name: "Learning Rate",
-      valueClassName: "lr number",
-      value: metadata.get("ss_learning_rate"),
-    }),
-    h(MetaAttribute, {
-      name: "UNet Learning Rate",
+      name: "UNet learning rate",
       valueClassName: "lr number",
       value: metadata.get("ss_unet_lr"),
     }),
     h(MetaAttribute, {
-      name: "Text Encoder Learning Rate",
+      name: "Text encoder learning rate",
       valueClassName: "lr number",
       value: metadata.get("ss_text_encoder_lr"),
     }),
@@ -847,7 +879,7 @@ function Blocks({ metadata, filename }) {
 function EpochStep({ metadata }) {
   return h(
     "div",
-    { className: "row space-apart part3" },
+    { className: "row space-apart" },
     h(MetaAttribute, {
       name: "Epoch",
       valueClassName: "number",
@@ -858,16 +890,18 @@ function EpochStep({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_steps"),
     }),
-    h(MetaAttribute, {
-      name: "Max Train Epochs",
-      valueClassName: "number",
-      value: metadata.get("ss_max_train_epochs"),
-    }),
-    h(MetaAttribute, {
-      name: "Max Train Steps",
-      valueClassName: "number",
-      value: metadata.get("ss_max_train_steps"),
-    }),
+    metadata.get("ss_max_train_steps") === undefined &&
+      h(MetaAttribute, {
+        name: "Max Train Epochs",
+        valueClassName: "number",
+        value: metadata.get("ss_max_train_epochs"),
+      }),
+    metadata.get("ss_max_train_epochs") === undefined &&
+      h(MetaAttribute, {
+        name: "Max Train Steps",
+        valueClassName: "number",
+        value: metadata.get("ss_max_train_steps"),
+      }),
   );
 }
 function Batch({ metadata }) {
@@ -889,7 +923,7 @@ function Batch({ metadata }) {
 
   return h(
     "div",
-    { className: "row space-apart part3" },
+    { className: "row space-apart" },
     h(MetaAttribute, {
       name: "Num train images",
       valueClassName: "number",
@@ -917,24 +951,24 @@ function Noise({ metadata }) {
   return h(
     "div",
     { className: "row space-apart" },
-      h(MetaAttribute, {
-        name: "IP noise gamma",
-        valueClassName: "number",
-        value: metadata.get("ss_ip_noise_gamma"),
-        ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
-					secondaryName: "Random strength:",
-          secondary: metadata.get("ss_ip_noise_gamma_random_strength")
-            ? "True"
-            : "False",
-          // secondaryClassName: "number",
-        }),
+    h(MetaAttribute, {
+      name: "IP noise gamma",
+      valueClassName: "number",
+      value: metadata.get("ss_ip_noise_gamma"),
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+        secondaryName: "Random strength:",
+        secondary: metadata.get("ss_ip_noise_gamma_random_strength")
+          ? "True"
+          : "False",
+        // secondaryClassName: "number",
       }),
+    }),
     h(MetaAttribute, {
       name: "Noise offset",
       valueClassName: "number",
       value: metadata.get("ss_noise_offset"),
       ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
-				secondaryName: "Random strength:",
+        secondaryName: "Random strength:",
         secondary: metadata.get("ss_noise_offset_random_strength")
           ? "True"
           : "False",
@@ -976,13 +1010,25 @@ function Loss({ metadata }) {
     "div",
     { className: "row space-apart" },
     h(MetaAttribute, {
-      name: "Gradient Checkpointing",
-      valueClassName: "number",
-      value: metadata.get("ss_gradient_checkpointing"),
+      name: "Loss type",
+      valueClassName: "attribute",
+      value: metadata.get("ss_loss_type"),
     }),
+    metadata.get("ss_loss_type") === "huber" &&
+      h(MetaAttribute, {
+        name: "Huber schedule",
+        valueClassName: "attribute",
+        value: metadata.get("ss_huber_schedule"),
+      }),
+    metadata.get("ss_loss_type") === "huber" &&
+      h(MetaAttribute, {
+        name: "Huber c",
+        valueClassName: "number",
+        value: metadata.get("ss_huber_c"),
+      }),
     h(MetaAttribute, {
       name: "Debiased Estimation",
-      valueClassName: "number",
+      valueClassName: "boolean",
       value: metadata.get("ss_debiased_estimation") ?? "False",
     }),
     h(MetaAttribute, {
@@ -992,7 +1038,7 @@ function Loss({ metadata }) {
     }),
     h(MetaAttribute, {
       name: "Zero Terminal SNR",
-      valueClassName: "number",
+      valueClassName: "boolean",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
     metadata.has("ss_masked_loss") != undefined &&

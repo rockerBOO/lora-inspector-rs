@@ -79,20 +79,15 @@ impl LoraWorker {
             .collect()
     }
 
-    // pub fn dora_scales(&self) -> Vec<JsValue> {
-    //     self.file
-    //         .dora_scales()
-    //         .into_iter()
-    //         .map(|dora_scale| {
-    //             serde_wasm_bindgen::to_value(&dora_scale).unwrap_or_else(|_v| {
-    //                 serde_wasm_bindgen::to_value("invalid dora_scale").unwrap()
-    //             })
-    //         })
-    //         .collect()
-    // }
-    //
-    pub fn dims(&self) -> Vec<u32> {
-        self.file.dims().into_iter().collect()
+    pub fn dims(&self) -> Vec<JsValue> {
+        self.file
+            .dims()
+            .into_iter()
+            .map(|dims| {
+                serde_wasm_bindgen::to_value(&dims)
+                    .unwrap_or_else(|_v| serde_wasm_bindgen::to_value("invalid dims").unwrap())
+            })
+            .collect()
     }
 
     pub fn keys(&self) -> Vec<String> {
@@ -128,7 +123,7 @@ impl LoraWorker {
         console_error_panic_hook::set_once();
 
         self.file
-            .scale_weights(&candle_core::Device::Cpu)
+            .scale_weights()
             .iter()
             .filter_map(|scaled| match scaled {
                 Ok(_) => None,
