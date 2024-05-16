@@ -523,7 +523,6 @@ mod tests {
     "use_cp": "true", 
     "algo": "loha",
     "preset": "attn-only"
-    
 }"#;
 
         let network_args: Result<NetworkArgs, serde_json::Error> = serde_json::from_str(json);

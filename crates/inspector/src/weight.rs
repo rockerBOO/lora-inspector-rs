@@ -12,8 +12,6 @@ use std::{fmt, ops::Mul};
 
 use wasm_bindgen::prelude::*;
 
-use crate::get_base_name;
-
 #[derive(Debug, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub struct Alpha(pub f32);
@@ -945,6 +943,33 @@ impl Weight for LoRAWeight {
     }
 }
 
+pub fn get_base_name(name: &str) -> String {
+    name.split('.')
+        .filter(|part| {
+            !matches!(
+                *part,
+                "weight"
+                    | "lora_up"
+                    | "lora_down"
+                    | "lokr_w1"
+                    | "lokr_w2"
+                    | "hada_w1_a"
+                    | "hada_w1_b"
+                    | "hada_w2_a"
+                    | "oft_diag"
+                    | "hada_w2_b"
+                    | "alpha"
+            )
+        })
+        .fold(String::new(), |acc, v| {
+            if acc.is_empty() {
+                v.to_owned()
+            } else {
+                format!("{acc}.{v}")
+            }
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -956,6 +981,58 @@ mod tests {
     use crate::norms;
 
     use super::*;
+
+    use std::fs;
+
+    #[test]
+    fn get_base_name_test() {
+        let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_up.weight");
+        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+
+        let base_name =
+            get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_down.weight");
+        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.hada_w1_a");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.lokr_w1");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name =
+            get_base_name("lora_te1_text_model_encoder_layers_5_self_attn_q_proj.oft_diag");
+        assert_eq!(
+            base_name,
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");
+        assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+    }
+
+    fn load_keys_json() -> serde_json::Result<Vec<String>> {
+        let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
+        serde_json::from_str::<Vec<String>>(&keys)
+    }
+
+    // #[test]
+    // fn test_key_parsing() {
+    //     let keys: Vec<String> = load_keys_json().unwrap();
+    //
+    //     for key in keys {
+    //         let successful_parse = KeyParser::parse(Rule::key, &key);
+    //         assert!(successful_parse.is_ok());
+    //     }
+    // }
+    //
 
     fn load_test_file() -> Result<Vec<u8>, io::Error> {
         let filename = "boo.safetensors";
@@ -1133,7 +1210,7 @@ mod tests {
 
     #[test]
     fn dims_returns_unique_values() {
-        let buffer = load_test_diag_oft_file().unwrap();
+        let buffer = load_test_file().unwrap();
 
         // Arrange
         let lora_weight = LoRAWeight::new(buffer, &Device::Cpu).unwrap();
