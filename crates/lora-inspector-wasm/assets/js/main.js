@@ -1911,7 +1911,6 @@ function compileTextEncoderLayers(bases) {
           subKey = "fc2";
           break;
       }
-      console.log(base, base.stat);
 
       if (!layers[layerId]) {
         layers[layerId] = {
