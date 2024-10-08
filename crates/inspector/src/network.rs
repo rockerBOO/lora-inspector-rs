@@ -36,7 +36,7 @@ pub enum NetworkType {
     LoKr,
     IA3,
     DyLoRA,
-    GLora,
+    GLoRA,
     GLoKr,
     OFT,
     DiagOFT,
@@ -55,6 +55,10 @@ pub struct NetworkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank_dropout: Option<f64>,
 
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank_dropout_scale: Option<bool>,
+
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub module_dropout: Option<f64>,
@@ -67,6 +71,10 @@ pub struct NetworkArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conv_alpha: Option<f64>,
 
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alpha: Option<f64>,
+
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_dims: Option<BlockUsizeSeq>,
@@ -74,6 +82,14 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block_alphas: Option<BlockUsizeSeq>,
+
+    #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conv_block_dims: Option<BlockUsizeSeq>,
+
+    #[serde(deserialize_with = "de_optional_vec_sequence_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conv_block_alphas: Option<BlockUsizeSeq>,
 
     // #[serde(deserialize_with = "de_optional_vec_sequence_f64_from_str")]
     // #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -87,7 +103,6 @@ pub struct NetworkArgs {
     // #[serde(default, skip_serializing_if = "Option::is_none")]
     pub up_lr_weight: Option<LrWeight>,
 
-    // block_lr_zero_threshold=0.1
     pub drop_keys: Option<String>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
@@ -100,7 +115,23 @@ pub struct NetworkArgs {
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_scalar: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_conv_cp: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_conv_cp: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dora_wd: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight_decompose: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -108,14 +139,54 @@ pub struct NetworkArgs {
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rescale: Option<bool>,
+    pub rescaled: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constrain: Option<f64>,
 
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplier: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block_size: Option<usize>,
+
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub factor: Option<usize>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bypass_mode: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub train_norm: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_matrix: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decompose_both: Option<bool>,
+
     // #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preset: Option<String>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_lr_ratio: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_text_encoder_lr_ratio: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loraplus_unet_lr_ratio: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -429,7 +500,7 @@ mod tests {
     //     Ok(data)
     // }
 
-  // "dropout": "0.5",
+    // "dropout": "0.5",
     #[test]
     fn network_args() -> crate::Result<()> {
         let json = r#"{
@@ -452,7 +523,6 @@ mod tests {
     "use_cp": "true", 
     "algo": "loha",
     "preset": "attn-only"
-    
 }"#;
 
         let network_args: Result<NetworkArgs, serde_json::Error> = serde_json::from_str(json);

@@ -106,13 +106,23 @@ pub fn get_base_name(name: &str) -> String {
                 "weight"
                     | "lora_up"
                     | "lora_down"
+                    // LoKr
                     | "lokr_w1"
                     | "lokr_w2"
+                    // LoHa
                     | "hada_w1_a"
                     | "hada_w1_b"
                     | "hada_w2_a"
-                    | "oft_diag"
                     | "hada_w2_b"
+                    // OFT
+                    | "oft_diag"
+                    // BOFT
+                    | "oft_blocks"
+                    // GLoRA
+                    | "a1"
+                    | "b1"
+                    | "a2"
+                    | "b2"
                     | "alpha"
             )
         })
@@ -161,6 +171,14 @@ mod tests {
         assert_eq!(
             base_name,
             "lora_te1_text_model_encoder_layers_5_self_attn_q_proj"
+        );
+
+        let base_name = get_base_name(
+            "lora_unet_up_blocks_3_attentions_2_transformer_blocks_0_attn1_to_out_0.oft_blocks",
+        );
+        assert_eq!(
+            base_name,
+            "lora_unet_up_blocks_3_attentions_2_transformer_blocks_0_attn1_to_out_0"
         );
 
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");

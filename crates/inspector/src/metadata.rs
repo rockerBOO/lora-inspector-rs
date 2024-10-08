@@ -45,7 +45,7 @@ impl Metadata {
     pub fn network_type(&self) -> Option<NetworkType> {
         // try to discover the network type
         match self.network_module() {
-            Some(NetworkModule::KohyaSSLoRA) => match dbg!(self.network_args()) {
+            Some(NetworkModule::KohyaSSLoRA) => match self.network_args() {
                 Some(network_args) => match network_args.conv_dim {
                     // We need to make the name for LoCon/Lo-Curious
                     Some(_) => Some(NetworkType::LoRA),
@@ -59,7 +59,7 @@ impl Metadata {
                     Some("boft") => NetworkType::BOFT,
                     Some("loha") => NetworkType::LoHA,
                     Some("lokr") => NetworkType::LoKr,
-                    Some("glora") => NetworkType::GLora,
+                    Some("glora") => NetworkType::GLoRA,
                     Some("glokr") => NetworkType::GLoKr,
                     Some("locon") => NetworkType::LoCon,
                     Some("lora") => NetworkType::LoRA,

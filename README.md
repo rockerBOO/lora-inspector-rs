@@ -14,7 +14,7 @@ See the different blocks of the different networks. Ideally uses the more common
 
 ![Screenshot 2023-12-05 at 03-33-38 LoRA Inspector](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/e128240f-ef1a-4c6c-a019-4548e57892e9)
 
-See the different settings for the LoRA file. What model it was trained on. Any VAE. Network Dim/Rank and Alpha. Learning rates. Optimizer settings, Learning rate schedulers.
+See the different settings for the LoRA file. What model it was trained on. Any VAE. Network Dim/Rank and Alpha. Learning rates. Optimizer settings, learning rate schedulers.
 
 ![8efa06b5-4b86-4ffb-bf19-8842eaed5503](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/0df99556-73bf-4e2b-a576-2e2f0693377e)
 
@@ -47,7 +47,7 @@ Any http-server works (like python or nginx)
 
 ```bash
 cd crates/lora-inspector-wasm
-npx http-server
+npx http-server # or any http server, static 
 ```
 
 Then we can view it in the browser.

@@ -46,7 +46,17 @@ serde_json = "1.0.108"
 serde_with = "3.4.0"
 wasm-bindgen = "0.2"
 
+# [profile.release]
+# lto = true
+# opt-level = 's'
+# panic = "abort"
+
 [profile.release]
 lto = true
-opt-level = 's'
-# panic = "abort"
+opt-level = 'z'
+# opt-level = 's'
+debug = false
+codegen-units = 1
+panic = "abort"
+# strip = true
+incremental = false

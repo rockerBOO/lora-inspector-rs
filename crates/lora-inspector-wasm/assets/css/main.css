@@ -210,6 +210,22 @@ h1 {
     1s ease-in-out fade-in;
 }
 
+.boolean {
+  font-size: 1.5em;
+  text-shadow: 2px 2px black;
+  animation:
+    0.5s ease-in-out slide-in,
+    1s ease-in-out fade-in;
+}
+
+.attribute {
+  font-size: 1.5em;
+  text-shadow: 2px 2px black;
+  animation:
+    0.5s ease-in-out slide-in,
+    1s ease-in-out fade-in;
+}
+
 .args {
   overflow: auto;
   max-height: 10em;
@@ -528,6 +544,23 @@ text {
   margin: 0;
   margin-bottom: 0.5em;
   text-align: center;
+}
+
+.meta-attribute-value {
+
+	display: flex;
+	gap: 1em;
+	align-items: center;
+}
+
+.secondary {
+	display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.secondary-name {
+	opacity: 0.6;
 }
 
 /* .download { */

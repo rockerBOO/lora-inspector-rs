@@ -17,7 +17,6 @@ const files = new Map();
 const loraWorkers = new Map();
 
 const loraWorkersRegistry = new FinalizationRegistry((key) => {
-  console.log("worker garbage controlled", key);
   if (!loraWorkers.get(key)?.deref()) {
     loraWorkers.delete(key);
   }
@@ -174,7 +173,6 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "norms") {
-        // We must lock if we are getting scaled weights
         getNorms(e).then(([norms, error]) => {
           if (e.data.reply) {
             if (error) {
@@ -325,7 +323,6 @@ async function getKeys(e) {
 async function scaleWeights(e) {
   console.log("scaling weights...");
   console.time("scale_weights");
-  // console.log(performance.memory);
   await navigator.locks.request(`scale-weights`, async (lock) => {
     const name = e.data.name;
 
@@ -393,7 +390,6 @@ async function iterScaleWeights(e) {
 async function scaleWeight(e) {
   console.log("scaling weight...");
   console.time("scale_weight");
-  // console.log(performance.memory);
   await navigator.locks.request(`scale-weights`, async (lock) => {
     const name = e.data.name;
     const baseName = e.data.baseName;
@@ -432,7 +428,6 @@ async function getBaseNames(e) {
 }
 
 async function getNorms(e) {
-  // console.log("getting norms", e.data);
   const name = e.data.name;
   const loraWorker = getWorker(name);
   const baseName = e.data.baseName;
@@ -477,9 +472,10 @@ async function getL2Norms(e) {
       });
 
       try {
-        return [base_name, loraWorker.l2_norm(base_name)];
+        const norm = loraWorker.l2_norm(base_name);
+        return [base_name, norm];
       } catch (e) {
-        console.error(e);
+        console.error(base_name, e);
         return [base_name, undefined];
       }
     })
@@ -520,23 +516,10 @@ async function getL2Norms(e) {
     messageType: "l2_norms_progress_finished",
   });
 
-  // console.log(
-  //   "weight_norms block",
-  //   Array.from(l2Norms["block"]).sort(([k, _], [k2, _v]) => {
-  //     return k > k2;
-  //   }),
-  // );
-  // console.log(
-  //   "weight_norms count",
-  //   Array.from(l2Norms["block_count"]).sort(([k, _], [k2, _v]) => {
-  //     return k > k2;
-  //   }),
-  // );
   const norms = Array.from(l2Norms["block_mean"]).sort(([k, _], [k2, _v]) => {
     return k > k2;
   });
 
-  // console.log("weight_norms mean", norms);
   console.timeEnd("Calculating norms");
 
   // Split between TE and UNet
@@ -583,11 +566,12 @@ async function getRankStabilized(e) {
   return loraWorker.rank_stabilized();
 }
 
-
 async function getDoraScales(e) {
   const loraWorker = getWorker(e.data.name);
 
-  return Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
+  const doraScales = Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
+
+  return doraScales;
 }
 
 async function getDims(e) {
@@ -678,8 +662,6 @@ function parseSDKey(key) {
       blockId = parseInt(groups["block_id"]);
       subBlockId = parseInt(groups["subblock_id"]);
 
-      // console.log(groups["block_id"]);
-
       if (groups["type"] === "attentions") {
         idx = 3 * blockId + subBlockId;
         isAttention = true;
@@ -693,8 +675,6 @@ function parseSDKey(key) {
         idx = 3 * blockId + 2;
         isSampler = true;
       }
-
-      // console.log("block_type", groups["block_type"]);
 
       if (groups["block_type"] === "down") {
         blockIdx = 1 + idx;

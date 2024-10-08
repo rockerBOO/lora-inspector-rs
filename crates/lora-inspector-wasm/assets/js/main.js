@@ -17,27 +17,37 @@ function ModelSpec({ metadata }) {
       h(MetaAttribute, {
         name: "Date",
         value: new Date(metadata.get("modelspec.date")).toLocaleString(),
+        key: "date",
       }),
       h(MetaAttribute, {
         name: "Title",
         value: metadata.get("modelspec.title"),
+        key: "title",
       }),
       h(MetaAttribute, {
         name: "Prediction type",
         value: metadata.get("modelspec.prediction_type"),
+        key: "prediction-type",
       }),
     ]),
     h("div", { className: "row space-apart" }, [
       h(MetaAttribute, {
         name: "License",
         value: metadata.get("modelspec.license"),
+        key: "license",
       }),
       h(MetaAttribute, {
         name: "Description",
         value: metadata.get("modelspec.description"),
+        key: "description",
       }),
 
-      h(MetaAttribute, { name: "Tags", value: metadata.get("modelspec.tags") }),
+      h(MetaAttribute, {
+        name: "Tags",
+        value: metadata.get("modelspec.tags"),
+
+        key: "tags",
+      }),
     ]),
 
     metadata.has("ss_training_comment") &&
@@ -61,7 +71,9 @@ function PretrainedModel({ metadata }) {
       name: "SD model name",
       value: metadata.get("ss_sd_model_name"),
     }),
-    h("div", {}, [
+    h(
+      "div",
+      {},
       h(MetaAttribute, {
         name: "Model hash",
         value: metadata.get("sshs_model_hash"),
@@ -73,8 +85,10 @@ function PretrainedModel({ metadata }) {
         value: metadata.get("sshs_legacy_hash"),
         metadata,
       }),
-    ]),
-    h("div", {}, [
+    ),
+    h(
+      "div",
+      {},
       h(MetaAttribute, {
         name: "Session ID",
         value: metadata.get("ss_session_id"),
@@ -84,7 +98,7 @@ function PretrainedModel({ metadata }) {
         value: metadata.get("ss_sd_scripts_commit_hash"),
         valueClassName: "hash",
       }),
-    ]),
+    ),
     h("div", null, h(VAE, { metadata })),
   );
 }
@@ -122,6 +136,9 @@ function MetaAttribute({
   name,
   value,
   valueClassName,
+  secondary,
+  secondaryName,
+  secondaryClassName,
   metadata,
   containerProps,
 }) {
@@ -129,7 +146,37 @@ function MetaAttribute({
     "div",
     containerProps ?? null,
     h("div", { title: name, className: "caption" }, name),
-    h("div", { title: name, className: valueClassName ?? "" }, value),
+    h(
+      "div",
+      { className: "meta-attribute-value" },
+      h("div", { title: name, className: valueClassName ?? "" }, value),
+
+      secondary &&
+        h(
+          "div",
+          { className: "secondary" },
+          h(
+            "div",
+            { title: secondaryName, className: "caption secondary-name" },
+            secondaryName,
+          ),
+          h(
+            "div",
+            { title: name, className: secondaryClassName ?? "" },
+            secondary,
+          ),
+        ),
+    ),
+  );
+}
+
+function supportsDoRA(networkType) {
+  return (
+    networkType === "LoRA" ||
+    networkType === "LoHa" ||
+    networkType === "LoRAFA" ||
+    networkType === "LoKr" ||
+    networkType === "GLoRA"
   );
 }
 
@@ -189,6 +236,8 @@ function Network({ metadata, filename }) {
     networkOptions = h(DiagOFTNetwork, { metadata });
   } else if (networkType === "BOFT") {
     networkOptions = h(BOFTNetwork, { metadata });
+  } else if (networkType === "LoKr") {
+    networkOptions = h(LoKrNetwork, { metadata });
   } else {
     networkOptions = h(LoRANetwork, { metadata });
   }
@@ -196,15 +245,17 @@ function Network({ metadata, filename }) {
   return [
     h(
       "div",
-      { className: "row space-apart" }, //
+      { key: "network", className: "row space-apart" },
       h(MetaAttribute, {
         containerProps: { id: "network-module" },
         name: "Network module",
+        valueClassName: "attribute",
         value: networkModule,
       }),
       h(MetaAttribute, {
         containerProps: { id: "network-type" },
         name: "Network type",
+        valueClassName: "attribute",
         value: networkType,
       }),
       networkOptions,
@@ -213,20 +264,28 @@ function Network({ metadata, filename }) {
         valueClassName: "number",
         value: metadata.get("ss_network_dropout"),
       }),
-      h(MetaAttribute, {
-        name: "Weight decomposition (DoRA)",
-        valueClassName: "number",
-        value: weightDecomposition ?? "False",
-      }),
+
+      supportsDoRA(networkType) &&
+        h(MetaAttribute, {
+          name: "Weight decomposition (DoRA)",
+          valueClassName: "number",
+          value: weightDecomposition ?? "False",
+        }),
       h(MetaAttribute, {
         name: "Rank-stabilized",
         valueClassName: "number",
-				value: rankStabilized ? "True" : "False",
+        value: rankStabilized ? "True" : "False",
+      }),
+
+      h(MetaAttribute, {
+        name: "Gradient Checkpointing",
+        valueClassName: "number",
+        value: metadata.get("ss_gradient_checkpointing"),
       }),
     ),
     h(
       "div",
-      { className: "row space-apart" },
+      { key: "network-args", className: "row space-apart" },
       h(MetaAttribute, {
         name: "Network args",
         containerProps: {
@@ -234,29 +293,27 @@ function Network({ metadata, filename }) {
           style: { gridColumn: "1 / span 6" },
         },
         valueClassName: "args",
-
-        value: JSON.stringify(networkArgs),
+        value: networkArgs ? JSON.stringify(networkArgs) : "None",
       }),
     ),
-    // h("div", {}, [
-    //   h("div", { title: "seed" }, metadata.get("ss_seed")),
-    //   h("div", { title: "Training started at" }, trainingStart),
-    //   h("div", { title: "Training ended at" }, trainingEnded),
-    // ]),
   ];
+  // h("div", {}, [
+  //   h("div", { title: "seed" }, metadata.get("ss_seed")),
+  //   h("div", { title: "Training started at" }, trainingStart),
+  //   h("div", { title: "Training ended at" }, trainingEnded),
+  // ]),
 }
 
 function DiagOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-  console.log(dims);
-  // React.useEffect(() => {
-  //   trySyncMessage(
-  //     { messageType: "dims", name: mainFilename },
-  //     mainFilename,
-  //   ).then((resp) => {
-  //     setDims(resp.dims);
-  //   });
-  // }, []);
+  React.useEffect(() => {
+    trySyncMessage(
+      { messageType: "dims", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
   return [
     h(MetaAttribute, {
       name: "Network blocks",
@@ -268,19 +325,38 @@ function DiagOFTNetwork({ metadata }) {
 
 function BOFTNetwork({ metadata }) {
   const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
-  // React.useEffect(() => {
-  //   trySyncMessage(
-  //     { messageType: "dims", name: mainFilename },
-  //     mainFilename,
-  //   ).then((resp) => {
-  //     setDims(resp.dims);
-  //   });
-  // }, []);
+  React.useEffect(() => {
+    trySyncMessage(
+      { messageType: "dims", name: mainFilename },
+      mainFilename,
+    ).then((resp) => {
+      setDims(resp.dims);
+    });
+  }, []);
   return [
     h(MetaAttribute, {
       name: "Network factor",
       valueClassName: "rank",
       value: dims.join(", "),
+    }),
+  ];
+}
+
+function LoKrNetwork({ metadata }) {
+  return [
+    h(MetaAttribute, {
+      name: "Network Rank/Dimension",
+      containerProps: { id: "network-rank" },
+      valueClassName: "rank",
+      value: metadata.get("ss_network_dim"),
+      key: "network-rank",
+    }),
+    h(MetaAttribute, {
+      name: "Network Alpha",
+      containerProps: { id: "network-alpha" },
+      valueClassName: "alpha",
+      value: metadata.get("ss_network_alpha"),
+      key: "network-alpha",
     }),
   ];
 }
@@ -313,6 +389,7 @@ function LoRANetwork({ metadata }) {
       containerProps: { id: "network-rank" },
       valueClassName: "rank",
       value: dims.join(", "),
+      key: "network-rank",
     }),
     h(MetaAttribute, {
       name: "Network Alpha",
@@ -330,6 +407,7 @@ function LoRANetwork({ metadata }) {
           }
         })
         .join(", "),
+      key: "network-alpha",
     }),
   ];
 }
@@ -339,44 +417,46 @@ function LRScheduler({ metadata }) {
     ? metadata.get("ss_lr_scheduler_type")
     : metadata.get("ss_lr_scheduler");
 
-  return [
-    h("div", { className: "row space-apart" }, [
-      h(MetaAttribute, {
-        name: "LR Scheduler",
+  return h(
+    "div",
+    { className: "row space-apart" },
+    h(MetaAttribute, {
+      name: "LR Scheduler",
 
-        containerProps: { style: { gridColumn: "1 / span 3" } },
-        value: lrScheduler,
+      containerProps: { style: { gridColumn: "1 / span 3" } },
+      value: lrScheduler,
+    }),
+
+    metadata.has("ss_lr_warmup_steps") &&
+      h(MetaAttribute, {
+        name: "Warmup steps",
+        valueClassName: "lr number",
+        value: metadata.get("ss_lr_warmup_steps"),
       }),
-
-      metadata.has("ss_lr_warmup_steps") &&
-        h(MetaAttribute, {
-          name: "Warmup steps",
-          valueClassName: "lr number",
-          value: metadata.get("ss_lr_warmup_steps"),
-        }),
-    ]),
-    h("div", { className: "row space-apart" }, [
+    (metadata.get("ss_unet_lr") === "None" ||
+      metadata.get("ss_text_encoder_lr") === "None") &&
       h(MetaAttribute, {
-        name: "Learning Rate",
+        name: "Learning rate",
         valueClassName: "lr number",
         value: metadata.get("ss_learning_rate"),
       }),
-      h(MetaAttribute, {
-        name: "UNet Learning Rate",
-        valueClassName: "lr number",
-        value: metadata.get("ss_unet_lr"),
-      }),
-      h(MetaAttribute, {
-        name: "Text Encoder Learning Rate",
-        valueClassName: "lr number",
-        value: metadata.get("ss_text_encoder_lr"),
-      }),
-    ]),
-  ];
+    h(MetaAttribute, {
+      name: "UNet learning rate",
+      valueClassName: "lr number",
+      value: metadata.get("ss_unet_lr"),
+    }),
+    h(MetaAttribute, {
+      name: "Text encoder learning rate",
+      valueClassName: "lr number",
+      value: metadata.get("ss_text_encoder_lr"),
+    }),
+  );
 }
 
 function Optimizer({ metadata }) {
-  return h("div", { className: "row space-apart" }, [
+  return h(
+    "div",
+    { className: "row space-apart" },
     h(MetaAttribute, {
       name: "Optimizer",
 
@@ -388,7 +468,7 @@ function Optimizer({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_seed"),
     }),
-  ]);
+  );
 }
 
 function Weight({ metadata, filename }) {
@@ -415,7 +495,9 @@ function Weight({ metadata, filename }) {
   }
 
   return [
-    h("div", { className: "row space-apart" }, [
+    h(
+      "div",
+      { className: "row space-apart", key: "norms" },
       h(MetaAttribute, {
         name: "Max Grad Norm",
         valueClassName: "number",
@@ -436,10 +518,10 @@ function Weight({ metadata, filename }) {
       //   valueClassName: "number",
       //   value: averageMagnitude?.toPrecision(4),
       // }),
-    ]),
+    ),
     h(
       "div",
-      { className: "row space-apart" },
+      { className: "row space-apart", key: "precision" },
       h(Precision),
       h(MetaAttribute, {
         name: "Mixed precision",
@@ -453,7 +535,7 @@ function Weight({ metadata, filename }) {
           value: metadata.get("ss_full_fp16"),
         }),
     ),
-    h(Blocks, { metadata, filename }),
+    h(Blocks, { key: "blocks", metadata, filename }),
   ];
 }
 
@@ -487,7 +569,6 @@ function scale_weight() {
 }
 
 function Blocks({ metadata, filename }) {
-  // console.log("!!!! BLOCKS !!!!! METADATA FILENAME", filename);
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
@@ -499,15 +580,6 @@ function Blocks({ metadata, filename }) {
   const [currentBaseName, setCurrentBaseName] = React.useState("");
   const [canHaveBlockWeights, setCanHaveBlockWeights] = React.useState(false);
 
-  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
-  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
-    React.useState(0);
-  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
-
-  // setCurrentScaleWeightCount(value.currentCount);
-  // setTotalScaleWeightCount(value.totalCount);
-  // setScaleWeightProgress(value.currentCount / value.totalCount);
-
   const teChartRef = React.useRef(null);
   const unetChartRef = React.useRef(null);
 
@@ -516,38 +588,29 @@ function Blocks({ metadata, filename }) {
       return;
     }
 
+    setStartTime(performance.now());
+
+    listenProgress("l2_norms_progress", filename).then(async (getProgress) => {
+      let progress;
+      while ((progress = await getProgress().next())) {
+        const value = progress.value;
+        setCurrentBaseName(value.baseName);
+        setCurrentCount(value.currentCount);
+        setTotalCount(value.totalCount);
+        setNormProgress(value.currentCount / value.totalCount);
+      }
+    });
+
     trySyncMessage(
       {
-        messageType: "scale_weights_with_progress",
+        messageType: "l2_norm",
         name: filename,
         reply: true,
       },
       filename,
-    ).then(() => {
-      listenProgress("l2_norms_progress", filename).then(
-        async (getProgress) => {
-          let progress;
-          while ((progress = await getProgress().next())) {
-            const value = progress.value;
-            setCurrentBaseName(value.baseName);
-            setCurrentCount(value.currentCount);
-            setTotalCount(value.totalCount);
-            setNormProgress(value.currentCount / value.totalCount);
-          }
-        },
-      );
-
-      trySyncMessage(
-        {
-          messageType: "l2_norm",
-          name: filename,
-          reply: true,
-        },
-        filename,
-      ).then((resp) => {
-        setTEMagBlocks(resp.norms.te);
-        setUnetMagBlocks(resp.norms.unet);
-      });
+    ).then((resp) => {
+      setTEMagBlocks(resp.norms.te);
+      setUnetMagBlocks(resp.norms.unet);
     });
 
     return function cleanup() {};
@@ -566,6 +629,7 @@ function Blocks({ metadata, filename }) {
         resp.networkType === "LoRA" ||
         resp.networkType === "LoRAFA" ||
         resp.networkType === "DyLoRA" ||
+        resp.networkType === "GLoRA" ||
         // Assuming networkType of none could have block weights
         resp.networkType === undefined
       ) {
@@ -585,32 +649,6 @@ function Blocks({ metadata, filename }) {
       }
     });
   }, []);
-
-  React.useEffect(() => {
-    if (!hasBlockWeights) {
-      return;
-    }
-
-    setStartTime(performance.now());
-
-    listenProgress("scale_weight_progress", filename).then(
-      async (getProgress) => {
-        let progress;
-        while ((progress = await getProgress().next())) {
-          const value = progress.value;
-          if (!value) {
-            break;
-          }
-          setCurrentBaseName(value.baseName);
-          setCurrentScaleWeightCount(value.currentCount);
-          setTotalScaleWeightCount(value.totalCount);
-          setScaleWeightProgress(value.currentCount / value.totalCount);
-        }
-      },
-    );
-
-    return function cleanup() {};
-  }, [hasBlockWeights]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -738,17 +776,28 @@ function Blocks({ metadata, filename }) {
 
   if (teMagBlocks.size > 0) {
     teBlockWeights = [
-      h("h3", {}, "Text encoder block weights"),
-      h("div", { ref: teChartRef, className: "chart" }),
+      h(
+        "h3",
+        { key: "text-encoder-block-weights-header" },
+        "Text encoder block weights",
+      ),
+      h("div", {
+        key: "text-encoder-chart",
+        ref: teChartRef,
+        className: "chart",
+      }),
       h(
         "div",
-        { className: "block-weights text-encoder" },
+        {
+          key: "text-encoder-block-weights",
+          className: "block-weights text-encoder",
+        },
         Array.from(teMagBlocks)
           .sort(([a, _], [b, _v]) => a > b)
           .map(([k, v]) => {
             return h(
               "div",
-              null,
+              { key: k },
               // h(MetaAttribute, {
               //   name: `${k} average strength`,
               //   value: teStrBlocks[k].toPrecision(6),
@@ -769,15 +818,15 @@ function Blocks({ metadata, filename }) {
   let unetBlockWeights = [];
   if (unetMagBlocks.size > 0) {
     unetBlockWeights = [
-      h("h3", {}, "UNet block weights"),
-      h("div", { ref: unetChartRef, className: "chart" }),
+      h("h3", { key: "unet-header" }, "UNet block weights"),
+      h("div", { key: "unet-chart", ref: unetChartRef, className: "chart" }),
       h(
         "div",
-        { className: "block-weights unet" },
+        { key: "unet-block-weights", className: "block-weights unet" },
         Array.from(unetMagBlocks).map(([k, v]) => {
           return h(
             "div",
-            null,
+            { key: k },
             // h(MetaAttribute, {
             //   name: `${k} average strength`,
             //   value: v.toPrecision(6),
@@ -805,38 +854,6 @@ function Blocks({ metadata, filename }) {
       (elapsedTime * totalCount) / normProgress - elapsedTime * totalCount;
     const perSecond = currentCount / (elapsedTime / 1_000);
 
-    if (currentCount === 0) {
-      if (scaleWeightProgress === 0) {
-        return h(
-          "div",
-          { className: "block-weights-container" },
-          "Waiting for worker, please wait...",
-        );
-      }
-
-      const elapsedTime = performance.now() - startTime;
-      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
-
-      const remaining =
-        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
-        elapsedTime * totalScaleWeightCount;
-      return h(
-        "div",
-        { className: "block-weights-container" },
-        h(
-          "span",
-          null,
-          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
-            2,
-          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
-            2,
-          )}it/s ${(remaining / 1_000_000).toFixed(
-            2,
-          )}s remaining ${currentBaseName} `,
-        ),
-      );
-    }
-
     return h(
       "div",
       { className: "block-weights-container" },
@@ -860,7 +877,9 @@ function Blocks({ metadata, filename }) {
 }
 
 function EpochStep({ metadata }) {
-  return h("div", { className: "row space-apart part3" }, [
+  return h(
+    "div",
+    { className: "row space-apart" },
     h(MetaAttribute, {
       name: "Epoch",
       valueClassName: "number",
@@ -871,17 +890,19 @@ function EpochStep({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_steps"),
     }),
-    h(MetaAttribute, {
-      name: "Max Train Epochs",
-      valueClassName: "number",
-      value: metadata.get("ss_max_train_epochs"),
-    }),
-    h(MetaAttribute, {
-      name: "Max Train Steps",
-      valueClassName: "number",
-      value: metadata.get("ss_max_train_steps"),
-    }),
-  ]);
+    metadata.get("ss_max_train_steps") === undefined &&
+      h(MetaAttribute, {
+        name: "Max Train Epochs",
+        valueClassName: "number",
+        value: metadata.get("ss_max_train_epochs"),
+      }),
+    metadata.get("ss_max_train_epochs") === undefined &&
+      h(MetaAttribute, {
+        name: "Max Train Steps",
+        valueClassName: "number",
+        value: metadata.get("ss_max_train_steps"),
+      }),
+  );
 }
 function Batch({ metadata }) {
   let batchSize;
@@ -900,7 +921,9 @@ function Batch({ metadata }) {
     }
   }
 
-  return h("div", { className: "row space-apart part3" }, [
+  return h(
+    "div",
+    { className: "row space-apart" },
     h(MetaAttribute, {
       name: "Num train images",
       valueClassName: "number",
@@ -921,23 +944,44 @@ function Batch({ metadata }) {
       valueClassName: "number",
       value: metadata.get("ss_gradient_accumulation_steps"),
     }),
-  ]);
+  );
 }
 
 function Noise({ metadata }) {
-  return h("div", { className: "row space-apart" }, [
+  return h(
+    "div",
+    { className: "row space-apart" },
     h(MetaAttribute, {
-      name: "Noise Offset",
+      name: "IP noise gamma",
       valueClassName: "number",
-      value: metadata.get("ss_noise_offset"),
+      value: metadata.get("ss_ip_noise_gamma"),
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+        secondaryName: "Random strength:",
+        secondary: metadata.get("ss_ip_noise_gamma_random_strength")
+          ? "True"
+          : "False",
+        // secondaryClassName: "number",
+      }),
     }),
     h(MetaAttribute, {
-      name: "Adaptive Noise Scale",
+      name: "Noise offset",
+      valueClassName: "number",
+      value: metadata.get("ss_noise_offset"),
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+        secondaryName: "Random strength:",
+        secondary: metadata.get("ss_noise_offset_random_strength")
+          ? "True"
+          : "False",
+        // secondaryClassName: "number",
+      }),
+    }),
+    h(MetaAttribute, {
+      name: "Adaptive noise scale",
       valueClassName: "number",
       value: metadata.get("ss_adaptive_noise_scale"),
     }),
     h(MultiresNoise, { metadata }),
-  ]);
+  );
 }
 
 function MultiresNoise({ metadata }) {
@@ -950,25 +994,42 @@ function MultiresNoise({ metadata }) {
       name: "MultiRes Noise Iterations",
       valueClassName: "number",
       value: metadata.get("ss_multires_noise_iterations"),
+      key: "multires noise iterations",
     }),
     h(MetaAttribute, {
       name: "MultiRes Noise Discount",
       valueClassName: "number",
       value: metadata.get("ss_multires_noise_discount"),
+      key: "multires noise discount",
     }),
   ];
 }
 
 function Loss({ metadata }) {
-  return h("div", { className: "row space-apart" }, [
+  return h(
+    "div",
+    { className: "row space-apart" },
     h(MetaAttribute, {
-      name: "Gradient Checkpointing",
-      value: metadata.get("ss_gradient_checkpointing"),
+      name: "Loss type",
+      valueClassName: "attribute",
+      value: metadata.get("ss_loss_type"),
     }),
+    metadata.get("ss_loss_type") === "huber" &&
+      h(MetaAttribute, {
+        name: "Huber schedule",
+        valueClassName: "attribute",
+        value: metadata.get("ss_huber_schedule"),
+      }),
+    metadata.get("ss_loss_type") === "huber" &&
+      h(MetaAttribute, {
+        name: "Huber c",
+        valueClassName: "number",
+        value: metadata.get("ss_huber_c"),
+      }),
     h(MetaAttribute, {
       name: "Debiased Estimation",
-      valueClassName: "number",
-      value: metadata.get("ss_debiased_estimation"),
+      valueClassName: "boolean",
+      value: metadata.get("ss_debiased_estimation") ?? "False",
     }),
     h(MetaAttribute, {
       name: "Min SNR Gamma",
@@ -977,14 +1038,15 @@ function Loss({ metadata }) {
     }),
     h(MetaAttribute, {
       name: "Zero Terminal SNR",
+      valueClassName: "boolean",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
-    metadata.has("ss_masked_loss") &&
+    metadata.has("ss_masked_loss") != undefined &&
       h(MetaAttribute, {
         name: "Masked Loss",
         value: metadata.get("ss_masked_loss"),
       }),
-  ]);
+  );
 }
 
 function CaptionDropout({ metadata }) {
@@ -1028,8 +1090,8 @@ function Dataset({ metadata }) {
     null,
     h("h2", null, "Dataset"),
 
-    datasets.map((dataset) => {
-      return h(Buckets, { dataset, metadata });
+    datasets.map((dataset, i) => {
+      return h(Buckets, { key: i, dataset, metadata });
     }),
   );
 }
@@ -1038,7 +1100,7 @@ function Buckets({ dataset, metadata }) {
   return [
     h(
       "div",
-      { className: "row space-apart" },
+      { key: "buckets", className: "row space-apart" },
       h(MetaAttribute, {
         name: "Buckets",
         value: dataset["enable_bucket"] ? "True" : "False",
@@ -1060,28 +1122,37 @@ function Buckets({ dataset, metadata }) {
       }),
     ),
 
-    h("div", null, h(BucketInfo, { metadata, dataset })),
+    h("div", { key: "bucket-info" }, h(BucketInfo, { metadata, dataset })),
     h(
       "h3",
-      { className: "row space-apart" },
-
+      { key: "subsets-header", className: "row space-apart" },
       "Subsets:",
     ),
     h(
       "div",
-      { className: "subsets" },
-      dataset["subsets"].map((subset) => h(Subset, { metadata, subset })),
+      { key: "subsets", className: "subsets" },
+      dataset["subsets"].map((subset, i) =>
+        h(Subset, {
+          key: `subset-${subset["image_dir"]}-${i}`,
+          metadata,
+          subset,
+        }),
+      ),
     ),
-    h("h3", {}, "Tag frequencies"),
+    h("h3", { key: "header-tag-frequencies" }, "Tag frequencies"),
     h(
       "div",
-      { className: "tag-frequencies row space-apart" },
+      { key: "tag-frequencies", className: "tag-frequencies row space-apart" },
       Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
         h(
           "div",
-          {},
+          { key: dir },
           h("h3", {}, dir),
-          h(TagFrequency, { tagFrequency: frequency, metadata }),
+          h(TagFrequency, {
+            key: "tag-frequency",
+            tagFrequency: frequency,
+            metadata,
+          }),
         ),
       ),
     ),
@@ -1103,7 +1174,7 @@ function BucketInfo({ metadata, dataset }) {
     Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
       return h(
         "div",
-        { className: "bucket" },
+        { key, className: "bucket" },
         h(MetaAttribute, {
           name: `Bucket ${key}`,
           value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
@@ -1138,64 +1209,75 @@ function Subset({ subset, metadata }) {
 
   return h(
     "div",
-    { className: "subset" },
-    h(
-      "div",
-      { className: "row space-apart" },
+    { className: "subset row space-apart" },
+    h(MetaAttribute, {
+      name: "Image count",
+      value: subset["img_count"],
+      valueClassName: "number",
+    }),
+    h(MetaAttribute, {
+      name: "Image dir",
+      value: subset["image_dir"],
+      valueClassName: "",
+    }),
+    h(MetaAttribute, {
+      name: "Flip augmentation",
+      ...tf(subset["flip_aug"], false),
+    }),
+    h(MetaAttribute, {
+      name: "Color augmentation",
+      ...tf(subset["color_aug"], false),
+    }),
+    h(MetaAttribute, {
+      name: "Num repeats",
+      value: subset["num_repeats"],
+      valueClassName: "number",
+    }),
+    h(MetaAttribute, {
+      name: "Is regularization",
+      ...tf(subset["is_reg"], false),
+    }),
+    h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
+    h(MetaAttribute, {
+      name: "Keep tokens",
+      value: subset["keep_tokens"],
+      valueClassName: "number",
+    }),
+    "keep_tokens_separator" in subset &&
       h(MetaAttribute, {
-        name: "Image count",
-        value: subset["img_count"],
-        valueClassName: "number",
+        name: "Keep tokens separator",
+        value: subset["keep_tokens_separator"],
       }),
+    "caption_separator" in subset &&
       h(MetaAttribute, {
-        name: "Image dir",
-        value: subset["image_dir"],
-        valueClassName: "",
+        name: "Caption separator",
+        value: subset["caption_separator"],
       }),
-    ),
-    h(
-      "div",
-      { className: "row space-apart" },
+    "secondary_separator" in subset &&
       h(MetaAttribute, {
-        name: "Flip aug",
-        ...tf(subset["flip_aug"], false),
+        name: "Secondary separator",
+        value: subset["secondary_separator"],
       }),
+    "enable_wildcard" in subset &&
       h(MetaAttribute, {
-        name: "Color aug",
-        ...tf(subset["color_aug"], false),
+        name: "Enable wildcard",
+        ...tf(subset["enable_wildcard"], false),
       }),
-    ),
-    h(
-      "div",
-      { className: "row space-apart" },
+    "shuffle_caption" in subset &&
       h(MetaAttribute, {
-        name: "Num repeats",
-        value: subset["num_repeats"],
-        valueClassName: "number",
-      }),
-      h(MetaAttribute, {
-        name: "Is reg",
-        ...tf(subset["is_reg"], false),
-      }),
-    ),
-    h(
-      "div",
-      { className: "row space-apart" },
-      h(MetaAttribute, {
-        name: "Keep tokens",
-        value: subset["keep_tokens"],
-        valueClassName: "number",
-      }),
-      h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
-    ),
-    h(
-      "div",
-      { className: "row space-apart" },
-      h(MetaAttribute, {
-        name: "shuffle caption",
+        name: "Shuffle caption",
         ...tf(subset["shuffle_caption"], false),
       }),
-    ),
+    "caption_prefix" in subset &&
+      h(MetaAttribute, {
+        name: "Caption prefix",
+        value: subset["caption_prefix"],
+      }),
+    "caption_suffix" in subset &&
+      h(MetaAttribute, {
+        name: "Caption suffix",
+        value: subset["caption_suffix"],
+      }),
   );
 }
 
@@ -1210,14 +1292,14 @@ function TagFrequency({ tagFrequency, metadata }) {
       const alt = i % 2 > 0 ? " alt-row" : "";
       return h(
         "div",
-        { className: "tag-frequency" + alt },
+        { className: "tag-frequency" + alt, key: tag },
         h("div", {}, count),
         h("div", {}, tag),
       );
     }),
     h(
       "div",
-      null,
+      { key: "show-more" },
       showMore === false && allTags.length > sortedTags.length
         ? h(
             "button",
@@ -1334,42 +1416,44 @@ function Advanced({ metadata, filename }) {
   }
 
   return [
-    h("h2", { id: "advanced", ref: advancedRef }, "Advanced"),
     h(
-      "div",
-      { className: "row" },
+      "h2",
+      { key: "header-advanced", id: "advanced", ref: advancedRef },
+      "Advanced",
+    ),
+    h("div", { key: "advanced", className: "row" }, [
       h(
         "div",
-        null,
+        { key: "base name keys" },
         showBaseNames
           ? h(BaseNames, { baseNames })
           : h("div", null, `Base name keys: ${baseNames.length}`),
       ),
       h(
         "div",
-        null,
+        { key: "text encoder name keys" },
         showTextEncoderKeys
           ? h(TextEncoderKeys, { textEncoderKeys })
           : h("div", null, `Text encoder keys: ${textEncoderKeys.length}`),
       ),
       h(
         "div",
-        null,
+        { key: "unet keys" },
         showUnetKeys
           ? h(UnetKeys, { unetKeys })
           : h("div", null, `Unet keys: ${unetKeys.length}`),
       ),
       h(
         "div",
-        null,
+        { key: "all keys" },
         showAllKeys
           ? h(AllKeys, { allKeys })
           : h("div", null, `All keys: ${allKeys.length}`),
       ),
-    ),
+    ]),
     !canHaveStatistics
-      ? h(BaseNames, { baseNames })
-      : h(Statistics, { baseNames, filename }),
+      ? h(BaseNames, { key: "base-names", baseNames })
+      : h(Statistics, { key: "statistics", baseNames, filename }),
   ];
 }
 
@@ -1386,10 +1470,10 @@ function Statistics({ baseNames, filename }) {
   const [startTime, setStartTime] = React.useState(undefined);
   const [currentBaseName, setCurrentBaseName] = React.useState("");
 
-  const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
-  const [currentScaleWeightCount, setCurrentScaleWeightCount] =
-    React.useState(0);
-  const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
+  // const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
+  // const [currentScaleWeightCount, setCurrentScaleWeightCount] =
+  //   React.useState(0);
+  // const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
 
   React.useEffect(() => {
     if (!calcStatistics) {
@@ -1401,62 +1485,62 @@ function Statistics({ baseNames, filename }) {
     }
 
     console.time("scale weights");
-    trySyncMessage(
-      {
-        messageType: "scale_weights_with_progress",
-        name: filename,
-        reply: true,
-      },
-      filename,
-    ).then(() => {
-      console.timeEnd("scale weights");
-      console.log("Calculating statistics...");
-      console.time("get statistics");
+    // trySyncMessage(
+    //   {
+    //     messageType: "scale_weights_with_progress",
+    //     name: filename,
+    //     reply: true,
+    //   },
+    //   filename,
+    // ).then(() => {
+    console.timeEnd("scale weights");
+    console.log("Calculating statistics...");
+    console.time("get statistics");
 
-      // listenProgress("statistics_progress", filename).then(
-      //   async (getProgress) => {
-      //     let progress;
-      //     while ((progress = await getProgress().next())) {
-      //       const value = progress.value;
-      //       setCurrentBaseName(value.baseName);
-      //       setCurrentCount(value.currentCount);
-      //       setTotalCount(value.totalCount);
-      //       setNormProgress(value.currentCount / value.totalCount);
-      //     }
-      //   },
-      // );
+    setStartTime(performance.now());
 
-      setStartTime(performance.now());
+    // listenProgress("statistics_progress", filename)
+    //   .then(async (getProgress) => {
+    //     let progress;
+    //     while ((progress = await getProgress().next())) {
+    //       const value = progress.value;
+    //       setCurrentBaseName(value.baseName);
+    //       setCurrentCount(value.currentCount);
+    //       setTotalCount(value.totalCount);
+    //       setNormProgress(value.currentCount / value.totalCount);
+    //     }
+    //   })
+    //   .then(() => {
+    let progress = 0;
+    Promise.allSettled(
+      baseNames.map(async (baseName) => {
+        return trySyncMessage(
+          { messageType: "norms", name: filename, baseName },
+          filename,
+          ["messageType", "baseName"],
+        ).then((resp) => {
+          progress += 1;
+          // console.log("progress", progress / baseNames.length, resp);
 
-      let progress = 0;
-      Promise.allSettled(
-        baseNames.map(async (baseName) => {
-          return trySyncMessage(
-            { messageType: "norms", name: filename, baseName },
-            filename,
-            ["messageType", "baseName"],
-          ).then((resp) => {
-            progress += 1;
-            // console.log("progress", progress / baseNames.length, resp);
+          setCurrentBaseName(resp.baseName);
+          setCurrentCount(progress);
+          setTotalCount(baseNames.length);
+          setStatisticProgress(progress / baseNames.length);
 
-            setCurrentBaseName(resp.baseName);
-            setCurrentCount(progress);
-            setTotalCount(baseNames.length);
-            setStatisticProgress(progress / baseNames.length);
-
-            return { baseName: resp.baseName, stat: resp.norms };
-          });
-        }),
-      ).then((results) => {
-        progress = 0;
-        const bases = results
-          .filter((v) => v.status === "fulfilled")
-          .map((v) => v.value);
-        setBases(bases);
-        setHasStatistics(true);
-        console.timeEnd("get statistics");
-      });
+          return { baseName: resp.baseName, stat: resp.norms };
+        });
+      }),
+    ).then((results) => {
+      progress = 0;
+      const bases = results
+        .filter((v) => v.status === "fulfilled")
+        .map((v) => v.value);
+      setBases(bases);
+      setHasStatistics(true);
+      console.timeEnd("get statistics");
     });
+    // });
+    // });
   }, [calcStatistics, baseNames]);
 
   React.useEffect(() => {
@@ -1512,37 +1596,37 @@ function Statistics({ baseNames, filename }) {
       (elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount;
     const perSecond = currentCount / (elapsedTime / 1_000);
 
-    if (currentCount === 0) {
-      const elapsedTime = performance.now() - startTime;
-      const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
-
-      if (scaleWeightProgress === 0) {
-        return h(
-          "div",
-          { className: "block-weights-container" },
-          "Waiting for worker, please wait...",
-        );
-      }
-
-      const remaining =
-        (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
-        elapsedTime * totalScaleWeightCount;
-      return h(
-        "div",
-        { className: "block-weights-container" },
-        h(
-          "span",
-          null,
-          `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
-            2,
-          )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
-            2,
-          )}it/s ${(remaining / 1_000_000).toFixed(
-            2,
-          )}s remaining ${currentBaseName} `,
-        ),
-      );
-    }
+    // if (currentCount === 0) {
+    //   const elapsedTime = performance.now() - startTime;
+    //   const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
+    //
+    //   if (scaleWeightProgress === 0) {
+    //     return h(
+    //       "div",
+    //       { className: "block-weights-container" },
+    //       "Waiting for worker, please wait...",
+    //     );
+    //   }
+    //
+    //   const remaining =
+    //     (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
+    //     elapsedTime * totalScaleWeightCount;
+    //   return h(
+    //     "div",
+    //     { className: "block-weights-container" },
+    //     h(
+    //       "span",
+    //       null,
+    //       `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
+    //         2,
+    //       )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
+    //         2,
+    //       )}it/s ${(remaining / 1_000_000).toFixed(
+    //         2,
+    //       )}s remaining ${currentBaseName} `,
+    //     ),
+    //   );
+    // }
 
     return h(
       "div",
@@ -1605,13 +1689,13 @@ function Statistics({ baseNames, filename }) {
       bases.map((base) => {
         return h(StatisticRow, {
           baseName: base.baseName,
-          l1Norm: base.stat.get("l1_norm"),
-          l2Norm: base.stat.get("l2_norm"),
-          matrixNorm: base.stat.get("matrix_norm"),
-          min: base.stat.get("min"),
-          max: base.stat.get("max"),
-          median: base.stat.get("median"),
-          stdDev: base.stat.get("std_dev"),
+          l1Norm: base.stat?.get("l1_norm"),
+          l2Norm: base.stat?.get("l2_norm"),
+          matrixNorm: base.stat?.get("matrix_norm"),
+          min: base.stat?.get("min"),
+          max: base.stat?.get("max"),
+          median: base.stat?.get("median"),
+          stdDev: base.stat?.get("std_dev"),
         });
       }),
     ]),
@@ -1827,19 +1911,18 @@ function compileTextEncoderLayers(bases) {
           subKey = "fc2";
           break;
       }
-      console.log(base, base.stat);
 
       if (!layers[layerId]) {
         layers[layerId] = {
           [layerKey]: {
-            [subKey]: base.stat.get("l2_norm"),
+            [subKey]: base.stat?.get("l2_norm"),
           },
         };
       } else {
         if (!layers[layerId][layerKey]) {
           layers[layerId][layerKey] = {};
         }
-        layers[layerId][layerKey][subKey] = base.stat.get("l2_norm");
+        layers[layerId][layerKey][subKey] = base.stat?.get("l2_norm");
       }
     }
   }
@@ -2196,46 +2279,46 @@ function compileUnetLayers(bases) {
     if (parsedKey.isAttention) {
       if (base.baseName.includes("attn1")) {
         if (base.baseName.includes("to_q")) {
-          layer["attn1"]["q"] = base.stat.get("l2_norm");
+          layer["attn1"]["q"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_k")) {
-          layer["attn1"]["k"] = base.stat.get("l2_norm");
+          layer["attn1"]["k"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_v")) {
-          layer["attn1"]["v"] = base.stat.get("l2_norm");
+          layer["attn1"]["v"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_out")) {
-          layer["attn1"]["out"] = base.stat.get("l2_norm");
+          layer["attn1"]["out"] = base.stat?.get("l2_norm");
         }
       } else if (base.baseName.includes("attn2")) {
         if (base.baseName.includes("to_q")) {
-          layer["attn2"]["q"] = base.stat.get("l2_norm");
+          layer["attn2"]["q"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_k")) {
-          layer["attn2"]["k"] = base.stat.get("l2_norm");
+          layer["attn2"]["k"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_v")) {
-          layer["attn2"]["v"] = base.stat.get("l2_norm");
+          layer["attn2"]["v"] = base.stat?.get("l2_norm");
         } else if (base.baseName.includes("to_out")) {
-          layer["attn2"]["out"] = base.stat.get("l2_norm");
+          layer["attn2"]["out"] = base.stat?.get("l2_norm");
         }
       } else if (base.baseName.includes("ff_net_0_proj")) {
-        layer["ff1"] = base.stat.get("l2_norm");
+        layer["ff1"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("ff_net_2")) {
-        layer["ff2"] = base.stat.get("l2_norm");
+        layer["ff2"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("proj_in")) {
-        layer["proj_in"] = base.stat.get("l2_norm");
+        layer["proj_in"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("proj_out")) {
-        layer["proj_out"] = base.stat.get("l2_norm");
+        layer["proj_out"] = base.stat?.get("l2_norm");
       }
     } else if (parsedKey.isConv) {
       if (base.baseName.includes("conv1")) {
-        layer["conv1"] = base.stat.get("l2_norm");
+        layer["conv1"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("time_emb_proj")) {
-        layer["time_emb_proj"] = base.stat.get("l2_norm");
+        layer["time_emb_proj"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("conv2")) {
-        layer["conv2"] = base.stat.get("l2_norm");
+        layer["conv2"] = base.stat?.get("l2_norm");
       } else if (base.baseName.includes("conv_shortcut")) {
-        layer["conv_shortcut"] = base.stat.get("l2_norm");
+        layer["conv_shortcut"] = base.stat?.get("l2_norm");
       }
     } else if (parsedKey.isSampler) {
       if (base.baseName.includes("conv")) {
-        layer["conv"] = base.stat.get("l2_norm");
+        layer["conv"] = base.stat?.get("l2_norm");
       }
     }
   }
@@ -2257,36 +2340,36 @@ function StatisticRow({
     "tr",
     null,
     h("td", null, baseName),
-    h("td", null, l1Norm.toPrecision(4)),
-    h("td", null, l2Norm.toPrecision(4)),
-    h("td", null, matrixNorm.toPrecision(4)),
-    h("td", null, min.toPrecision(4)),
-    h("td", null, max.toPrecision(4)),
-    h("td", null, median.toPrecision(4)),
-    h("td", null, stdDev.toPrecision(4)),
+    h("td", null, l1Norm?.toPrecision(4)),
+    h("td", null, l2Norm?.toPrecision(4)),
+    h("td", null, matrixNorm?.toPrecision(4)),
+    h("td", null, min?.toPrecision(4)),
+    h("td", null, max?.toPrecision(4)),
+    h("td", null, median?.toPrecision(4)),
+    h("td", null, stdDev?.toPrecision(4)),
   );
 }
 
 function UnetKeys({ unetKeys }) {
   return [
-    h("h3", null, "UNet keys"),
+    h("h3", { key: "unet-keys-header" }, "UNet keys"),
     h(
       "ul",
-      null,
-      unetKeys.map((unetKeys) => {
-        return h("li", null, unetKeys);
+      { key: "unet-keys" },
+      unetKeys.map((unetKey) => {
+        return h("li", { key: unetKey }, unetKey);
       }),
     ),
   ];
 }
 function TextEncoderKeys({ textEncoderKeys }) {
   return [
-    h("h3", null, "Text encoder keys"),
+    h("h3", { key: "text-encoder-keys-header" }, "Text encoder keys"),
     h(
       "ul",
-      null,
-      textEncoderKeys.map((textEncoderKeys) => {
-        return h("li", null, textEncoderKeys);
+      { key: "text-encoder-keys" },
+      textEncoderKeys.map((textEncoderKey) => {
+        return h("li", { key: textEncoderKey }, textEncoderKey);
       }),
     ),
   ];
@@ -2294,12 +2377,12 @@ function TextEncoderKeys({ textEncoderKeys }) {
 
 function BaseNames({ baseNames }) {
   return [
-    h("h3", null, "Base names"),
+    h("h3", { key: "header-base-names" }, "Base names"),
     h(
       "ul",
-      null,
+      { key: "base-names" },
       baseNames.map((baseName) => {
-        return h("li", null, baseName);
+        return h("li", { key: baseName }, baseName);
       }),
     ),
   ];
@@ -2307,12 +2390,12 @@ function BaseNames({ baseNames }) {
 
 function AllKeys({ allkeys }) {
   return [
-    h("h3", null, "All keys"),
+    h("h3", { key: "all-keys-header" }, "All keys"),
     h(
       "ul",
-      null,
+      { key: "all-keys" },
       allKeys.map((key) => {
-        return h("li", null, key);
+        return h("li", { key }, key);
       }),
     ),
   ];
@@ -3007,19 +3090,25 @@ function SimpleWeight({ groupProps, titleProps, valueProps, title, value }) {
 
 function Main({ metadata, filename }) {
   if (!metadata) {
-    return h("main", null, [
+    return h(
+      "main",
+      null,
       h("div", null, "No metadata for this file"),
       h(Headline, { filename }),
-      h("div", { className: "row space-apart" }, [
+      h(
+        "div",
+        { className: "row space-apart" },
         h(LoRANetwork, { metadata }),
         h(Precision),
-      ]),
+      ),
       h(Weight, { metadata, filename }),
       h(Advanced, { metadata, filename }),
-    ]);
+    );
   }
 
-  return h("main", null, [
+  return h(
+    "main",
+    null,
     h(PretrainedModel, { metadata }),
     h(Network, { metadata }),
     h(LRScheduler, { metadata }),
@@ -3032,7 +3121,7 @@ function Main({ metadata, filename }) {
     h(CaptionDropout, { metadata }),
     h(Dataset, { metadata }),
     h(Advanced, { metadata, filename }),
-  ]);
+  );
 }
 
 function Raw({ metadata, filename }) {
@@ -3048,18 +3137,15 @@ function Raw({ metadata, filename }) {
         return obj;
       }, {});
 
-    return h(
-      "div",
-      { className: "full-overlay" },
-      h("pre", null, JSON.stringify(sortedEntries, null, 2)),
+    return h("div", { className: "full-overlay" }, [
+      h("pre", { key: "pre" }, JSON.stringify(sortedEntries, null, 2)),
 
-      h(
-        "div",
-        { className: "action-overlay" },
+      h("div", { className: "action-overlay", key: "action overlay" }, [
         h(
           "button",
           {
             className: "download",
+            key: "download button",
             onClick: () => {
               sortedEntries;
               const data =
@@ -3085,14 +3171,15 @@ function Raw({ metadata, filename }) {
           "button",
           {
             className: "close",
+            key: "close button",
             onClick: () => {
               setShowRaw(false);
             },
           },
           "Close",
         ),
-      ),
-    );
+      ]),
+    ]);
   }
 
   return h(
@@ -3100,8 +3187,8 @@ function Raw({ metadata, filename }) {
     {
       style: {
         display: "grid",
-        "justify-items": "end",
-        "align-items": "flex-start",
+        justifyItems: "end",
+        alignItems: "flex-start",
       },
     },
     h(
@@ -3120,11 +3207,14 @@ function Raw({ metadata, filename }) {
 function Headline({ metadata, filename }) {
   let raw;
   if (metadata) {
-    raw = h(Raw, { metadata, filename });
+    raw = h(Raw, { key: "raw", metadata, filename });
   }
 
   return h("div", { className: "headline" }, [
-    h("div", null, h("div", null, "LoRA file"), h("h1", null, filename)),
+    h("div", { key: "headline" }, [
+      h("div", { key: "lora file" }, "LoRA file"),
+      h("h1", { key: "filename" }, filename),
+    ]),
     raw,
   ]);
 }
@@ -3145,9 +3235,9 @@ function Metadata({ metadata, filename }) {
   }
 
   return [
-    h(Headline, { metadata, filename }),
-    h(Header, { metadata, filename }),
-    h(Main, { metadata, filename }),
+    h(Headline, { key: "headline", metadata, filename }),
+    h(Header, { key: "header", metadata, filename }),
+    h(Main, { key: "main", metadata, filename }),
   ];
 }
 
