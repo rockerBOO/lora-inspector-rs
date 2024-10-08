@@ -1,15 +1,7 @@
-// The worker has its own scope and no direct access to functions/objects of the
-// global scope. We import the generated JS file to make `wasm_bindgen`
-// available which we need to initialize our Wasm code.
 importScripts("/pkg/lora_inspector_wasm.js");
 ("use strict");
 
-// In the worker, we have a different struct that we want to use as in
-// `index.js`.
 const { LoraWorker, LoRAFile, BufferedLoRAWeight } = wasm_bindgen;
-
-// let clients = [];
-// let wasms = [];
 
 const files = new Map();
 
@@ -51,7 +43,6 @@ function getWorker(workerName) {
 }
 
 function init_wasm_in_worker() {
-  // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
   wasm_bindgen("/pkg/lora_inspector_wasm_bg.wasm").then(() => {
     onerror = (event) => {
       console.log("There is an error inside your worker!", event);
@@ -61,6 +52,7 @@ function init_wasm_in_worker() {
       if (e.data.messageType === "file_upload") {
         fileUploadHandler(e);
       } else if (e.data.messageType === "unload") {
+        console.log("Unloading", e.data);
         unloadWorker(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
@@ -140,7 +132,7 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weights") {
-        scaleWeights(e).then((baseNames) => {
+        scaleWeights(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weights",
@@ -148,7 +140,7 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weights_with_progress") {
-        iterScaleWeights(e).then((baseNames) => {
+        iterScaleWeights(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weights_with_progress",
@@ -156,7 +148,7 @@ function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weight") {
-        scaleWeight(e).then((baseNames) => {
+        scaleWeight(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weight",
@@ -247,6 +239,8 @@ function init_wasm_in_worker() {
             });
           }
         });
+      } else {
+        console.log("Unhandled input on worker", e.data);
       }
     };
   });
@@ -321,89 +315,79 @@ async function getKeys(e) {
 }
 
 async function scaleWeights(e) {
-  console.log("scaling weights...");
-  console.time("scale_weights");
-  await navigator.locks.request(`scale-weights`, async (lock) => {
-    const name = e.data.name;
+  const name = e.data.name;
 
-    const loraWorker = getWorker(name);
-    try {
-      loraWorker.scale_weights();
-      console.timeEnd("scale_weights");
-    } catch (e) {
-      console.error(e);
-      console.timeEnd("scale_weights");
-    }
-  });
+  const loraWorker = getWorker(name);
+  try {
+    loraWorker.scale_weights();
+    console.timeEnd("scale_weights");
+  } catch (e) {
+    console.error(e);
+    console.timeEnd("scale_weights");
+  }
 }
 
 async function iterScaleWeights(e) {
   const name = e.data.name;
   const loraWorker = getWorker(name);
 
-  return await navigator.locks.request(`scale-weights`, async (lock) => {
-    const baseNames = loraWorker.base_names();
-    const totalCount = baseNames.length;
+  const baseNames = loraWorker.base_names();
+  const totalCount = baseNames.length;
 
-    let currentCount = 0;
+  let currentCount = 0;
 
-    console.time("scale_weights");
-    return Promise.all(
-      baseNames.map((baseName) => {
-        currentCount += 1;
+  console.time("scale_weights");
+  return Promise.all(
+    baseNames.map((baseName) => {
+      currentCount += 1;
 
-        try {
-          loraWorker.scale_weight(baseName);
+      try {
+        loraWorker.scale_weight(baseName);
 
-          self.postMessage({
-            messageType: "scale_weight_progress",
-            currentCount,
-            totalCount,
-            baseName: baseName,
-          });
+        self.postMessage({
+          messageType: "scale_weight_progress",
+          currentCount,
+          totalCount,
+          baseName: baseName,
+        });
 
-          return [baseName, undefined];
-        } catch (e) {
-          console.error(e);
-          self.postMessage({
-            messageType: "scale_weight_progress",
-            error: e,
-            currentCount,
-            totalCount,
-            baseName: baseName,
-          });
+        return [baseName, undefined];
+      } catch (e) {
+        console.error(e);
+        self.postMessage({
+          messageType: "scale_weight_progress",
+          error: e,
+          currentCount,
+          totalCount,
+          baseName: baseName,
+        });
 
-          return [baseName, e];
-        }
-      }),
-    ).then((results) => {
-      self.postMessage({
-        messageType: "scale_weight_progress_finished",
-      });
-
-      console.timeEnd("scale_weights");
-      return results;
+        return [baseName, e];
+      }
+    }),
+  ).then((results) => {
+    self.postMessage({
+      messageType: "scale_weight_progress_finished",
     });
+
+    console.timeEnd("scale_weights");
+    return results;
   });
 }
 
 async function scaleWeight(e) {
-  console.log("scaling weight...");
-  console.time("scale_weight");
-  await navigator.locks.request(`scale-weights`, async (lock) => {
-    const name = e.data.name;
-    const baseName = e.data.baseName;
+  const name = e.data.name;
+  const baseName = e.data.baseName;
 
-    const loraWorker = getWorker(name);
+  const loraWorker = getWorker(name);
 
-    try {
-      loraWorker.scale_weight(baseName);
-      console.timeEnd("scale_weight");
-    } catch (e) {
-      console.error(e);
-      console.timeEnd("scale_weight");
-    }
-  });
+  try {
+    loraWorker.scale_weight(baseName);
+    console.timeEnd("scale_weight");
+  } catch (e) {
+    console.error(e);
+    console.timeEnd("scale_weight");
+  }
 }
 
 async function getTextEncoderKeys(e) {
@@ -525,9 +509,6 @@ async function getL2Norms(e) {
   // Split between TE and UNet
   const splitNorms = norms.reduce(
     (acc, [k, v]) => {
-      if (!k) {
-        debugger;
-      }
       if (k.includes("TE")) {
         acc.te.set(k, { mean: v, metadata: l2Norms["metadata"].get(k) });
       } else {
@@ -614,10 +595,15 @@ function sendWASMMessage(message) {
 
 const SDRE =
   /.*(?<block_type>up|down|mid)_blocks?_.*(?<block_id>\d+).*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<subblock_id>\d+).*/;
+const SDXLRE =
+  /.*(?<block_type>input|output)[^\d]+(?<block_id_1>\d+)?_(?<block_id_2>\d+).*(?<type>transformer_blocks|proj_in|proj_out)_?(?<subblock_id>\d+)?.*/;
 
 const MID_SDRE =
   /.*(?<block_type>up|down|mid)_block_.*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<block_id>\d+)_.*(?<subblock_id>\d+)?.*/;
-const TE_SDRE = /(?<block_id>\d+).*(?<block_type>self_attn|mlp)/;
+const MID_SDXLRE =
+  /.*(?<block_type>middle)_block_(\d+)?_(?<type>transformer_blocks|proj_in|proj_out)_?(?<block_id>\d+)?.*(?<subblock_id>\d+)?.*/;
+const TE_SDRE =
+  /(?<te>te1|te2|te)_text_model_encoder_layers_(?<block_id>\d+).*(?<block_type>self_attn|mlp)/;
 const NUM_OF_BLOCKS = 12;
 
 function parseSDKey(key) {
@@ -630,22 +616,49 @@ function parseSDKey(key) {
   let isProjection = false;
   let isFeedForward = false;
 
+  let isSDXL = false;
+
   let type;
   let blockType;
   let blockId;
+  let blockId2;
   let subBlockId;
   let name;
+  let te;
+
+  if (
+    key.includes("middle") ||
+    key.includes("input") ||
+    key.includes("output") ||
+    key.includes("te1") ||
+    key.includes("te2")
+  ) {
+    isSDXL = true;
+  }
 
   // Handle the text encoder
-  if (key.includes("te_text_model")) {
+  if (
+    key.includes("te_text_model") ||
+    key.includes("te1_text_model") ||
+    key.includes("te2_text_model")
+  ) {
     const matches = key.match(TE_SDRE);
     if (matches) {
       const groups = matches.groups;
       type = "encoder";
+      switch (groups["te"]) {
+        case "te1":
+          te = "1_";
+        case "te2":
+          te = "2_";
+        case "te":
+          te = "";
+      }
+
       blockId = parseInt(groups["block_id"]);
       blockType = groups["block_type"];
 
-      name = `TE${padTwo(blockId)}`;
+      name = `TE${te}${padTwo(blockId)}`;
 
       if (blockType === "self_attn") {
         isAttention = true;
@@ -653,16 +666,28 @@ function parseSDKey(key) {
     }
     // Handling the UNet values
   } else {
-    const matches = key.match(SDRE);
+    const matches = key.match(isSDXL ? SDXLRE : SDRE);
     if (matches) {
       const groups = matches.groups;
 
       type = groups["type"];
       blockType = groups["block_type"];
-      blockId = parseInt(groups["block_id"]);
-      subBlockId = parseInt(groups["subblock_id"]);
+      blockId =
+        "block_id" in groups
+          ? parseInt(groups["block_id"])
+          : parseInt(groups["block_id_1"]);
+      blockId2 = parseInt(groups["block_id_2"]);
+      subBlockId =
+        "subblock_id" in groups && groups["subblock_id"] !== undefined
+          ? parseInt(groups["subblock_id"])
+          : 0;
 
-      if (groups["type"] === "attentions") {
+      if (
+        groups["type"] === "attentions" ||
+        groups["type"] === "transformer_blocks" ||
+        groups["type"] === "proj_in" ||
+        groups["type"] === "proj_out"
+      ) {
         idx = 3 * blockId + subBlockId;
         isAttention = true;
       } else if (groups["type"] === "resnets") {
@@ -676,18 +701,24 @@ function parseSDKey(key) {
         isSampler = true;
       }
 
-      if (groups["block_type"] === "down") {
+      if (groups["block_type"] === "down" || groups["block_type"] === "input") {
         blockIdx = 1 + idx;
         name = `IN${padTwo(idx)}`;
-      } else if (groups["block_type"] === "up") {
+      } else if (
+        groups["block_type"] === "up" ||
+        groups["block_type"] === "output"
+      ) {
         blockIdx = NUM_OF_BLOCKS + 1 + idx;
         name = `OUT${padTwo(idx)}`;
-      } else if (groups["block_type"] === "mid") {
+      } else if (
+        groups["block_type"] === "mid" ||
+        groups["block_type"] === "middle"
+      ) {
         blockIdx = NUM_OF_BLOCKS;
       }
       // Handle the mid block
-    } else if (key.includes("mid_block_")) {
-      const midMatch = key.match(MID_SDRE);
+    } else if (key.includes("mid_block_") || key.includes("middle_block_")) {
+      const midMatch = key.match(isSDXL ? MID_SDXLRE : MID_SDRE);
       name = `MID`;
 
       if (midMatch) {
@@ -701,6 +732,8 @@ function parseSDKey(key) {
         name = `MID${padTwo(blockId)}`;
 
         if (groups.type == "attentions") {
+          isAttention = true;
+        } else if (groups.type == "transformer_blocks") {
           isAttention = true;
         } else if (groups.type === "resnets") {
           isConv = true;
@@ -734,6 +767,7 @@ function parseSDKey(key) {
     // is a upscaler/downscaler
     isSampler,
     key,
+    isSDXL,
   };
 }
 

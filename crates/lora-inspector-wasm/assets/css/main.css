@@ -4,6 +4,7 @@
   --accent-color: #2aaa93;
   --accent-color-b: #c9e836;
   --color: #9ddfab;
+  --color-fade: #6ea87a;
 }
 
 html,
@@ -58,6 +59,20 @@ button:active {
 h1 {
   text-shadow: 2px 2px black;
   animation: fade-in 1s ease-in-out;
+}
+
+a {
+  color: var(--accent-color);
+  /* background-color: var(--accent-bg-color); */
+
+  transition: 96ms ease-in all;
+}
+
+a:hover,
+a:focus {
+  color: var(--accent-color);
+  background-color: var(--accent-bg-color);
+  outline: 6px solid var(--accent-bg-color);
 }
 
 .note {
@@ -170,7 +185,7 @@ h1 {
 }
 
 .row div {
-	overflow-wrap: anywhere;
+  overflow-wrap: anywhere;
 }
 
 .space-apart {
@@ -178,7 +193,7 @@ h1 {
 }
 
 .span-3 {
-	grid-column: 3/1;
+  grid-column: 3/1;
 }
 
 .rank,
@@ -241,8 +256,8 @@ h1 {
 
 .caption {
   font-style: italic;
-  opacity: 0.8;
   font-size: 0.8em;
+  color: var(--color-fade);
 }
 
 .subsets {
@@ -547,25 +562,70 @@ text {
 }
 
 .meta-attribute-value {
-
-	display: flex;
-	gap: 1em;
-	align-items: center;
+  display: flex;
+  gap: 1em;
+  align-items: center;
 }
 
 .secondary {
-	display: flex;
+  display: flex;
   gap: 0.5em;
   align-items: center;
 }
 
 .secondary-name {
-	opacity: 0.6;
+  opacity: 0.6;
 }
 
 /* .download { */
 /**/
 /* } */
+
+.payme {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+}
+
+.payme > button {
+  background-image: url("../img/m5.png");
+  background-size: 5em 5em;
+  width: 5em;
+  height: 2em;
+
+  color: white;
+  font-weight: 900;
+  text-shadow: 2px 2px black;
+}
+
+.payme > button:hover {
+  transform: scale(1.5) translate3d(-25%, 25%, 0);
+}
+
+.payme > button:active {
+  transform: scale(2) translate3d(-25%, 25%, 0);
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  background-color: #000e;
+  overflow-y: scroll;
+}
+
+.modal > div {
+  background-color: #000;
+}
+
+.primary-text {
+  padding: 0.4em 1em;
+}
 
 @keyframes fade-in {
   from {
