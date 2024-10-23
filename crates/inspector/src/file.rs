@@ -196,14 +196,14 @@ mod tests {
         io::{self, Read},
     };
 
-    macro_rules! assert_err {
-        ($expression:expr, $($pattern:tt)+) => {
-            match $expression {
-                $($pattern)+ => (),
-                ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
-            }
-        }
-    }
+    // macro_rules! assert_err {
+    //     ($expression:expr, $($pattern:tt)+) => {
+    //         match $expression {
+    //             $($pattern)+ => (),
+    //             ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
+    //         }
+    //     }
+    // }
 
     use candle_core::Device;
 
@@ -293,7 +293,7 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&buffer, filename, &Device::Cpu);
         let base_name = "error_weight";
-        let device = &Device::Cpu;
+        let _device = &Device::Cpu;
 
         let result = lora_file.scale_weight(base_name);
 
@@ -307,7 +307,6 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&[1_u8], filename, &Device::Cpu);
         let base_name = "l1_error_weight";
-        let device = &Device::Cpu;
 
         let result = lora_file.scale_weight(base_name);
 
@@ -321,7 +320,6 @@ mod tests {
         let buffer = load_file(file)?;
         let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
 
-        let device = &Device::Cpu;
         let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
 
         let scaled_weight = lora_file
