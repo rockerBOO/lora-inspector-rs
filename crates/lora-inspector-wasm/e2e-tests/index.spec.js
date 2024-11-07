@@ -1,5 +1,4 @@
-const { test, expect } = require("@playwright/test");
-const { path } = require("path");
+import { test, expect } from "@playwright/test";
 
 test("has title", async ({ page }) => {
   await page.goto("/");

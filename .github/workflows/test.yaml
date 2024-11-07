@@ -1,0 +1,42 @@
+on: push
+jobs:
+  test:
+    strategy:
+      # Don't cancel test runs if one fails
+      fail-fast: false
+      # Run 4 jobs in parallel, each executing a subset of all tests
+      matrix:
+        node_index: [0, 1, 2, 3]
+        total_nodes: [4]
+    defaults:
+      run:
+        working-directory: crates/lora-inspector-wasm
+
+    runs-on: ubuntu-latest
+    steps:
+      # Check out code and perform setup steps
+      # ...
+      - uses: actions/checkout@v3
+
+      - name: Set Node.js lts/*
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Corepack 
+        run: corepack enable
+
+      - name: Run install
+        run: yarn install
+
+      - name: Test
+        run: yarn test
+        env:
+          CI_NODE_INDEX: ${{ matrix.node_index }}
+          CI_NODE_TOTAL: ${{ matrix.total_nodes }}
+

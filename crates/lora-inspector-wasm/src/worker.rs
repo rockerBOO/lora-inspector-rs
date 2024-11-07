@@ -10,7 +10,6 @@ use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
 use inspector::network::{NetworkModule, WeightDecomposition};
 use inspector::{norms, statistic, InspectorError};
-use std::panic;
 
 #[wasm_bindgen]
 pub struct LoraWorker {

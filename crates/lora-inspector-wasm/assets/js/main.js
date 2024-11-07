@@ -1,4 +1,8 @@
-"use strict";
+import { LineChart, easings } from "chartist";
+import React from "react";
+import ReactDOM from "react-dom";
+import init from "/pkg";
+
 const h = React.createElement;
 
 function Header({ metadata }) {
@@ -139,7 +143,6 @@ function MetaAttribute({
   secondary,
   secondaryName,
   secondaryClassName,
-  metadata,
   containerProps,
 }) {
   return h(
@@ -180,7 +183,7 @@ function supportsDoRA(networkType) {
   );
 }
 
-function Network({ metadata, filename }) {
+function Network({ metadata }) {
   const [networkModule, setNetworkModule] = React.useState(
     metadata.get("ss_network_module"),
   );
@@ -363,10 +366,10 @@ function LoKrNetwork({ metadata }) {
 
 function LoRANetwork({ metadata }) {
   const [alphas, setAlphas] = React.useState([
-    (metadata && metadata.get("ss_network_alpha")) ?? undefined,
+    metadata?.get("ss_network_alpha") ?? undefined,
   ]);
   const [dims, setDims] = React.useState([
-    (metadata && metadata.get("ss_network_dim")) ?? undefined,
+    metadata?.get("ss_network_dim") ?? undefined,
   ]);
   React.useEffect(() => {
     trySyncMessage(
@@ -400,11 +403,12 @@ function LoRANetwork({ metadata }) {
         .map((alpha) => {
           if (typeof alpha === "number") {
             return alpha.toPrecision(2);
-          } else if (alpha.includes(".")) {
-            return parseFloat(alpha).toPrecision(2);
-          } else {
-            return parseInt(alpha);
           }
+
+          if (alpha.includes(".")) {
+            return Number.parseFloat(alpha).toPrecision(2);
+          }
+          return Number.parseInt(alpha);
         })
         .join(", "),
       key: "network-alpha",
@@ -539,7 +543,7 @@ function Weight({ metadata, filename }) {
   ];
 }
 
-function Precision({}) {
+function Precision(props = {}) {
   const [precision, setPrecision] = React.useState("");
 
   React.useEffect(() => {
@@ -568,7 +572,7 @@ function scale_weight() {
   // get progress
 }
 
-function Blocks({ metadata, filename }) {
+function Blocks({ filename }) {
   const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
   const [teMagBlocks, setTEMagBlocks] = React.useState(new Map());
   const [unetMagBlocks, setUnetMagBlocks] = React.useState(new Map());
@@ -634,18 +638,18 @@ function Blocks({ metadata, filename }) {
         resp.networkType === undefined
       ) {
         setCanHaveBlockWeights(true);
-        trySyncMessage(
-          {
-            messageType: "precision",
-            name: filename,
-            reply: true,
-          },
-          filename,
-        ).then((resp) => {
-          if (resp.precision == "bf16") {
-            setCanHaveBlockWeights(false);
-          }
-        });
+        // trySyncMessage(
+        //   {
+        //     messageType: "precision",
+        //     name: filename,
+        //     reply: true,
+        //   },
+        //   filename,
+        // ).then((resp) => {
+        //   if (resp.precision == "bf16") {
+        //     setCanHaveBlockWeights(false);
+        //   }
+        // });
       }
     });
   }, []);
@@ -666,7 +670,7 @@ function Blocks({ metadata, filename }) {
         ],
       };
       // console.log("chartdata", data);
-      const chart = new Chartist.Line(chartRef.current, data, {
+      const chart = new LineChart(chartRef.current, data, {
         chartPadding: {
           right: 60,
           top: 30,
@@ -685,18 +689,18 @@ function Blocks({ metadata, filename }) {
           // scaleMinSpace: 100,
           // position: "end",
         },
-        plugins: [
-          Chartist.plugins.ctPointLabels({
-            labelOffset: {
-              x: 10,
-              y: -10,
-            },
-            textAnchor: "middle",
-            labelInterpolationFnc: function (value) {
-              return value.toPrecision(4);
-            },
-          }),
-        ],
+        // plugins: [
+        //   Chartist.plugins.ctPointLabels({
+        //     labelOffset: {
+        //       x: 10,
+        //       y: -10,
+        //     },
+        //     textAnchor: "middle",
+        //     labelInterpolationFnc: function (value) {
+        //       return value.toPrecision(4);
+        //     },
+        //   }),
+        // ],
       });
 
       let seq = 0;
@@ -725,7 +729,7 @@ function Blocks({ metadata, filename }) {
               from: data.x - 20,
               to: data.x,
               // You can specify an easing function name or use easing functions from Chartist.Svg.Easing directly
-              easing: Chartist.Svg.Easing.easeOutQuart,
+              easing: easings.easeOutQuart,
             },
           });
         }
@@ -754,7 +758,9 @@ function Blocks({ metadata, filename }) {
       { className: "block-weights-container" },
       "Block weights not supported for this network type or precision.",
     );
-  } else if (!hasBlockWeights) {
+  }
+
+  if (!hasBlockWeights) {
     return h(
       "div",
       { className: "block-weights-container" },
@@ -1593,7 +1599,8 @@ function Statistics({ baseNames, filename }) {
   if (calcStatistics && !hasStatistics) {
     const elapsedTime = performance.now() - startTime;
     const remaining =
-      (elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount;
+      (elapsedTime * totalCount) / statisticProgress -
+        elapsedTime * totalCount || 0;
     const perSecond = currentCount / (elapsedTime / 1_000);
 
     // if (currentCount === 0) {
@@ -3314,7 +3321,7 @@ const dropbox = document.querySelector("#dropbox");
 //   });
 // });
 
-let files = new Map();
+const files = new Map();
 let mainFilename;
 
 // let worker = new Worker("./assets/js/worker.js", {});
@@ -3322,12 +3329,13 @@ let mainFilename;
 const workers = new Map();
 
 async function addWorker(file) {
-  const worker = new Worker("./assets/js/worker.js", {});
+  const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+  // const worker = new InspectorWorker();
 
   workers.set(file, worker);
 
   return new Promise((resolve, reject) => {
-    let timeouts = [];
+    const timeouts = [];
     const worker = workers.get(file);
 
     worker.onmessage = (event) => {
@@ -3365,7 +3373,7 @@ function clearWorkers() {
   });
 }
 
-wasm_bindgen().then(() => {
+init().then(() => {
   ["drop"].forEach((evtName) => {
     document.addEventListener(evtName, async (e) => {
       e.preventDefault();
