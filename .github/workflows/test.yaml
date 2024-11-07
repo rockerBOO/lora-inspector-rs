@@ -10,7 +10,7 @@ jobs:
         total_nodes: [4]
     defaults:
       run:
-        working-directory: ./crates/lora-inspector-wasm
+        working-directory: crates/lora-inspector-wasm
 
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +23,7 @@ jobs:
         with:
           node-version: lts/*
           cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
 
       - name: Corepack 
         run: corepack enable
