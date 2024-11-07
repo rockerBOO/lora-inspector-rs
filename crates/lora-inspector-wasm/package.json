@@ -7,7 +7,7 @@
   "license": "ISC",
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@playwright/test": "^1.41.1",
+    "@playwright/test": "^1.48.2",
     "@types/node": "^20.11.5",
     "autoprefixer": "^10.4.20",
     "ava": "^6.2.0",
@@ -16,9 +16,7 @@
     "postcss-cli": "^11.0.0",
     "postcss-preset-env": "^10.0.9",
     "vite": "^5.4.10",
-    "vite-plugin-top-level-await": "^1.4.4",
-    "vite-plugin-wasm": "^3.3.0",
-    "vite-plugin-wasm-pack": "^0.1.12"
+    "vite-plugin-wasm": "^3.3.0"
   },
   "type": "module",
   "scripts": {

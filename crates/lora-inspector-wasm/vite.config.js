@@ -1,14 +1,12 @@
 import { defineConfig } from "vite";
 import wasm from "vite-plugin-wasm";
 
-import topLevelAwait from "vite-plugin-top-level-await";
-
 export default defineConfig({
   // worker: {
   //   // Enable classic web workers
   //   type: "classic",
   // },
-  plugins: [wasm(), topLevelAwait()],
+  plugins: [wasm()],
   build: {
     // main: {
     //   entry: resolve(__dirname, "index.html"),

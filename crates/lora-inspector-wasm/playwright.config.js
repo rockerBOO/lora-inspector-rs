@@ -1,5 +1,6 @@
-// @ts-check
-const { defineConfig, devices } = require("@playwright/test");
+import { defineConfig, devices } from "@playwright/test";
+import { resolve } from "node:path";
+import process from "node:process";
 
 /**
  * Read environment variables from file.
@@ -10,8 +11,8 @@ const { defineConfig, devices } = require("@playwright/test");
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
-module.exports = defineConfig({
-  testDir: "./tests",
+export default defineConfig({
+  testDir: "./e2e-tests",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -25,7 +26,7 @@ module.exports = defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://127.0.0.1:8080",
+		baseURL: "http://localhost:4173",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -83,11 +84,11 @@ module.exports = defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npx http-server",
-    url: "http://127.0.0.1:8080",
+    command: "yarn preview",
+    url: "http://localhost:4173",
     reuseExistingServer: !process.env.CI,
   },
 
-  globalSetup: require.resolve('./global-setup'),
-  // globalTeardown: require.resolve('./global-teardown'),
+  globalSetup: "./global-setup",
+  // globalTeardown: './global-teardown',
 });

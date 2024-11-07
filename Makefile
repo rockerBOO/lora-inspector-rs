@@ -12,21 +12,24 @@ WEAK_REFS :=
 
 # Default target
 .PHONY: all
-all: test build-wasm
+all: test build-wasm build-frontend
 
 # Run tests for the whole workspace
 .PHONY: test
 test:
 	cargo test --workspace && \
 		make wasm-bindgen-test && \
-		yarn --cwd crates/lora-inspector-wasm test && \
-		yarn --cwd crates/lora-inspector-wasm e2e-test 
+		yarn --cwd $(WASM_DIR) test && \
+		yarn --cwd $(WASM_DIR) e2e-test 
 
 # Build WASM for production (optimized)
 .PHONY: build-wasm
 build-wasm:
-	wasm-pack build $(TARGET) --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS) && \
-		yarn --cwd $(WASM_DIR) build
+	wasm-pack build $(TARGET) --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
+
+.PHONY: build-frontend
+build-frontend:
+	yarn --cwd $(WASM_DIR) build
 
 # Start a local HTTP server for serving the WASM package (simple)
 .PHONY: dev-wasm
