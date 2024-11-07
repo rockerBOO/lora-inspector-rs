@@ -11,7 +11,7 @@ function Header({ metadata }) {
 
 function ModelSpec({ metadata }) {
   let training = [
-    h("div", { className: "row space-apart" }, [
+    h("div", { className: "row space-apart", key: "training_timings" }, [
       metadata.has("ss_training_started_at") &&
         h(MetaAttribute, {
           key: "started_at",
@@ -43,7 +43,7 @@ function ModelSpec({ metadata }) {
 
     h(
       "div",
-      { className: "row space-apart" },
+      { className: "row space-apart", key: "training_comments" },
       metadata.has("ss_training_comment") &&
         h(
           "div",
@@ -2963,15 +2963,14 @@ function Headline({ metadata, filename }) {
   }
 
   return h("div", { className: "headline" }, [
-    h("div", { key: "headline" }, [
-      h("div", { key: "lora file" }, "LoRA file"),
-      h("h1", { key: "filename" }, filename),
-    ]),
+    h("div", { key: "lora file" }, "LoRA file"),
+
     raw,
+    h("h1", { key: "filename" }, filename),
   ]);
 }
 
-function Payme() {
+function Support() {
   const [modal, setModal] = React.useState(false);
 
   React.useEffect(() => {
@@ -3098,31 +3097,6 @@ function Metadata({ metadata, filename }) {
   ];
 }
 
-// async function getAverageMagnitude(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_magnitude(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-// async function getAverageStrength(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_strength(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-
 const isAdvancedUpload = (function () {
   var div = document.createElement("div");
   return (
@@ -3174,8 +3148,6 @@ const dropbox = document.querySelector("#dropbox");
 const files = new Map();
 let mainFilename;
 
-// let worker = new Worker("./assets/js/worker.js", {});
-
 const workers = new Map();
 
 async function addWorker(file) {
@@ -3183,21 +3155,18 @@ async function addWorker(file) {
   // const worker = new InspectorWorker();
 
   workers.set(file, worker);
-  console.log(worker);
 
   return new Promise((resolve, reject) => {
     const timeouts = [];
     const worker = workers.get(file);
 
     worker.onmessage = (event) => {
-      console.log("got ok message", event.data);
       timeouts.map((timeout) => clearTimeout(timeout));
       worker.onmessage = undefined;
       resolve(worker);
     };
 
     function checkIfAvailable() {
-      console.log("sent message if available");
       worker.postMessage({ messageType: "is_available", reply: true });
       const timeout = setTimeout(() => {
         checkIfAvailable();
@@ -3249,7 +3218,6 @@ document.querySelector("#file").addEventListener("change", async function (e) {
   e.stopPropagation();
 
   const files = e.target.files;
-  console.log("change file", files);
 
   for (let i = 0; i < files.length; i++) {
     if (files.item(i).type != "") {
@@ -3265,8 +3233,11 @@ document.querySelector("#file").addEventListener("change", async function (e) {
 async function handleMetadata(metadata, filename) {
   dropbox.classList.remove("box__open");
   dropbox.classList.add("box__closed");
-  document.querySelector("#jumbo").classList.remove("jumbo__intro");
-  document.querySelector("#note").classList.add("hidden");
+  document.querySelector(".support").classList.remove("hidden");
+  document.querySelector(".home")?.classList.remove("home");
+  document.querySelector(".box").classList.remove("box__open");
+  document.querySelector(".box__intro").classList.add("hidden");
+  document.querySelector(".note").classList.add("hidden");
   const root = ReactDOM.createRoot(document.getElementById("results"));
   root.render(
     h(Metadata, {
@@ -3277,14 +3248,13 @@ async function handleMetadata(metadata, filename) {
 }
 
 (() => {
-  const root = ReactDOM.createRoot(document.getElementById("payme"));
-  root.render(h(Payme, {}));
+  const root = ReactDOM.createRoot(document.querySelector(".support"));
+  root.render(h(Support, {}));
 })();
 
 let uploadTimeoutHandler;
 
 async function processFile(file) {
-  console.log("clear workerss");
   clearWorkers();
   console.log("adding worker", file.name);
   const worker = await addWorker(file.name);

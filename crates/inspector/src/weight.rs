@@ -202,14 +202,14 @@ impl WeightKey for BufferedLoRAWeight {
         self.keys_by_key("alpha")
     }
 
-    fn up_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_up")
-    }
-
-    fn down_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_down")
-    }
-
+    // fn up_keys(&self) -> Vec<String> {
+    //     self.keys_by_key("lora_up")
+    // }
+    //
+    // fn down_keys(&self) -> Vec<String> {
+    //     self.keys_by_key("lora_down")
+    // }
+    //
     fn base_names(&self) -> Vec<String> {
         self.weight_keys()
             .iter()
@@ -355,7 +355,7 @@ impl Weight for BufferedLoRAWeight {
 
     fn scale_lokr_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
         let lokr_w1 = format!("{}.lokr_w1", base_name);
-        let lokr_w2 = format!("{}.lokr_w2", base_name);
+        let _lokr_w2 = format!("{}.lokr_w2", base_name);
 
         let lokr_w1_a = format!("{}.lokr_w1_a", base_name);
         let lokr_w1_b = format!("{}.lokr_w1_b", base_name);
@@ -532,11 +532,11 @@ impl BufferedLoRAWeight {
 pub trait WeightKey {
     fn keys(&self) -> Vec<String>;
     fn keys_by_key(&self, key: &str) -> Vec<String>;
-    fn up_keys(&self) -> Vec<String>;
+    // fn up_keys(&self) -> Vec<String>;
     fn unet_keys(&self) -> Vec<String>;
     fn text_encoder_keys(&self) -> Vec<String>;
     fn weight_keys(&self) -> Vec<String>;
-    fn down_keys(&self) -> Vec<String>;
+    // fn down_keys(&self) -> Vec<String>;
     fn alpha_keys(&self) -> Vec<String>;
     fn base_names(&self) -> Vec<String>;
 }
@@ -619,13 +619,13 @@ impl WeightKey for LoRAWeight {
         self.keys_by_key("alpha")
     }
 
-    fn up_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_up")
-    }
-
-    fn down_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_down")
-    }
+    // fn up_keys(&self) -> Vec<String> {
+    //     self.keys_by_key("lora_up")
+    // }
+    //
+    // fn down_keys(&self) -> Vec<String> {
+    //     self.keys_by_key("lora_down")
+    // }
 
     fn base_names(&self) -> Vec<String> {
         self.weight_keys()
@@ -1001,8 +1001,6 @@ mod tests {
 
     use super::*;
 
-    use std::fs;
-
     #[test]
     fn get_base_name_test() {
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_up.weight");
@@ -1037,10 +1035,10 @@ mod tests {
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
     }
 
-    fn load_keys_json() -> serde_json::Result<Vec<String>> {
-        let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
-        serde_json::from_str::<Vec<String>>(&keys)
-    }
+    // fn load_keys_json() -> serde_json::Result<Vec<String>> {
+    //     let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
+    //     serde_json::from_str::<Vec<String>>(&keys)
+    // }
 
     // #[test]
     // fn test_key_parsing() {
@@ -1063,13 +1061,13 @@ mod tests {
         Ok(data)
     }
 
-    fn load_file(filename: &str) -> Result<Vec<u8>, io::Error> {
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
+    // fn load_file(filename: &str) -> Result<Vec<u8>, io::Error> {
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
 
     fn load_test_conv_file() -> Result<Vec<u8>, io::Error> {
         let filename = "./lora_unet_down_blocks_1_resnets_1_conv2.safetensors";

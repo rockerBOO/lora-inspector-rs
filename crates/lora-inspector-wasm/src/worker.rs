@@ -1,4 +1,3 @@
-// use pest::Parser;
 use std::collections::HashMap;
 use std::fmt;
 use wasm_bindgen::prelude::*;
