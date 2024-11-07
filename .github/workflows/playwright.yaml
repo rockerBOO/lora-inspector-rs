@@ -15,18 +15,22 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
-        node-version: 18
+        node-version: lts/*
     - name: Install rust
       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
     - name: Build WASM
       run: wasm-pack build --target no-modules --out-dir pkg crates/lora-inspector-wasm --release
       working-directory: ./
+
+    - name: Corepack
+      run: corepack enable
+
     - name: Install dependencies
-      run: npm ci
+      run: yarn install --immutable
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
+      run: yarn playwright install --with-deps
     - name: Run Playwright tests
-      run: npx playwright test
+      run: yarn playwright test
     - uses: actions/upload-artifact@v3
       if: always()
       with:
