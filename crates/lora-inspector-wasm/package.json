@@ -2,6 +2,7 @@
   "name": "lora-inspector-wasm",
   "version": "1.0.0",
   "description": "",
+  "main": "assets/js/main.js",
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -290,6 +290,7 @@ impl LoraWorker {
             Some(NetworkModule::Lycoris) => "lycoris".to_owned(),
             Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
+            Some(NetworkModule::KohyaSSLoRAFlux) => "kohya-ss/lora_flux".to_owned(),
             Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
             Some(NetworkModule::KohyaSSOFT) => "kohya-ss/oft".to_owned(),
             None => "no_module_found".to_owned(),

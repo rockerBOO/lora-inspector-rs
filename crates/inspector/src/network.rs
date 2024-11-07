@@ -16,6 +16,7 @@ pub enum NetworkModule {
     KohyaSSLoRAFA,
     KohyaSSDyLoRA,
     KohyaSSOFT,
+    KohyaSSLoRAFlux,
     Lycoris,
 }
 
