@@ -1,0 +1,41 @@
+on: push
+jobs:
+  test:
+    strategy:
+      # Don't cancel test runs if one fails
+      fail-fast: false
+      # Run 4 jobs in parallel, each executing a subset of all tests
+      matrix:
+        node_index: [0, 1, 2, 3]
+        total_nodes: [4]
+
+    runs-on: ubuntu-latest
+    steps:
+      # Check out code and perform setup steps
+      # ...
+      - uses: actions/checkout@v3
+
+      - name: Set Node.js 22.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+
+      - name: Run install
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install # will run `yarn install` command
+          dir: 'crates/lora-inspector-wasm'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # if needed
+      - name: Build production bundle
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: build:prod # will run `yarn build:prod` command
+      - name: Test the app
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: test # will run `yarn test` command
+          dir: 'crates/lora-inspector-wasm'
+        env:
+          CI_NODE_INDEX: ${{ matrix.node_index }}
+          CI_NODE_TOTAL: ${{ matrix.total_nodes }}
