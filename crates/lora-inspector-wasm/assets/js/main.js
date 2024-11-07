@@ -10,7 +10,7 @@ function Header({ metadata }) {
 }
 
 function ModelSpec({ metadata }) {
-  let training = [
+  const training = [
     h("div", { className: "row space-apart", key: "training_timings" }, [
       metadata.has("ss_training_started_at") &&
         h(MetaAttribute, {
@@ -32,12 +32,11 @@ function ModelSpec({ metadata }) {
         h(MetaAttribute, {
           key: "elapsed_at",
           name: "Elapsed",
-          value:
-            (
-              (metadata.get("ss_training_finished_at") -
-                metadata.get("ss_training_started_at")) /
-              60
-            ).toPrecision(4) + " minutes",
+          value: `${(
+            (metadata.get("ss_training_finished_at") -
+              metadata.get("ss_training_started_at")) /
+            60
+          ).toPrecision(4)} minutes`,
         }),
     ]),
 
@@ -376,13 +375,11 @@ function BOFTNetwork({ metadata }) {
       setDims(resp.dims);
     });
   }, []);
-  return [
-    h(MetaAttribute, {
-      name: "Network factor",
-      valueClassName: "rank",
-      value: dims.join(", "),
-    }),
-  ];
+  return h(MetaAttribute, {
+    name: "Network factor",
+    valueClassName: "rank",
+    value: dims.join(", "),
+  });
 }
 
 function LoKrNetwork({ metadata }) {
@@ -669,7 +666,7 @@ function Blocks({ filename }) {
     });
 
     return function cleanup() {};
-  }, [hasBlockWeights]);
+  }, [filename, hasBlockWeights]);
 
   React.useEffect(() => {
     trySyncMessage(
@@ -703,7 +700,7 @@ function Blocks({ filename }) {
         // });
       }
     });
-  }, []);
+  }, [filename]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -716,7 +713,7 @@ function Blocks({ filename }) {
         labels: dataset.map(([k, _]) => k),
         // Our series array that contains series objects or in this case series data arrays
         series: [
-          dataset.map(([_k, v]) => v["mean"]),
+          dataset.map(([_k, v]) => v.mean),
           // dataset.map(([k, v]) => strBlocks.get(k)),
         ],
       };
@@ -740,27 +737,25 @@ function Blocks({ filename }) {
           // scaleMinSpace: 100,
           // position: "end",
         },
-        // plugins: [
-        //   Chartist.plugins.ctPointLabels({
-        //     labelOffset: {
-        //       x: 10,
-        //       y: -10,
-        //     },
-        //     textAnchor: "middle",
-        //     labelInterpolationFnc: function (value) {
-        //       return value.toPrecision(4);
-        //     },
-        //   }),
-        // ],
+        plugins: [
+          Chartist.plugins.ctPointLabels({
+            labelOffset: {
+              x: 10,
+              y: -10,
+            },
+            textAnchor: "middle",
+            labelInterpolationFnc: (value) => value.toPrecision(4),
+          }),
+        ],
       });
 
       let seq = 0;
 
       // Once the chart is fully created we reset the sequence
-      chart.on("created", function () {
+      chart.on("created", () => {
         seq = 0;
       });
-      chart.on("draw", function (data) {
+      chart.on("draw", (data) => {
         if (data.type === "point") {
           // If the drawn element is a line we do a simple opacity fade in. This could also be achieved using CSS3 animations.
           data.element.animate({
@@ -790,14 +785,14 @@ function Blocks({ filename }) {
     if (teMagBlocks.size > 0) {
       makeChart(
         // We are removing elements that are 0 because they cause the chart to find them as undefined
-        Array.from(teMagBlocks).filter(([_k, v]) => v["mean"] !== 0),
+        Array.from(teMagBlocks).filter(([_k, v]) => v.mean !== 0),
         teChartRef,
       );
     }
     if (unetMagBlocks.size > 0) {
       makeChart(
         // We are removing elements that are 0 because they cause the chart to find them as undefined
-        Array.from(unetMagBlocks).filter(([_k, v]) => v["mean"] !== 0),
+        Array.from(unetMagBlocks).filter(([_k, v]) => v.mean !== 0),
         unetChartRef,
       );
     }
@@ -810,7 +805,6 @@ function Blocks({ filename }) {
       "Block weights not supported for this network type or precision.",
     );
   }
-
   if (!hasBlockWeights) {
     return h(
       "div",
@@ -821,7 +815,7 @@ function Blocks({ filename }) {
           className: "primary",
           onClick: (e) => {
             e.preventDefault();
-            setHasBlockWeights((state) => (state ? false : true));
+            setHasBlockWeights((state) => state);
           },
         },
         "Get block weights",
@@ -862,8 +856,8 @@ function Blocks({ filename }) {
               // }),
               h(MetaAttribute, {
                 className: "te-block",
-                name: `${k} avg l2 norm ${v["metadata"]["type"]}`,
-                value: v["mean"].toPrecision(6),
+                name: `${k} avg l2 norm ${v.metadata.type}`,
+                value: v.mean.toPrecision(6),
                 valueClassName: "number",
               }),
             );
@@ -891,8 +885,8 @@ function Blocks({ filename }) {
             // }),
             h(MetaAttribute, {
               className: "unet-block",
-              name: `${k} avg l2 norm  ${v["metadata"]["type"]}`,
-              value: v["mean"].toPrecision(6),
+              name: `${k} avg l2 norm  ${v.metadata.type}`,
+              value: v.mean.toPrecision(6),
               valueClassName: "number",
             }),
           );
@@ -972,7 +966,7 @@ function Batch({ metadata }) {
 
       for (const dataset of datasets) {
         if ("batch_size_per_device" in dataset) {
-          batchSize = dataset["batch_size_per_device"];
+          batchSize = dataset.batch_size_per_device;
         }
       }
     }
@@ -1012,10 +1006,10 @@ function Noise({ metadata }) {
       name: "IP noise gamma",
       valueClassName: "number",
       value: metadata.get("ss_ip_noise_gamma"),
-      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
         secondaryName: "Random strength:",
         secondary:
-          metadata.get("ss_ip_noise_gamma_random_strength") == "True"
+          metadata.get("ss_ip_noise_gamma_random_strength") === "True"
             ? "True"
             : "False",
         // secondaryClassName: "number",
@@ -1025,10 +1019,10 @@ function Noise({ metadata }) {
       name: "Noise offset",
       valueClassName: "number",
       value: metadata.get("ss_noise_offset"),
-      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
         secondaryName: "Random strength:",
         secondary:
-          metadata.get("ss_noise_offset_random_strength") == "True"
+          metadata.get("ss_noise_offset_random_strength") === "True"
             ? "True"
             : "False",
         // secondaryClassName: "number",
@@ -1100,7 +1094,7 @@ function Loss({ metadata }) {
       valueClassName: "boolean",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
-    metadata.has("ss_masked_loss") != undefined &&
+    metadata.has("ss_masked_loss") !== undefined &&
       h(MetaAttribute, {
         name: "Masked Loss",
         value: metadata.get("ss_masked_loss"),
@@ -1162,22 +1156,22 @@ function Buckets({ dataset, metadata }) {
       { key: "buckets", className: "row space-apart" },
       h(MetaAttribute, {
         name: "Buckets",
-        value: dataset["enable_bucket"] ? "True" : "False",
+        value: dataset.enable_bucket ? "True" : "False",
       }),
       h(MetaAttribute, {
         name: "Min bucket resolution",
         valueClassName: "number",
-        value: dataset["min_bucket_reso"],
+        value: dataset.min_bucket_reso,
       }),
       h(MetaAttribute, {
         name: "Max bucket resolution",
         valueClassName: "number",
-        value: dataset["max_bucket_reso"],
+        value: dataset.max_bucket_reso,
       }),
       h(MetaAttribute, {
         name: "Resolution",
         valueClassName: "number",
-        value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
+        value: `${dataset.resolution[0]}x${dataset.resolution[0]}`,
       }),
     ),
 
@@ -1190,9 +1184,9 @@ function Buckets({ dataset, metadata }) {
     h(
       "div",
       { key: "subsets", className: "subsets" },
-      dataset["subsets"].map((subset, i) =>
+      dataset.subsets.map((subset, i) =>
         h(Subset, {
-          key: `subset-${subset["image_dir"]}-${i}`,
+          key: `subset-${subset.image_dir}-${i}`,
           metadata,
           subset,
         }),
@@ -1202,7 +1196,7 @@ function Buckets({ dataset, metadata }) {
     h(
       "div",
       { key: "tag-frequencies", className: "tag-frequencies row space-apart" },
-      Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
+      Object.entries(dataset.tag_frequency).map(([dir, frequency]) =>
         h(
           "div",
           { key: dir },
@@ -1220,25 +1214,25 @@ function Buckets({ dataset, metadata }) {
 
 function BucketInfo({ metadata, dataset }) {
   // No bucket info
-  if (!dataset["bucket_info"]) {
+  if (!dataset.bucket_info) {
     return;
   }
 
   // No buckets data
-  if (!dataset["bucket_info"]["buckets"]) {
+  if (!dataset.bucket_info.buckets) {
     return;
   }
 
   return h("div", { className: "bucket-infos" }, [
-    Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
+    Object.entries(dataset.bucket_info.buckets).map(([key, bucket]) => {
       return h(
         "div",
         { key, className: "bucket" },
         h(MetaAttribute, {
           name: `Bucket ${key}`,
-          value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
-            bucket["count"]
-          } image${bucket["count"] > 1 ? "s" : ""}`,
+          value: `${bucket.resolution[0]}x${bucket.resolution[1]}: ${
+            bucket.count
+          } image${bucket.count > 1 ? "s" : ""}`,
         }),
       );
     }),
@@ -1246,14 +1240,14 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-  const tf = (v, defaults = undefined, opts) => {
+  const tf = (v, defaults = undefined, opts = {}) => {
     let className = "";
     if (v === true) {
       if (v !== defaults) {
         className = "changed";
       }
       return {
-        valueClassName: opts?.valueClassName ?? "" + " option " + className,
+        valueClassName: opts?.valueClassName ?? ` option ${className}`,
         value: "true",
       };
     }
@@ -1261,7 +1255,7 @@ function Subset({ subset, metadata }) {
       className = "changed";
     }
     return {
-      valueClassName: opts?.valueClassName ?? "" + " option " + className,
+      valueClassName: opts?.valueClassName ?? ` option ${className}`,
       value: "false",
     };
   };
@@ -1271,71 +1265,71 @@ function Subset({ subset, metadata }) {
     { className: "subset row space-apart" },
     h(MetaAttribute, {
       name: "Image count",
-      value: subset["img_count"],
+      value: subset.img_count,
       valueClassName: "number",
     }),
     h(MetaAttribute, {
       name: "Image dir",
-      value: subset["image_dir"],
+      value: subset.image_dir,
       valueClassName: "",
     }),
     h(MetaAttribute, {
       name: "Flip augmentation",
-      ...tf(subset["flip_aug"], false),
+      ...tf(subset.flip_aug, false),
     }),
     h(MetaAttribute, {
       name: "Color augmentation",
-      ...tf(subset["color_aug"], false),
+      ...tf(subset.color_aug, false),
     }),
     h(MetaAttribute, {
       name: "Num repeats",
-      value: subset["num_repeats"],
+      value: subset.num_repeats,
       valueClassName: "number",
     }),
     h(MetaAttribute, {
       name: "Is regularization",
-      ...tf(subset["is_reg"], false),
+      ...tf(subset.is_reg, false),
     }),
-    h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
+    h(MetaAttribute, { name: "Class token", value: subset.class_tokens }),
     h(MetaAttribute, {
       name: "Keep tokens",
-      value: subset["keep_tokens"],
+      value: subset.keep_tokens,
       valueClassName: "number",
     }),
     "keep_tokens_separator" in subset &&
       h(MetaAttribute, {
         name: "Keep tokens separator",
-        value: subset["keep_tokens_separator"],
+        value: subset.keep_tokens_separator,
       }),
     "caption_separator" in subset &&
       h(MetaAttribute, {
         name: "Caption separator",
-        value: subset["caption_separator"],
+        value: subset.caption_separator,
       }),
     "secondary_separator" in subset &&
       h(MetaAttribute, {
         name: "Secondary separator",
-        value: subset["secondary_separator"],
+        value: subset.secondary_separator,
       }),
     "enable_wildcard" in subset &&
       h(MetaAttribute, {
         name: "Enable wildcard",
-        ...tf(subset["enable_wildcard"], false),
+        ...tf(subset.enable_wildcard, false),
       }),
     "shuffle_caption" in subset &&
       h(MetaAttribute, {
         name: "Shuffle caption",
-        ...tf(subset["shuffle_caption"], false),
+        ...tf(subset.shuffle_caption, false),
       }),
     "caption_prefix" in subset &&
       h(MetaAttribute, {
         name: "Caption prefix",
-        value: subset["caption_prefix"],
+        value: subset.caption_prefix,
       }),
     "caption_suffix" in subset &&
       h(MetaAttribute, {
         name: "Caption suffix",
-        value: subset["caption_suffix"],
+        value: subset.caption_suffix,
       }),
   );
 }
@@ -1344,14 +1338,14 @@ function TagFrequency({ tagFrequency, metadata }) {
   const [showMore, setShowMore] = React.useState(false);
 
   const allTags = Object.entries(tagFrequency).sort((a, b) => a[1] < b[1]);
-  const sortedTags = showMore == false ? allTags.slice(0, 50) : allTags;
+  const sortedTags = showMore === false ? allTags.slice(0, 50) : allTags;
 
   return [
     sortedTags.map(([tag, count], i) => {
       const alt = i % 2 > 0 ? " alt-row" : "";
       return h(
         "div",
-        { className: "tag-frequency" + alt, key: tag },
+        { className: `tag-frequency${alt}`, key: tag },
         h("div", {}, count),
         h("div", {}, tag),
       );
@@ -1433,7 +1427,7 @@ function Advanced({ metadata, filename }) {
         setAllKeys(resp.keys);
       },
     );
-  }, []);
+  }, [filename]);
 
   React.useEffect(() => {
     trySyncMessage(
@@ -1460,18 +1454,18 @@ function Advanced({ metadata, filename }) {
           },
           filename,
         ).then((resp) => {
-          if (resp.precision == "bf16") {
+          if (resp.precision === "bf16") {
             setCanHaveStatistics(false);
           }
         });
       }
     });
-  }, []);
+  }, [filename]);
 
   if (DEBUG) {
     React.useEffect(() => {
       advancedRef.current.scrollIntoView({ behavior: "smooth" });
-    }, []);
+    }, [advancedRef.current.scrollIntoView]);
   }
 
   return [
@@ -1600,7 +1594,7 @@ function Statistics({ baseNames, filename }) {
     });
     // });
     // });
-  }, [calcStatistics, baseNames]);
+  }, [filename, calcStatistics, baseNames]);
 
   React.useEffect(() => {
     if (!calcStatistics) {
@@ -1630,7 +1624,7 @@ function Statistics({ baseNames, filename }) {
     );
 
     return function cleanup() {};
-  }, [calcStatistics]);
+  }, [filename, baseNames.length, calcStatistics]);
 
   if (!hasStatistics && !calcStatistics) {
     return h(
@@ -1727,7 +1721,7 @@ function Statistics({ baseNames, filename }) {
                 "bases",
                 bases.map((v) => ({
                   ...v,
-                  stat: Object.fromEntries(v["stat"]),
+                  stat: Object.fromEntries(v.stat),
                 })),
               );
             },
@@ -1797,7 +1791,6 @@ function compileTextEncoderLayers(bases) {
       const subType = match.groups.sub_type;
 
       const layerKey = layerType === "self_attn" ? "attn" : "mlp";
-      let value;
       let subKey;
 
       switch (subType) {
@@ -1859,8 +1852,8 @@ function parseSDKey(key) {
   let isConv = false;
   let isAttention = false;
   let isSampler = false;
-  let isProjection = false;
-  let isFeedForward = false;
+  const isProjection = false;
+  const isFeedForward = false;
 
   let type;
   let blockType;
@@ -1874,8 +1867,8 @@ function parseSDKey(key) {
     if (matches) {
       const groups = matches.groups;
       type = "encoder";
-      blockId = parseInt(groups["block_id"]);
-      blockType = groups["block_type"];
+      blockId = Number.parseInt(groups.block_id);
+      blockType = groups.block_type;
 
       name = `TE${padTwo(blockId)}`;
 
@@ -1889,52 +1882,52 @@ function parseSDKey(key) {
     if (matches) {
       const groups = matches.groups;
 
-      type = groups["type"];
-      blockType = groups["block_type"];
-      blockId = parseInt(groups["block_id"]);
-      subBlockId = parseInt(groups["subblock_id"]);
+      type = groups.type;
+      blockType = groups.block_type;
+      blockId = Number.parseInt(groups.block_id);
+      subBlockId = Number.parseInt(groups.subblock_id);
 
       // console.log(groups["block_id"]);
 
-      if (groups["type"] === "attentions") {
+      if (groups.type === "attentions") {
         idx = 3 * blockId + subBlockId;
         isAttention = true;
-      } else if (groups["type"] === "resnets") {
+      } else if (groups.type === "resnets") {
         idx = 3 * blockId + subBlockId;
         isConv = true;
       } else if (
-        groups["type"] === "upsamplers" ||
-        groups["type"] === "downsamplers"
+        groups.type === "upsamplers" ||
+        groups.type === "downsamplers"
       ) {
         idx = 3 * blockId + 2;
         isSampler = true;
       }
 
-      if (groups["block_type"] === "down") {
+      if (groups.block_type === "down") {
         blockIdx = 1 + idx;
         name = `IN${padTwo(idx)}`;
-      } else if (groups["block_type"] === "up") {
+      } else if (groups.block_type === "up") {
         blockIdx = NUM_OF_BLOCKS + 1 + idx;
         name = `OUT${padTwo(idx)}`;
-      } else if (groups["block_type"] === "mid") {
+      } else if (groups.block_type === "mid") {
         blockIdx = NUM_OF_BLOCKS;
       }
       // Handle the mid block
     } else if (key.includes("mid_block_")) {
       const midMatch = key.match(MID_SDRE);
-      name = `MID`;
+      name = "MID";
 
       if (midMatch) {
         const groups = midMatch.groups;
 
-        type = groups["type"];
-        blockType = groups["block_type"];
-        blockId = parseInt(groups["block_id"]);
-        subBlockId = parseInt(groups["subblock_id"]);
+        type = groups.type;
+        blockType = groups.block_type;
+        blockId = Number.parseInt(groups.block_id);
+        subBlockId = Number.parseInt(groups.subblock_id);
 
         name = `MID${padTwo(blockId)}`;
 
-        if (groups.type == "attentions") {
+        if (groups.type === "attentions") {
           isAttention = true;
         } else if (groups.type === "resnets") {
           isConv = true;
@@ -1983,8 +1976,8 @@ function compileUnetLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  const re =
-    /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
+  // const re =
+  //   /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
   const layers = {
     down: {},
@@ -2023,7 +2016,7 @@ function compileUnetLayers(bases) {
       continue;
     }
 
-    let parsedKey = parseSDKey(base.baseName);
+    const parsedKey = parseSDKey(base.baseName);
 
     // TODO need layer id
     layer = ensureLayer(layer, parsedKey.name);
@@ -2146,7 +2139,7 @@ function AllKeys({ allkeys }) {
     h(
       "ul",
       { key: "all-keys" },
-      allKeys.map((key) => {
+      allkeys.map((key) => {
         return h("li", { key }, key);
       }),
     ),
@@ -2901,16 +2894,15 @@ function Raw({ metadata, filename }) {
             onClick: () => {
               sortedEntries;
               const data =
-                "text/json;charset=utf-8," +
-                encodeURIComponent(JSON.stringify(sortedEntries, null, 2));
+                `text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(sortedEntries, null, 2))}`;
               const a = document.createElement("a");
-              a.href = "data:" + data;
+              a.href = `data:${data}`;
               a.download = `${filename.replace(
                 ".safetensors",
                 "",
               )}-metadata.json`;
 
-              var container = document.body;
+              const container = document.body;
               container.appendChild(a);
               a.click();
 
@@ -2980,7 +2972,7 @@ function Support() {
 
     function close(e) {
       // escape
-      if (e.keyCode == 27) {
+      if (e.keyCode === 27) {
         setModal(false);
 
         window.removeEventListener("keydown", close);
@@ -3068,10 +3060,10 @@ function Support() {
     "button",
     {
       onClick: () => {
-        setModal(modal ? false : true);
+        setModal(modal);
       },
     },
-    `Support`,
+    "Support",
   );
 }
 
@@ -3097,8 +3089,8 @@ function Metadata({ metadata, filename }) {
   ];
 }
 
-const isAdvancedUpload = (function () {
-  var div = document.createElement("div");
+const isAdvancedUpload = (() => {
+  const div = document.createElement("div");
   return (
     ("draggable" in div || ("ondragstart" in div && "ondrop" in div)) &&
     "FormData" in window &&
@@ -3112,6 +3104,7 @@ if (isAdvancedUpload) {
 
 const dropbox = document.querySelector("#dropbox");
 
+// biome-ignore lint/complexity/noForEach: need to remove 
 [
   "drag",
   "dragstart",
@@ -3127,12 +3120,14 @@ const dropbox = document.querySelector("#dropbox");
   }),
 );
 
+// biome-ignore lint/complexity/noForEach: need to remove
 ["dragover", "dragenter"].forEach((evtName) => {
   dropbox.addEventListener(evtName, () => {
     dropbox.classList.add("is-dragover");
   });
 });
 
+// biome-ignore lint/complexity/noForEach: need to remove 
 ["dragleave", "dragend", "drop"].forEach((evtName) => {
   dropbox.addEventListener(evtName, () => {
     dropbox.classList.remove("is-dragover");
@@ -3156,11 +3151,11 @@ async function addWorker(file) {
 
   workers.set(file, worker);
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const timeouts = [];
     const worker = workers.get(file);
 
-    worker.onmessage = (event) => {
+    worker.onmessage = () => {
       timeouts.map((timeout) => clearTimeout(timeout));
       worker.onmessage = undefined;
       resolve(worker);
@@ -3190,6 +3185,7 @@ function removeWorker(file) {
 }
 
 function clearWorkers() {
+  // biome-ignore lint/complexity/noForEach: <explanation>
   Array.from(workers.keys()).forEach((key) => {
     removeWorker(key);
   });
@@ -3203,7 +3199,7 @@ init().then(() => {
 
     const droppedFiles = e.dataTransfer.files;
     for (let i = 0; i < droppedFiles.length; i++) {
-      if (files.item(i).type != "") {
+      if (files.item(i).type !== "") {
         addErrorMessage("Invalid filetype. Try a .safetensors file.");
         continue;
       }
@@ -3213,14 +3209,14 @@ init().then(() => {
   });
 });
 
-document.querySelector("#file").addEventListener("change", async function (e) {
+document.querySelector("#file").addEventListener("change", async (e) => {
   e.preventDefault();
   e.stopPropagation();
 
   const files = e.target.files;
 
   for (let i = 0; i < files.length; i++) {
-    if (files.item(i).type != "") {
+    if (files.item(i).type !== "") {
       addErrorMessage("Invalid filetype. Try a .safetensors file.");
       continue;
     }
@@ -3330,11 +3326,11 @@ function cancelLoading(file) {
   clearTimeout(uploadTimeoutHandler);
 }
 
-window.addEventListener("keyup", (e) => {
-  if (e.key === "Escape") {
-    cancelLoading(file);
-  }
-});
+// window.addEventListener("keyup", (e) => {
+//   if (e.key === "Escape") {
+//     cancelLoading(file);
+//   }
+// });
 
 function loading(file) {
   const loadingEle = document.createElement("div");

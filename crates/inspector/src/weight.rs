@@ -470,9 +470,9 @@ impl Weight for BufferedLoRAWeight {
     //         .collect()
     // }
 
-    fn dora_scale(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        self.get(&format!("{base_name}.dora_scale"))
-    }
+    // fn dora_scale(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+    //     self.get(&format!("{base_name}.dora_scale"))
+    // }
 
     fn dims(&self) -> HashSet<usize> {
         self.buffered
@@ -486,14 +486,10 @@ impl Weight for BufferedLoRAWeight {
                 } else if k.contains("lokr_w1") {
                     self.get(k).map(|v| v.dims()[0]).ok()
                 } else if k.contains("b1.weight") {
-                    // dbg!(self.get(k).map(|v| v.dims().to_vec()).unwrap());
-                    // dbg!(self.get(k).map(|v| v.dims()[0]).ok());
-                    // self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
                     self.get(k).map(|v| v.dims()[0]).ok()
                 } else if k.contains("oft_diag") {
                     self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
                 } else if k.contains("oft_blocks") {
-                    // dbg!(self.get(k).map(|v| v.dims().to_vec()).unwrap());
                     self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
                 } else {
                     None
@@ -544,16 +540,37 @@ pub trait WeightKey {
 pub trait Weight {
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error>;
 
+    /// Most common precision datatype
     fn precision(&self) -> Option<DType>;
+
+    /// Scale LoRA weights by the alpha and combine the A/B weights
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if tensor operations fail.
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
     fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+    /// Scale the weights by the alpha and combine with the LoHa/Hada/FedPara weights
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the tensor operations fail.
     fn scale_hada_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+
+    /// Scale the weights by the alpha and combine with the LoKr weights
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the tensor operations fail.
     fn scale_lokr_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
 
+    /// Unique alphas in the tensors
     fn alphas(&self) -> HashSet<Alpha>;
-    // fn dora_scales(&self) -> Vec<Vec<f32>>;
-    fn dora_scale(&self, key: &str) -> Result<Tensor, candle_core::Error>;
+
+    /// Unique dimensions in the tensors
     fn dims(&self) -> HashSet<usize>;
+
+    /// All shapes dimensions by HashMap of tensor modules
     fn shapes(&self) -> HashMap<String, Vec<usize>>;
 }
 
@@ -618,14 +635,6 @@ impl WeightKey for LoRAWeight {
     fn alpha_keys(&self) -> Vec<String> {
         self.keys_by_key("alpha")
     }
-
-    // fn up_keys(&self) -> Vec<String> {
-    //     self.keys_by_key("lora_up")
-    // }
-    //
-    // fn down_keys(&self) -> Vec<String> {
-    //     self.keys_by_key("lora_down")
-    // }
 
     fn base_names(&self) -> Vec<String> {
         self.weight_keys()
@@ -918,9 +927,9 @@ impl Weight for LoRAWeight {
             })
     }
 
-    fn dora_scale(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        self.get(&format!("{base_name}.dora_scale"))
-    }
+    // fn dora_scale(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+    //     self.get(&format!("{base_name}.dora_scale"))
+    // }
 
     fn dims(&self) -> HashSet<usize> {
         self.tensors
