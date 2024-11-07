@@ -252,17 +252,23 @@ impl Weight for BufferedLoRAWeight {
             / dims[0] as f64;
 
         if dims.len() == 2 {
-            up.matmul(&down)?.detach()?.mul(scale)?.detach()
+            to_compatible_dtype(&up)?
+                .matmul(&to_compatible_dtype(&down)?)?
+                .detach()?
+                .mul(scale)?
+                .detach()
         } else if dims[2] == 1 && dims[3] == 1 {
-            up.squeeze(3)?
+            to_compatible_dtype(&up)?
+                .squeeze(3)?
                 .squeeze(2)?
-                .matmul(&down.squeeze(3)?.squeeze(2)?)?
+                .matmul(&to_compatible_dtype(&down)?.squeeze(3)?.squeeze(2)?)?
                 .unsqueeze(2)?
                 .unsqueeze(3)?
                 .mul(scale)
         } else {
-            down.permute((1, 0, 2, 3))?
-                .conv2d(&up, 0, 1, 1, 1)?
+            to_compatible_dtype(&down)?
+                .permute((1, 0, 2, 3))?
+                .conv2d(&to_compatible_dtype(&up)?, 0, 1, 1, 1)?
                 .permute((1, 0, 2, 3))?
                 .mul(scale)
         }
@@ -558,6 +564,15 @@ pub struct LoRAWeight {
     pub device: Device,
 }
 
+/// Converts tensor into DType thats compatible with candle
+/// We convert BF16 to F32
+fn to_compatible_dtype(tensor: &candle_core::Tensor) -> Result<Tensor, candle_core::Error> {
+    match tensor.dtype() {
+        candle_core::DType::BF16 => tensor.to_dtype(candle_core::DType::F32),
+        _ => Ok(tensor.clone()),
+    }
+}
+
 impl LoRAWeight {
     pub fn new(buffer: Vec<u8>, device: &Device) -> Result<Self, candle_core::Error> {
         Ok(Self {
@@ -660,17 +675,21 @@ impl Weight for LoRAWeight {
         let scale = alpha.to_scalar::<f64>()? / dims[0] as f64;
 
         if dims.len() == 2 {
-            up.matmul(down)?.mul(scale)
+            to_compatible_dtype(up)?
+                .matmul(&to_compatible_dtype(down)?)?
+                .mul(scale)
         } else if dims[2] == 1 && dims[3] == 1 {
-            up.squeeze(3)?
+            to_compatible_dtype(up)?
+                .squeeze(3)?
                 .squeeze(2)?
-                .matmul(&down.squeeze(3)?.squeeze(2)?)?
+                .matmul(&to_compatible_dtype(down)?.squeeze(3)?.squeeze(2)?)?
                 .unsqueeze(2)?
                 .unsqueeze(3)?
                 .mul(scale)
         } else {
-            down.permute((1, 0, 2, 3))?
-                .conv2d(up, 0, 1, 1, 1)?
+            to_compatible_dtype(down)?
+                .permute((1, 0, 2, 3))?
+                .conv2d(&to_compatible_dtype(up)?, 0, 1, 1, 1)?
                 .permute((1, 0, 2, 3))?
                 .mul(scale)
         }
@@ -732,7 +751,7 @@ impl Weight for LoRAWeight {
             let t1_w1 = t1.mul(&one)?;
             let t2_w2 = t2.mul(&two)?;
 
-            t1_w1.matmul(&t2_w2)?.mul(scale)
+            t1_w1.matmul(&t2_w2)? * scale
         } else {
             let one = w1_a.matmul(w1_b)?;
             let two = w2_a.matmul(w2_b)?;
