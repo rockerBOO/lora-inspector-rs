@@ -41,7 +41,7 @@ dev-wasm:
 # Start a custom server (e.g., with CORS enabled) for development
 .PHONY: dev-wasm-cors
 dev-wasm-cors:
-	cd $(WASM_DIR) && python simple-cors-server.py
+	cd $(WASM_DIR) && yarn vite build && python simple-cors-server.py
 
 .PHONY: 
 wasm-bindgen-test: 
