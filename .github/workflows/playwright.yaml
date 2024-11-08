@@ -25,10 +25,8 @@ jobs:
     - name: Build WASM
       run: wasm-pack build --target web --out-dir pkg crates/lora-inspector-wasm --release
       working-directory: ./
-
     - name: Corepack
       run: corepack enable
-
     - name: Install dependencies
       run: yarn install --immutable
     - name: Install Playwright Browsers
