@@ -1,32 +1,40 @@
 # LoRA Inspector
 
-![Screenshot 2023-11-23 at 02-56-54 LoRA Inspector](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/64eb186a-414c-49b7-ad4b-0eb1567c0801)
+![home](https://github.com/user-attachments/assets/48bebf44-187c-4fd7-91a0-d8611a8092d3)
 
 [https://lora-inspector.rocker.boo/](https://lora-inspector.rocker.boo/)
 
 Rust version of [LoRA inspector](https://github.com/rockerBOO/lora-inspector)
 
+![lora-training-metadata](https://github.com/user-attachments/assets/b87df1b5-57f0-4cce-8dc4-2dc2ebc7780d)
+
 Web based tool for inspecting your LoRAs. All done in the browser, no servers. Private. No dependencies like torch or python.
 
-![Screenshot 2023-12-05 at 03-50-31 LoRA Inspector](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/344cea55-9b1e-4321-93c8-3e3ddc70a9d2)
+![block-weight-norms](https://github.com/user-attachments/assets/363239b3-3cba-4b97-83b8-d2fa0557f8c9)
 
 See the different blocks of the different networks. Ideally uses the more common format but still good to see how the weights are effectively. We use Frobenius norm for the magnitude and a vector norm for the strength.
 
-![Screenshot 2023-12-05 at 03-33-38 LoRA Inspector](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/e128240f-ef1a-4c6c-a019-4548e57892e9)
+![lora-network-module-metadata](https://github.com/user-attachments/assets/cee5b3cc-6c39-478a-aa68-cb95b2a0aa83)
+
+![learning-rate-metadata](https://github.com/user-attachments/assets/06609fd7-394f-4bd7-9cba-27f9539aabf7)
 
 See the different settings for the LoRA file. What model it was trained on. Any VAE. Network Dim/Rank and Alpha. Learning rates. Optimizer settings, learning rate schedulers.
 
-![8efa06b5-4b86-4ffb-bf19-8842eaed5503](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/0df99556-73bf-4e2b-a576-2e2f0693377e)
+![epoch-dataset-steps](https://github.com/user-attachments/assets/aa6e3b9a-4ebb-458a-b0dd-ef07d640ac60)
 
 Dataset with buckets. Bucket resolutions.
 
-![aef217c2-59a2-40c1-b2a3-bef3df800895](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/26c8daec-353c-45da-a6a2-1e6a791dbf42)
+![dataset-subset-metadata](https://github.com/user-attachments/assets/6d3a135d-51fa-4a6d-b9a5-f1a0322a36c3)
 
 Subsets showing the different subset datasets, image augments, captions.
 
 ![c2182030-8b1f-4eff-8007-3feafa60b577](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/cff02f1b-5f75-48ba-a126-3f781bcb1005)
 
 Tags used (tags are phrases separated by , )
+
+
+
+
 
 - WASM version
 - Binary (coming soon)
