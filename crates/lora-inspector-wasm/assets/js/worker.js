@@ -51,6 +51,7 @@ async function init_wasm_in_worker() {
       if (e.data.messageType === "file_upload") {
         fileUploadHandler(e);
       } else if (e.data.messageType === "unload") {
+        console.log("Unloading", e.data);
         unloadWorker(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
@@ -130,7 +131,7 @@ async function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weights") {
-        scaleWeights(e).then((baseNames) => {
+        scaleWeights(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weights",
@@ -138,7 +139,7 @@ async function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weights_with_progress") {
-        iterScaleWeights(e).then((baseNames) => {
+        iterScaleWeights(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weights_with_progress",
@@ -146,7 +147,7 @@ async function init_wasm_in_worker() {
           }
         });
       } else if (e.data.messageType === "scale_weight") {
-        scaleWeight(e).then((baseNames) => {
+        scaleWeight(e).then(() => {
           if (e.data.reply) {
             self.postMessage({
               messageType: "scale_weight",
@@ -237,6 +238,8 @@ async function init_wasm_in_worker() {
             });
           }
         });
+      } else {
+        console.log("Unhandled input on worker", e.data);
       }
     };
   });

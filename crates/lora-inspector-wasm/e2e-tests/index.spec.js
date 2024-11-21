@@ -8,6 +8,9 @@ test("has title", async ({ page }) => {
 });
 
 test("test", async ({ page }) => {
+  page.on("pageerror", (error) => {
+    console.error("Page error:", error.message);
+  });
   await page.goto("/");
   // await page.getByText("Choose a file").click();
 
@@ -19,37 +22,52 @@ test("test", async ({ page }) => {
   // console.log(file.suggestedFilename());
 
   // Click on <strong> "Choose a file"
-  // await page.click('text=Choose a file');
-  //
-  await page.evaluate(() => {
-    const hiddenInput = document.getElementById("file");
-    if (hiddenInput) {
-      // Modify CSS properties to make the element visible
-      hiddenInput.style.display = "block";
-    }
-  });
+  // await page.click('text=Choose a safetensors file');
 
+  // await page.evaluate(() => {
+  //   const hiddenInput = document.getElementById("file");
+  //   if (hiddenInput) {
+  //     // Modify CSS properties to make the element visible
+  //     hiddenInput.style.display = "block";
+  //   }
+  // });
+  // Check if the page navigates or if any JavaScript errors occur
+
+  // await page.getByText("Choose a safetensors file").click();
+
+  // Wait for the file chooser to appear
   // const [fileChooser] = await Promise.all([
-  //    // It is important to call waitForEvent before click to set up waiting.
-  //    page.waitForEvent('filechooser'),
-  //    // Opens the file chooser.
-  //    ,
-  //  ])
+  //   page.waitForEvent('filechooser'),
+  //   page.getByText("Choose a safetensors file").click(), // This might need to be checked
+  // ]);
+  //
+  // await page.waitForTimeout(500);
+  //
+  //  // Wait for the file input to be visible
+  //  await expect(page.locator("#file")).toBeVisible();
+  //
+  //  // Wait for the file input to be ready
+  //  const [fileChooser] = await Promise.all([
+  //    page.waitForEvent('filechooser'), // Wait for the file chooser to appear
+  //    page.getByRole("#file").click() // Click to open it
+  //  ]);
+  //
+  //  // Set the file directly using the file chooser
+  //  await fileChooser.setFiles("boo.safetensors"); // Make sure the path is correct
+  await page.getByText("Choose a safetensors file").click();
 
-  page.on("filechooser", (fileChooser) => {
-    fileChooser.setFiles(["boo.safetensors"]);
-  });
+  await page.locator("#file").setInputFiles("boo.safetensors");
 
-	await page.getByText("Choose a file").click();
+  // Check the selected file
+  const inputValue = await page.locator("#file").inputValue();
+  console.log('Selected file:', inputValue);
 
-  // await expect(page.locator(".box__input input")).toBeVisible();
+  // Optionally, add a short wait to allow processing time
+  await page.waitForTimeout(1000);
 
-  // await page.locator("#file").setInputFiles("boo.safetensors");
-  // await fileChooser.setFiles(["boo.safetensors"]);
+  // // Set the file
 
-  await expect(page.locator("#network-rank")).toContainText("4", {
-    timeout: 10000,
-  });
+  await expect(page.locator("#network-rank")).toContainText("4", {});
   await expect(page.locator("#network-alpha")).toContainText("4.0");
   await expect(page.locator("#network-module")).toContainText("kohya-ss/lora");
   await expect(page.locator("#network-type")).toContainText("LoRA");

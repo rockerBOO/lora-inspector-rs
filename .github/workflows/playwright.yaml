@@ -1,9 +1,13 @@
 name: Playwright Tests
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+    paths:
+    - 'crates/lora-inspector-wasm/**'
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+    paths:
+    - 'crates/lora-inspector-wasm/**'
 jobs:
   test:
     timeout-minutes: 60
@@ -12,8 +16,8 @@ jobs:
       run:
         working-directory: ./crates/lora-inspector-wasm
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: lts/*
     - name: Install rust
@@ -21,10 +25,8 @@ jobs:
     - name: Build WASM
       run: wasm-pack build --target web --out-dir pkg crates/lora-inspector-wasm --release
       working-directory: ./
-
     - name: Corepack
       run: corepack enable
-
     - name: Install dependencies
       run: yarn install --immutable
     - name: Install Playwright Browsers
@@ -32,8 +34,8 @@ jobs:
     - name: Run Playwright tests
       run: yarn playwright test
     - uses: actions/upload-artifact@v3
-      if: always()
+      if: ${{ !cancelled() }}
       with:
         name: playwright-report
-        path: playwright-report/
+        path: crates/lora-inspector-wasm/playwright-report/
         retention-days: 30

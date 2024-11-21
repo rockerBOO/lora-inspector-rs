@@ -10,8 +10,56 @@ function Header({ metadata }) {
 }
 
 function ModelSpec({ metadata }) {
+  const training = [
+    h("div", { className: "row space-apart", key: "training_timings" }, [
+      metadata.has("ss_training_started_at") &&
+        h(MetaAttribute, {
+          key: "started_at",
+          name: "Started",
+          value: new Date(
+            metadata.get("ss_training_started_at") * 1000,
+          ).toString(),
+        }),
+      metadata.has("ss_training_finished_at") &&
+        h(MetaAttribute, {
+          key: "finished_at",
+          name: "Finished",
+          value: new Date(
+            metadata.get("ss_training_finished_at") * 1000,
+          ).toString(),
+        }),
+      metadata.has("ss_training_finished_at") &&
+        h(MetaAttribute, {
+          key: "elapsed_at",
+          name: "Elapsed",
+          value: `${(
+            (metadata.get("ss_training_finished_at") -
+              metadata.get("ss_training_started_at")) /
+            60
+          ).toPrecision(4)} minutes`,
+        }),
+    ]),
+
+    h(
+      "div",
+      { className: "row space-apart", key: "training_comments" },
+      metadata.has("ss_training_comment") &&
+        h(
+          "div",
+          {
+            key: "training_comment",
+            className: "row space-apart",
+          },
+          h(MetaAttribute, {
+            name: "Training comment",
+            value: metadata.get("ss_training_comment"),
+          }),
+        ),
+    ),
+  ];
+
   if (!metadata.has("modelspec.title")) {
-    return null;
+    return training;
   }
 
   return h(
@@ -53,16 +101,7 @@ function ModelSpec({ metadata }) {
         key: "tags",
       }),
     ]),
-
-    metadata.has("ss_training_comment") &&
-      h(
-        "div",
-        { className: "row space-apart" },
-        h(MetaAttribute, {
-          name: "Training comment",
-          value: metadata.get("ss_training_comment"),
-        }),
-      ),
+    training,
   );
 }
 
@@ -336,13 +375,11 @@ function BOFTNetwork({ metadata }) {
       setDims(resp.dims);
     });
   }, []);
-  return [
-    h(MetaAttribute, {
-      name: "Network factor",
-      valueClassName: "rank",
-      value: dims.join(", "),
-    }),
-  ];
+  return h(MetaAttribute, {
+    name: "Network factor",
+    valueClassName: "rank",
+    value: dims.join(", "),
+  });
 }
 
 function LoKrNetwork({ metadata }) {
@@ -538,6 +575,17 @@ function Weight({ metadata, filename }) {
           valueClassName: "number",
           value: metadata.get("ss_full_fp16"),
         }),
+      metadata.has("ss_full_bf16") &&
+        h(MetaAttribute, {
+          name: "Full bf16",
+          valueClassName: "number",
+          value: metadata.get("ss_full_bf16"),
+        }),
+      h(MetaAttribute, {
+        name: "fp8 base",
+        valueClassName: "number",
+        value: metadata.get("ss_fp8_base"),
+      }),
     ),
     h(Blocks, { key: "blocks", metadata, filename }),
   ];
@@ -618,7 +666,7 @@ function Blocks({ filename }) {
     });
 
     return function cleanup() {};
-  }, [hasBlockWeights]);
+  }, [filename, hasBlockWeights]);
 
   React.useEffect(() => {
     trySyncMessage(
@@ -652,7 +700,7 @@ function Blocks({ filename }) {
         // });
       }
     });
-  }, []);
+  }, [filename]);
 
   React.useEffect(() => {
     if (!teChartRef.current && !unetChartRef.current) {
@@ -665,7 +713,7 @@ function Blocks({ filename }) {
         labels: dataset.map(([k, _]) => k),
         // Our series array that contains series objects or in this case series data arrays
         series: [
-          dataset.map(([_k, v]) => v["mean"]),
+          dataset.map(([_k, v]) => v.mean),
           // dataset.map(([k, v]) => strBlocks.get(k)),
         ],
       };
@@ -689,27 +737,25 @@ function Blocks({ filename }) {
           // scaleMinSpace: 100,
           // position: "end",
         },
-        // plugins: [
-        //   Chartist.plugins.ctPointLabels({
-        //     labelOffset: {
-        //       x: 10,
-        //       y: -10,
-        //     },
-        //     textAnchor: "middle",
-        //     labelInterpolationFnc: function (value) {
-        //       return value.toPrecision(4);
-        //     },
-        //   }),
-        // ],
+        plugins: [
+          Chartist.plugins.ctPointLabels({
+            labelOffset: {
+              x: 10,
+              y: -10,
+            },
+            textAnchor: "middle",
+            labelInterpolationFnc: (value) => value.toPrecision(4),
+          }),
+        ],
       });
 
       let seq = 0;
 
       // Once the chart is fully created we reset the sequence
-      chart.on("created", function () {
+      chart.on("created", () => {
         seq = 0;
       });
-      chart.on("draw", function (data) {
+      chart.on("draw", (data) => {
         if (data.type === "point") {
           // If the drawn element is a line we do a simple opacity fade in. This could also be achieved using CSS3 animations.
           data.element.animate({
@@ -739,14 +785,14 @@ function Blocks({ filename }) {
     if (teMagBlocks.size > 0) {
       makeChart(
         // We are removing elements that are 0 because they cause the chart to find them as undefined
-        Array.from(teMagBlocks).filter(([_k, v]) => v["mean"] !== 0),
+        Array.from(teMagBlocks).filter(([_k, v]) => v.mean !== 0),
         teChartRef,
       );
     }
     if (unetMagBlocks.size > 0) {
       makeChart(
         // We are removing elements that are 0 because they cause the chart to find them as undefined
-        Array.from(unetMagBlocks).filter(([_k, v]) => v["mean"] !== 0),
+        Array.from(unetMagBlocks).filter(([_k, v]) => v.mean !== 0),
         unetChartRef,
       );
     }
@@ -759,7 +805,6 @@ function Blocks({ filename }) {
       "Block weights not supported for this network type or precision.",
     );
   }
-
   if (!hasBlockWeights) {
     return h(
       "div",
@@ -770,7 +815,7 @@ function Blocks({ filename }) {
           className: "primary",
           onClick: (e) => {
             e.preventDefault();
-            setHasBlockWeights((state) => (state ? false : true));
+            setHasBlockWeights((state) => state);
           },
         },
         "Get block weights",
@@ -811,8 +856,8 @@ function Blocks({ filename }) {
               // }),
               h(MetaAttribute, {
                 className: "te-block",
-                name: `${k} avg l2 norm ${v["metadata"]["type"]}`,
-                value: v["mean"].toPrecision(6),
+                name: `${k} avg l2 norm ${v.metadata.type}`,
+                value: v.mean.toPrecision(6),
                 valueClassName: "number",
               }),
             );
@@ -840,8 +885,8 @@ function Blocks({ filename }) {
             // }),
             h(MetaAttribute, {
               className: "unet-block",
-              name: `${k} avg l2 norm  ${v["metadata"]["type"]}`,
-              value: v["mean"].toPrecision(6),
+              name: `${k} avg l2 norm  ${v.metadata.type}`,
+              value: v.mean.toPrecision(6),
               valueClassName: "number",
             }),
           );
@@ -921,7 +966,7 @@ function Batch({ metadata }) {
 
       for (const dataset of datasets) {
         if ("batch_size_per_device" in dataset) {
-          batchSize = dataset["batch_size_per_device"];
+          batchSize = dataset.batch_size_per_device;
         }
       }
     }
@@ -961,11 +1006,12 @@ function Noise({ metadata }) {
       name: "IP noise gamma",
       valueClassName: "number",
       value: metadata.get("ss_ip_noise_gamma"),
-      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
         secondaryName: "Random strength:",
-        secondary: metadata.get("ss_ip_noise_gamma_random_strength")
-          ? "True"
-          : "False",
+        secondary:
+          metadata.get("ss_ip_noise_gamma_random_strength") === "True"
+            ? "True"
+            : "False",
         // secondaryClassName: "number",
       }),
     }),
@@ -973,11 +1019,12 @@ function Noise({ metadata }) {
       name: "Noise offset",
       valueClassName: "number",
       value: metadata.get("ss_noise_offset"),
-      ...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+      ...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
         secondaryName: "Random strength:",
-        secondary: metadata.get("ss_noise_offset_random_strength")
-          ? "True"
-          : "False",
+        secondary:
+          metadata.get("ss_noise_offset_random_strength") === "True"
+            ? "True"
+            : "False",
         // secondaryClassName: "number",
       }),
     }),
@@ -1047,7 +1094,7 @@ function Loss({ metadata }) {
       valueClassName: "boolean",
       value: metadata.get("ss_zero_terminal_snr"),
     }),
-    metadata.has("ss_masked_loss") != undefined &&
+    metadata.has("ss_masked_loss") !== undefined &&
       h(MetaAttribute, {
         name: "Masked Loss",
         value: metadata.get("ss_masked_loss"),
@@ -1109,22 +1156,22 @@ function Buckets({ dataset, metadata }) {
       { key: "buckets", className: "row space-apart" },
       h(MetaAttribute, {
         name: "Buckets",
-        value: dataset["enable_bucket"] ? "True" : "False",
+        value: dataset.enable_bucket ? "True" : "False",
       }),
       h(MetaAttribute, {
         name: "Min bucket resolution",
         valueClassName: "number",
-        value: dataset["min_bucket_reso"],
+        value: dataset.min_bucket_reso,
       }),
       h(MetaAttribute, {
         name: "Max bucket resolution",
         valueClassName: "number",
-        value: dataset["max_bucket_reso"],
+        value: dataset.max_bucket_reso,
       }),
       h(MetaAttribute, {
         name: "Resolution",
         valueClassName: "number",
-        value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
+        value: `${dataset.resolution[0]}x${dataset.resolution[0]}`,
       }),
     ),
 
@@ -1137,9 +1184,9 @@ function Buckets({ dataset, metadata }) {
     h(
       "div",
       { key: "subsets", className: "subsets" },
-      dataset["subsets"].map((subset, i) =>
+      dataset.subsets.map((subset, i) =>
         h(Subset, {
-          key: `subset-${subset["image_dir"]}-${i}`,
+          key: `subset-${subset.image_dir}-${i}`,
           metadata,
           subset,
         }),
@@ -1149,7 +1196,7 @@ function Buckets({ dataset, metadata }) {
     h(
       "div",
       { key: "tag-frequencies", className: "tag-frequencies row space-apart" },
-      Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
+      Object.entries(dataset.tag_frequency).map(([dir, frequency]) =>
         h(
           "div",
           { key: dir },
@@ -1167,25 +1214,25 @@ function Buckets({ dataset, metadata }) {
 
 function BucketInfo({ metadata, dataset }) {
   // No bucket info
-  if (!dataset["bucket_info"]) {
+  if (!dataset.bucket_info) {
     return;
   }
 
   // No buckets data
-  if (!dataset["bucket_info"]["buckets"]) {
+  if (!dataset.bucket_info.buckets) {
     return;
   }
 
   return h("div", { className: "bucket-infos" }, [
-    Object.entries(dataset["bucket_info"]["buckets"]).map(([key, bucket]) => {
+    Object.entries(dataset.bucket_info.buckets).map(([key, bucket]) => {
       return h(
         "div",
         { key, className: "bucket" },
         h(MetaAttribute, {
           name: `Bucket ${key}`,
-          value: `${bucket["resolution"][0]}x${bucket["resolution"][1]}: ${
-            bucket["count"]
-          } image${bucket["count"] > 1 ? "s" : ""}`,
+          value: `${bucket.resolution[0]}x${bucket.resolution[1]}: ${
+            bucket.count
+          } image${bucket.count > 1 ? "s" : ""}`,
         }),
       );
     }),
@@ -1193,14 +1240,14 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-  const tf = (v, defaults = undefined, opts) => {
+  const tf = (v, defaults = undefined, opts = {}) => {
     let className = "";
     if (v === true) {
       if (v !== defaults) {
         className = "changed";
       }
       return {
-        valueClassName: opts?.valueClassName ?? "" + " option " + className,
+        valueClassName: opts?.valueClassName ?? ` option ${className}`,
         value: "true",
       };
     }
@@ -1208,7 +1255,7 @@ function Subset({ subset, metadata }) {
       className = "changed";
     }
     return {
-      valueClassName: opts?.valueClassName ?? "" + " option " + className,
+      valueClassName: opts?.valueClassName ?? ` option ${className}`,
       value: "false",
     };
   };
@@ -1218,71 +1265,71 @@ function Subset({ subset, metadata }) {
     { className: "subset row space-apart" },
     h(MetaAttribute, {
       name: "Image count",
-      value: subset["img_count"],
+      value: subset.img_count,
       valueClassName: "number",
     }),
     h(MetaAttribute, {
       name: "Image dir",
-      value: subset["image_dir"],
+      value: subset.image_dir,
       valueClassName: "",
     }),
     h(MetaAttribute, {
       name: "Flip augmentation",
-      ...tf(subset["flip_aug"], false),
+      ...tf(subset.flip_aug, false),
     }),
     h(MetaAttribute, {
       name: "Color augmentation",
-      ...tf(subset["color_aug"], false),
+      ...tf(subset.color_aug, false),
     }),
     h(MetaAttribute, {
       name: "Num repeats",
-      value: subset["num_repeats"],
+      value: subset.num_repeats,
       valueClassName: "number",
     }),
     h(MetaAttribute, {
       name: "Is regularization",
-      ...tf(subset["is_reg"], false),
+      ...tf(subset.is_reg, false),
     }),
-    h(MetaAttribute, { name: "Class token", value: subset["class_tokens"] }),
+    h(MetaAttribute, { name: "Class token", value: subset.class_tokens }),
     h(MetaAttribute, {
       name: "Keep tokens",
-      value: subset["keep_tokens"],
+      value: subset.keep_tokens,
       valueClassName: "number",
     }),
     "keep_tokens_separator" in subset &&
       h(MetaAttribute, {
         name: "Keep tokens separator",
-        value: subset["keep_tokens_separator"],
+        value: subset.keep_tokens_separator,
       }),
     "caption_separator" in subset &&
       h(MetaAttribute, {
         name: "Caption separator",
-        value: subset["caption_separator"],
+        value: subset.caption_separator,
       }),
     "secondary_separator" in subset &&
       h(MetaAttribute, {
         name: "Secondary separator",
-        value: subset["secondary_separator"],
+        value: subset.secondary_separator,
       }),
     "enable_wildcard" in subset &&
       h(MetaAttribute, {
         name: "Enable wildcard",
-        ...tf(subset["enable_wildcard"], false),
+        ...tf(subset.enable_wildcard, false),
       }),
     "shuffle_caption" in subset &&
       h(MetaAttribute, {
         name: "Shuffle caption",
-        ...tf(subset["shuffle_caption"], false),
+        ...tf(subset.shuffle_caption, false),
       }),
     "caption_prefix" in subset &&
       h(MetaAttribute, {
         name: "Caption prefix",
-        value: subset["caption_prefix"],
+        value: subset.caption_prefix,
       }),
     "caption_suffix" in subset &&
       h(MetaAttribute, {
         name: "Caption suffix",
-        value: subset["caption_suffix"],
+        value: subset.caption_suffix,
       }),
   );
 }
@@ -1291,14 +1338,14 @@ function TagFrequency({ tagFrequency, metadata }) {
   const [showMore, setShowMore] = React.useState(false);
 
   const allTags = Object.entries(tagFrequency).sort((a, b) => a[1] < b[1]);
-  const sortedTags = showMore == false ? allTags.slice(0, 50) : allTags;
+  const sortedTags = showMore === false ? allTags.slice(0, 50) : allTags;
 
   return [
     sortedTags.map(([tag, count], i) => {
       const alt = i % 2 > 0 ? " alt-row" : "";
       return h(
         "div",
-        { className: "tag-frequency" + alt, key: tag },
+        { className: `tag-frequency${alt}`, key: tag },
         h("div", {}, count),
         h("div", {}, tag),
       );
@@ -1380,7 +1427,7 @@ function Advanced({ metadata, filename }) {
         setAllKeys(resp.keys);
       },
     );
-  }, []);
+  }, [filename]);
 
   React.useEffect(() => {
     trySyncMessage(
@@ -1407,18 +1454,18 @@ function Advanced({ metadata, filename }) {
           },
           filename,
         ).then((resp) => {
-          if (resp.precision == "bf16") {
+          if (resp.precision === "bf16") {
             setCanHaveStatistics(false);
           }
         });
       }
     });
-  }, []);
+  }, [filename]);
 
   if (DEBUG) {
     React.useEffect(() => {
       advancedRef.current.scrollIntoView({ behavior: "smooth" });
-    }, []);
+    }, [advancedRef.current.scrollIntoView]);
   }
 
   return [
@@ -1547,7 +1594,7 @@ function Statistics({ baseNames, filename }) {
     });
     // });
     // });
-  }, [calcStatistics, baseNames]);
+  }, [filename, calcStatistics, baseNames]);
 
   React.useEffect(() => {
     if (!calcStatistics) {
@@ -1577,7 +1624,7 @@ function Statistics({ baseNames, filename }) {
     );
 
     return function cleanup() {};
-  }, [calcStatistics]);
+  }, [filename, baseNames.length, calcStatistics]);
 
   if (!hasStatistics && !calcStatistics) {
     return h(
@@ -1674,7 +1721,7 @@ function Statistics({ baseNames, filename }) {
                 "bases",
                 bases.map((v) => ({
                   ...v,
-                  stat: Object.fromEntries(v["stat"]),
+                  stat: Object.fromEntries(v.stat),
                 })),
               );
             },
@@ -1728,152 +1775,6 @@ function compileTextEncoderLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  // return [
-  //   {
-  //     mlp: {
-  //       fc1: 0.08874939821570828,
-  //       fc2: 0.05158995647743977,
-  //     },
-  //     attn: {
-  //       k: 0.04563352340448522,
-  //       out: 0.026101619710240453,
-  //       q: 0.046494255017048534,
-  //       v: 0.03780647423398955,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.12399202308592269,
-  //       fc2: 0.03210216086766441,
-  //     },
-  //     attn: {
-  //       k: 0.025577711354884597,
-  //       out: 0.026762534720483375,
-  //       q: 0.024220520916595146,
-  //       v: 0.04206973022947387,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.07114190129556483,
-  //       fc2: 0.03149272871458899,
-  //     },
-  //     attn: {
-  //       k: 0.04921840851517207,
-  //       out: 0.03451791010418351,
-  //       q: 0.04933284289751113,
-  //       v: 0.03181333654645837,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.09089861052045024,
-  //       fc2: 0.036574718216460855,
-  //     },
-  //     attn: {
-  //       k: 0.027225555334912124,
-  //       out: 0.035934416130131236,
-  //       q: 0.04121116314738675,
-  //       v: 0.02635890848588376,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.11041730547456188,
-  //       fc2: 0.03660948051587213,
-  //     },
-  //     attn: {
-  //       k: 0.02081813800317196,
-  //       out: 0.03266481012845906,
-  //       q: 0.03326618360212101,
-  //       v: 0.04313162519570171,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.09382505505569123,
-  //       fc2: 0.04881491512305284,
-  //     },
-  //     attn: {
-  //       k: 0.027084868460153178,
-  //       out: 0.02916151803845624,
-  //       q: 0.030878825945429452,
-  //       v: 0.03581210590498464,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.16926477249623614,
-  //       fc2: 0.060107987530549974,
-  //     },
-  //     attn: {
-  //       k: 0.021157331055974435,
-  //       out: 0.038227226907503555,
-  //       q: 0.02008383666415178,
-  //       v: 0.03220566378701195,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.18332479856218353,
-  //       fc2: 0.07735364019766472,
-  //     },
-  //     attn: {
-  //       k: 0.052471287828089935,
-  //       out: 0.04615887378544053,
-  //       q: 0.05866832936442163,
-  //       v: 0.05664404590023604,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.1707969344954549,
-  //       fc2: 0.09448986346023289,
-  //     },
-  //     attn: {
-  //       k: 0.030359661684254257,
-  //       out: 0.056143544527776396,
-  //       q: 0.025398295302331834,
-  //       v: 0.06037875987513326,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.17792257660064115,
-  //       fc2: 0.114627288229075,
-  //     },
-  //     attn: {
-  //       k: 0.03419246336571407,
-  //       out: 0.05962438148295599,
-  //       q: 0.07194235688840948,
-  //       v: 0.05362023547165919,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.20935853343383742,
-  //       fc2: 0.11889095484740982,
-  //     },
-  //     attn: {
-  //       k: 0.04287766335118002,
-  //       out: 0.0655448747177529,
-  //       q: 0.04876705274789889,
-  //       v: 0.07943745730205916,
-  //     },
-  //   },
-  //   {
-  //     mlp: {
-  //       fc1: 0.24074216424406336,
-  //       fc2: 0.11492956004568068,
-  //     },
-  //     attn: {
-  //       k: 0.028727625051787244,
-  //       out: 0.06771910506228172,
-  //       q: 0.02736007475905027,
-  //       v: 0.10721855772929091,
-  //     },
-  //   },
-  // ];
   const re =
     /lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
@@ -1890,7 +1791,6 @@ function compileTextEncoderLayers(bases) {
       const subType = match.groups.sub_type;
 
       const layerKey = layerType === "self_attn" ? "attn" : "mlp";
-      let value;
       let subKey;
 
       switch (subType) {
@@ -1952,8 +1852,8 @@ function parseSDKey(key) {
   let isConv = false;
   let isAttention = false;
   let isSampler = false;
-  let isProjection = false;
-  let isFeedForward = false;
+  const isProjection = false;
+  const isFeedForward = false;
 
   let type;
   let blockType;
@@ -1967,8 +1867,8 @@ function parseSDKey(key) {
     if (matches) {
       const groups = matches.groups;
       type = "encoder";
-      blockId = parseInt(groups["block_id"]);
-      blockType = groups["block_type"];
+      blockId = Number.parseInt(groups.block_id);
+      blockType = groups.block_type;
 
       name = `TE${padTwo(blockId)}`;
 
@@ -1982,54 +1882,52 @@ function parseSDKey(key) {
     if (matches) {
       const groups = matches.groups;
 
-      type = groups["type"];
-      blockType = groups["block_type"];
-      blockId = parseInt(groups["block_id"]);
-      subBlockId = parseInt(groups["subblock_id"]);
+      type = groups.type;
+      blockType = groups.block_type;
+      blockId = Number.parseInt(groups.block_id);
+      subBlockId = Number.parseInt(groups.subblock_id);
 
       // console.log(groups["block_id"]);
 
-      if (groups["type"] === "attentions") {
+      if (groups.type === "attentions") {
         idx = 3 * blockId + subBlockId;
         isAttention = true;
-      } else if (groups["type"] === "resnets") {
+      } else if (groups.type === "resnets") {
         idx = 3 * blockId + subBlockId;
         isConv = true;
       } else if (
-        groups["type"] === "upsamplers" ||
-        groups["type"] === "downsamplers"
+        groups.type === "upsamplers" ||
+        groups.type === "downsamplers"
       ) {
         idx = 3 * blockId + 2;
         isSampler = true;
       }
 
-      // console.log("block_type", groups["block_type"]);
-
-      if (groups["block_type"] === "down") {
+      if (groups.block_type === "down") {
         blockIdx = 1 + idx;
         name = `IN${padTwo(idx)}`;
-      } else if (groups["block_type"] === "up") {
+      } else if (groups.block_type === "up") {
         blockIdx = NUM_OF_BLOCKS + 1 + idx;
         name = `OUT${padTwo(idx)}`;
-      } else if (groups["block_type"] === "mid") {
+      } else if (groups.block_type === "mid") {
         blockIdx = NUM_OF_BLOCKS;
       }
       // Handle the mid block
     } else if (key.includes("mid_block_")) {
       const midMatch = key.match(MID_SDRE);
-      name = `MID`;
+      name = "MID";
 
       if (midMatch) {
         const groups = midMatch.groups;
 
-        type = groups["type"];
-        blockType = groups["block_type"];
-        blockId = parseInt(groups["block_id"]);
-        subBlockId = parseInt(groups["subblock_id"]);
+        type = groups.type;
+        blockType = groups.block_type;
+        blockId = Number.parseInt(groups.block_id);
+        subBlockId = Number.parseInt(groups.subblock_id);
 
         name = `MID${padTwo(blockId)}`;
 
-        if (groups.type == "attentions") {
+        if (groups.type === "attentions") {
           isAttention = true;
         } else if (groups.type === "resnets") {
           isConv = true;
@@ -2078,168 +1976,8 @@ function compileUnetLayers(bases) {
   // we have a list of names and we want to extract the different components and put back together to use
   // with Attention
 
-  // return {
-  //   down: {
-  //     IN00: {
-  //       proj_in: 0.5835438035224952,
-  //       attn1: {
-  //         k: 0.7724846822186459,
-  //         q: 0.8470290780768107,
-  //         v: 0.5306325923819631,
-  //         out: 0.6966399804009704,
-  //       },
-  //       attn2: {
-  //         k: 2.820660007479423,
-  //         q: 1.1666530560013166,
-  //         v: 0.788413276490551,
-  //         out: 0.7739225866097094,
-  //       },
-  //       ff1: 2.8923656530518334,
-  //       ff2: 1.4149907236171593,
-  //       proj_out: 0.7232647789837462,
-  //       conv1: 0.7169271612272715,
-  //       conv2: 0.784292949111798,
-  //       time_emb_proj: 1.1519044797930735,
-  //     },
-  //     IN01: {
-  //       proj_in: 0.6407039401972426,
-  //       attn1: {
-  //         k: 0.7638138874376035,
-  //         q: 0.8438892577092059,
-  //         v: 0.5692621046551364,
-  //         out: 0.7930231090174562,
-  //       },
-  //       attn2: {
-  //         k: 1.8876336042150899,
-  //         q: 1.0693218042423827,
-  //         v: 1.3098261604459667,
-  //         out: 0.6458149416617049,
-  //       },
-  //       ff1: 2.586747191787799,
-  //       ff2: 1.4862982665952245,
-  //       proj_out: 0.8232362020418263,
-  //       conv1: 1.3327894552241408,
-  //       conv2: 1.3229192972339334,
-  //       time_emb_proj: 1.6733557758755002,
-  //     },
-  //     IN02: {
-  //       attn1: {},
-  //       attn2: {},
-  //       conv: 2.35427675751467,
-  //     },
-  //   },
-  //   mid: {},
-  //   up: {
-  //     OUT08: {
-  //       proj_in: 1.7769853066258527,
-  //       attn1: {
-  //         k: 4.772022244669916,
-  //         q: 4.008297087030857,
-  //         v: 2.1360581197918473,
-  //         out: 1.957634060338022,
-  //       },
-  //       attn2: {
-  //         k: 4.408301328593163,
-  //         q: 3.3735284340123792,
-  //         v: 1.4676879333177373,
-  //         out: 1.7915439777615563,
-  //       },
-  //       ff1: 9.172188318044737,
-  //       ff2: 3.638717008716509,
-  //       proj_out: 2.1340296767331397,
-  //       conv1: 6.416774669716237,
-  //       conv2: 3.1118551594311783,
-  //       conv_shortcut: 1.7328171138493016,
-  //       time_emb_proj: 5.685051613370558,
-  //       conv: 3.1030022051916775,
-  //     },
-  //     OUT09: {
-  //       proj_in: 0.7951332912669751,
-  //       attn1: {
-  //         k: 1.2786685525113588,
-  //         q: 1.4811242408744274,
-  //         v: 0.7510071869900969,
-  //         out: 0.9010832945689117,
-  //       },
-  //       attn2: {
-  //         k: 2.3476239220834954,
-  //         q: 1.44050725810973,
-  //         v: 0.8934114728460721,
-  //         out: 0.5778640528083228,
-  //       },
-  //       ff1: 3.3040693711947604,
-  //       ff2: 1.4768289033483628,
-  //       proj_out: 0.9967308251899586,
-  //       conv1: 3.056591979337983,
-  //       conv2: 1.2906941898525774,
-  //       conv_shortcut: 0.7425445422443783,
-  //       time_emb_proj: 1.924128192701365,
-  //     },
-  //     OUT10: {
-  //       proj_in: 0.6305214170387302,
-  //       attn1: {
-  //         k: 0.9343660072417308,
-  //         q: 1.013432606622726,
-  //         v: 0.6000705542423088,
-  //         out: 0.6296002281883292,
-  //       },
-  //       attn2: {
-  //         k: 2.8600073822587073,
-  //         q: 1.2318967798236578,
-  //         v: 0.6400245685661953,
-  //         out: 0.609398158974776,
-  //       },
-  //       ff1: 2.834280464365902,
-  //       ff2: 1.228979416115511,
-  //       proj_out: 0.8828615754836663,
-  //       conv1: 2.2751839253291393,
-  //       conv2: 0.9173411747213964,
-  //       conv_shortcut: 0.6309656205236726,
-  //       time_emb_proj: 2.824342966119458,
-  //     },
-  //     OUT11: {
-  //       proj_in: 0.5870043961700094,
-  //       attn1: {
-  //         k: 1.335164474060957,
-  //         q: 1.8194330761308897,
-  //         v: 0.794061194299154,
-  //         out: 0.6549539950277664,
-  //       },
-  //       attn2: {
-  //         k: 1.5748038833446982,
-  //         q: 1.3774989787665628,
-  //         v: 0.2612527544408402,
-  //         out: 0.4808003135439534,
-  //       },
-  //       ff1: 3.447681531040988,
-  //       ff2: 2.3266240441119534,
-  //       proj_out: 0.9813447720472999,
-  //       conv1: 1.4686158105766736,
-  //       conv2: 0.906270858910067,
-  //       conv_shortcut: 0.5799562447119877,
-  //       time_emb_proj: 3.145315279683768,
-  //     },
-  //   },
-  // };
-  const re =
-    /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
-
-  // const layers = [];
-  // console.log(bases);
-
-  // console.log(
-  //   "bases parsed",
-  //   bases.map((base) => parseSDKey(base)),
-  // );
-
-  // const layer = {
-  //   proj_in: 1,
-  //   attn1: { k: 1, q: 1, v: 1, out: 1 },
-  //   attn2: { k: 1, q: 1, v: 1, out: 1 },
-  //   ff1: 1,
-  //   ff2: 1,
-  //   proj_out: 1,
-  // };
+  // const re =
+  //   /lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
   const layers = {
     down: {},
@@ -2278,7 +2016,7 @@ function compileUnetLayers(bases) {
       continue;
     }
 
-    let parsedKey = parseSDKey(base.baseName);
+    const parsedKey = parseSDKey(base.baseName);
 
     // TODO need layer id
     layer = ensureLayer(layer, parsedKey.name);
@@ -2401,7 +2139,7 @@ function AllKeys({ allkeys }) {
     h(
       "ul",
       { key: "all-keys" },
-      allKeys.map((key) => {
+      allkeys.map((key) => {
         return h("li", { key }, key);
       }),
     ),
@@ -3156,16 +2894,15 @@ function Raw({ metadata, filename }) {
             onClick: () => {
               sortedEntries;
               const data =
-                "text/json;charset=utf-8," +
-                encodeURIComponent(JSON.stringify(sortedEntries, null, 2));
+                `text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(sortedEntries, null, 2))}`;
               const a = document.createElement("a");
-              a.href = "data:" + data;
+              a.href = `data:${data}`;
               a.download = `${filename.replace(
                 ".safetensors",
                 "",
               )}-metadata.json`;
 
-              var container = document.body;
+              const container = document.body;
               container.appendChild(a);
               a.click();
 
@@ -3218,12 +2955,116 @@ function Headline({ metadata, filename }) {
   }
 
   return h("div", { className: "headline" }, [
-    h("div", { key: "headline" }, [
-      h("div", { key: "lora file" }, "LoRA file"),
-      h("h1", { key: "filename" }, filename),
-    ]),
+    h("div", { key: "lora file" }, "LoRA file"),
+
     raw,
+    h("h1", { key: "filename" }, filename),
   ]);
+}
+
+function Support() {
+  const [modal, setModal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!modal) {
+      return;
+    }
+
+    function close(e) {
+      // escape
+      if (e.keyCode === 27) {
+        setModal(false);
+
+        window.removeEventListener("keydown", close);
+      }
+    }
+    window.addEventListener("keydown", close);
+
+    return function cleanup() {
+      window.removeEventListener("keydown", close);
+    };
+  }, [modal]);
+
+  if (modal) {
+    return h(
+      "div",
+      { className: "modal" },
+      h(
+        "div",
+        {},
+        h(
+          "div",
+          { style: { textAlign: "right", padding: "1em" } },
+          h(
+            "button",
+            {
+              onClick: () => {
+                setModal(false);
+              },
+            },
+            "Close",
+          ),
+        ),
+        h(
+          "p",
+          { className: "primary-text" },
+          "Primary support through ",
+          h(
+            "a",
+            {
+              href: "https://github.com/rockerBOO/lora-inspector-rs/issues",
+              target: "_blank",
+            },
+
+            "Github Issues",
+          ),
+        ),
+        h(
+          "p",
+          { className: "primary-text" },
+          "Looking to give support for this project? Through ",
+          h(
+            "a",
+            {
+              href: "https://github.com/sponsors/rockerBOO",
+              target: "_blank",
+            },
+            "Github Sponsors",
+          ),
+        ),
+        h(
+          "p",
+          { className: "primary-text" },
+          "Come see the source code over on ",
+          h(
+            "a",
+            {
+              href: "https://github.com/rockerBOO/lora-inspector-rs",
+              target: "_blank",
+            },
+            "Github (lora-inspector-rs)",
+          ),
+        ),
+        h(
+          "p",
+          {
+            className: "primary-text",
+          },
+          "Thank you for your support! - Dave (rockerBOO)",
+        ),
+      ),
+    );
+  }
+
+  return h(
+    "button",
+    {
+      onClick: () => {
+        setModal(modal);
+      },
+    },
+    "Support",
+  );
 }
 
 function NoMetadata({ filename }) {
@@ -3248,33 +3089,8 @@ function Metadata({ metadata, filename }) {
   ];
 }
 
-// async function getAverageMagnitude(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_magnitude(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-// async function getAverageStrength(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_strength(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-
-const isAdvancedUpload = (function () {
-  var div = document.createElement("div");
+const isAdvancedUpload = (() => {
+  const div = document.createElement("div");
   return (
     ("draggable" in div || ("ondragstart" in div && "ondrop" in div)) &&
     "FormData" in window &&
@@ -3288,6 +3104,7 @@ if (isAdvancedUpload) {
 
 const dropbox = document.querySelector("#dropbox");
 
+// biome-ignore lint/complexity/noForEach: need to remove 
 [
   "drag",
   "dragstart",
@@ -3303,12 +3120,14 @@ const dropbox = document.querySelector("#dropbox");
   }),
 );
 
+// biome-ignore lint/complexity/noForEach: need to remove
 ["dragover", "dragenter"].forEach((evtName) => {
   dropbox.addEventListener(evtName, () => {
     dropbox.classList.add("is-dragover");
   });
 });
 
+// biome-ignore lint/complexity/noForEach: need to remove 
 ["dragleave", "dragend", "drop"].forEach((evtName) => {
   dropbox.addEventListener(evtName, () => {
     dropbox.classList.remove("is-dragover");
@@ -3324,8 +3143,6 @@ const dropbox = document.querySelector("#dropbox");
 const files = new Map();
 let mainFilename;
 
-// let worker = new Worker("./assets/js/worker.js", {});
-
 const workers = new Map();
 
 async function addWorker(file) {
@@ -3334,11 +3151,11 @@ async function addWorker(file) {
 
   workers.set(file, worker);
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const timeouts = [];
     const worker = workers.get(file);
 
-    worker.onmessage = (event) => {
+    worker.onmessage = () => {
       timeouts.map((timeout) => clearTimeout(timeout));
       worker.onmessage = undefined;
       resolve(worker);
@@ -3368,6 +3185,7 @@ function removeWorker(file) {
 }
 
 function clearWorkers() {
+  // biome-ignore lint/complexity/noForEach: <explanation>
   Array.from(workers.keys()).forEach((key) => {
     removeWorker(key);
   });
@@ -3379,42 +3197,43 @@ init().then(() => {
       e.preventDefault();
       e.stopPropagation();
 
-      const droppedFiles = e.dataTransfer.files;
-      for (let i = 0; i < droppedFiles.length; i++) {
-        if (files.item(i).type != "") {
-          addErrorMessage("Invalid filetype. Try a .safetensors file.");
-          continue;
-        }
-
-        processFile(droppedFiles.item(i));
+    const droppedFiles = e.dataTransfer.files;
+    for (let i = 0; i < droppedFiles.length; i++) {
+      if (files.item(i).type !== "") {
+        addErrorMessage("Invalid filetype. Try a .safetensors file.");
+        continue;
       }
-    });
+
+      processFile(droppedFiles.item(i));
+    }
   });
-
-  document
-    .querySelector("#file")
-    .addEventListener("change", async function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const files = e.target.files;
-
-      for (let i = 0; i < files.length; i++) {
-        if (files.item(i).type != "") {
-          addErrorMessage("Invalid filetype. Try a .safetensors file.");
-          continue;
-        }
-
-        processFile(files.item(i));
-      }
-    });
 });
+
+document.querySelector("#file").addEventListener("change", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const files = e.target.files;
+
+  for (let i = 0; i < files.length; i++) {
+    if (files.item(i).type !== "") {
+      addErrorMessage("Invalid filetype. Try a .safetensors file.");
+      continue;
+    }
+
+    processFile(files.item(i));
+  }
+});
+// });
 
 async function handleMetadata(metadata, filename) {
   dropbox.classList.remove("box__open");
   dropbox.classList.add("box__closed");
-  document.querySelector("#jumbo").classList.remove("jumbo__intro");
-  document.querySelector("#note").classList.add("hidden");
+  document.querySelector(".support").classList.remove("hidden");
+  document.querySelector(".home")?.classList.remove("home");
+  document.querySelector(".box").classList.remove("box__open");
+  document.querySelector(".box__intro").classList.add("hidden");
+  document.querySelector(".note").classList.add("hidden");
   const root = ReactDOM.createRoot(document.getElementById("results"));
   root.render(
     h(Metadata, {
@@ -3424,15 +3243,24 @@ async function handleMetadata(metadata, filename) {
   );
 }
 
+(() => {
+  const root = ReactDOM.createRoot(document.querySelector(".support"));
+  root.render(h(Support, {}));
+})();
+
 let uploadTimeoutHandler;
 
 async function processFile(file) {
   clearWorkers();
+  console.log("adding worker", file.name);
   const worker = await addWorker(file.name);
 
-  terminatePreviousProcessing(file.name);
+  // console.log("terminate", file.name)
+  //  terminatePreviousProcessing(file.name);
 
   mainFilename = undefined;
+
+  console.log("Uploading file", file.name);
 
   worker.postMessage({ messageType: "file_upload", file: file });
   processingMetadata = true;
@@ -3463,15 +3291,8 @@ async function processFile(file) {
         worker.postMessage({ messageType: "network_type", name: mainFilename });
         worker.postMessage({ messageType: "weight_keys", name: mainFilename });
         worker.postMessage({ messageType: "alpha_keys", name: mainFilename });
-        // trySyncMessage({ messageType: "keys", name: mainFilename }).then(
-        //   (keys) => {
-        //     console.log("keys", keys);
-        //   },
-        // );
         worker.postMessage({ messageType: "base_names", name: mainFilename });
         worker.postMessage({ messageType: "weight_norms", name: mainFilename });
-        // worker.postMessage({ messageType: "alphas", name: mainFilename });
-        // worker.postMessage({ messageType: "dims", name: mainFilename });
       });
       finishLoading();
     } else {
@@ -3505,11 +3326,11 @@ function cancelLoading(file) {
   clearTimeout(uploadTimeoutHandler);
 }
 
-window.addEventListener("keyup", (e) => {
-  if (e.key === "Escape") {
-    cancelLoading(file);
-  }
-});
+// window.addEventListener("keyup", (e) => {
+//   if (e.key === "Escape") {
+//     cancelLoading(file);
+//   }
+// });
 
 function loading(file) {
   const loadingEle = document.createElement("div");
@@ -3597,7 +3418,6 @@ async function trySyncMessage(message, file, matches = []) {
         const hasMatches =
           matches.filter((match) => e.data[match] === message[match]).length ===
           matches.length;
-        // console.log("hasMatches", hasMatches);
         if (hasMatches) {
           worker.removeEventListener("message", workerHandler);
           resolve(e.data);
@@ -3626,7 +3446,6 @@ async function listenProgress(messageType, file) {
 
   return async function* listen() {
     if (isFinished) {
-      console.log("IS FINISHEDD!!!");
       return;
     }
 

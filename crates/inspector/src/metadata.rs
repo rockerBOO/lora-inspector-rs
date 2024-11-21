@@ -69,6 +69,7 @@ impl Metadata {
                 }
             }),
             Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
+            Some(NetworkModule::KohyaSSLoRAFlux) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
             None => None,
@@ -93,6 +94,7 @@ impl Metadata {
             Some(Some(network_module)) => match network_module.as_str() {
                 "networks.lora" => Some(NetworkModule::KohyaSSLoRA),
                 "networks.lora_fa" => Some(NetworkModule::KohyaSSLoRAFA),
+                "networks.lora_flux" => Some(NetworkModule::KohyaSSLoRAFlux),
                 "networks.dylora" => Some(NetworkModule::KohyaSSDyLoRA),
                 "networks.oft" => Some(NetworkModule::KohyaSSOFT),
                 "lycoris.kohya" => Some(NetworkModule::Lycoris),
