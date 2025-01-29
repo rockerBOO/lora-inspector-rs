@@ -228,6 +228,9 @@ impl Weight for BufferedLoRAWeight {
     fn precision(&self) -> Option<DType> {
         self.buffered
             .tensors()
+            .iter()
+            .filter(|(k, _)| !k.contains("alpha"))
+            .collect::<Vec<_>>()
             .first()
             .map(|(_key, t)| t.dtype().into())
     }

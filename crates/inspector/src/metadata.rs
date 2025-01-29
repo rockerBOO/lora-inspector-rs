@@ -48,7 +48,7 @@ impl Metadata {
             Some(NetworkModule::KohyaSSLoRA) => match self.network_args() {
                 Some(network_args) => match network_args.conv_dim {
                     // We need to make the name for LoCon/Lo-Curious
-                    Some(_) => Some(NetworkType::LoRA),
+                    Some(_) => Some(NetworkType::LoRAC3Lier),
                     None => Some(NetworkType::LoRA),
                 },
                 None => Some(NetworkType::LoRA),
@@ -71,6 +71,8 @@ impl Metadata {
             Some(NetworkModule::KohyaSSLoRAFA) => Some(NetworkType::LoRAFA),
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
+            Some(NetworkModule::KohyaSSLoRAFlux) => Some(NetworkType::LoRA),
+            Some(NetworkModule::KohyaSSLoRASD3) => Some(NetworkType::LoRA),
             None => None,
         }
     }
@@ -84,14 +86,19 @@ impl Metadata {
     }
 
     pub fn rank_stabilized(&self) -> Option<bool> {
-        self.network_args()
-            .map(|network_args| network_args.rs_lora.unwrap_or(false))
+        self.network_args().map(|network_args| {
+            let rs_lora = network_args.rs_lora.unwrap_or(false);
+            let rank_stabilized = network_args.rank_stabilized.unwrap_or(false);
+            rs_lora || rank_stabilized
+        })
     }
 
     pub fn network_module(&self) -> Option<NetworkModule> {
         match self.metadata.as_ref().map(|v| v.get("ss_network_module")) {
             Some(Some(network_module)) => match network_module.as_str() {
                 "networks.lora" => Some(NetworkModule::KohyaSSLoRA),
+                "networks.lora_flux" => Some(NetworkModule::KohyaSSLoRAFlux),
+                "networks.lora_sd3" => Some(NetworkModule::KohyaSSLoRASD3),
                 "networks.lora_fa" => Some(NetworkModule::KohyaSSLoRAFA),
                 "networks.dylora" => Some(NetworkModule::KohyaSSDyLoRA),
                 "networks.oft" => Some(NetworkModule::KohyaSSOFT),
