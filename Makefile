@@ -31,6 +31,13 @@ build-wasm:
 build-frontend:
 	yarn --cwd $(WASM_DIR) build
 
+.PHONY: build-frontend
+preview:
+	make build-wasm && yarn --cwd $(WASM_DIR) preview
+
+build:
+	make build-wasm && make build-frontend
+
 # Start a local HTTP server for serving the WASM package (simple)
 .PHONY: dev-wasm
 dev-wasm:
@@ -42,6 +49,9 @@ dev-wasm:
 .PHONY: dev-wasm-cors
 dev-wasm-cors:
 	cd $(WASM_DIR) && python simple-cors-server.py
+
+deploy:
+	fly deploy
 
 .PHONY: 
 wasm-bindgen-test: 

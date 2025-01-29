@@ -271,13 +271,13 @@ function Network({ metadata }) {
 				name: "Module dropout",
 				valueClassName: "number",
 				value:
-					"module_dropout" in networkArgs ? networkArgs.module_dropout : "None",
+					networkArgs && "module_dropout" in networkArgs ? networkArgs.module_dropout : "None",
 			}),
 			h(MetaAttribute, {
 				name: "Rank dropout",
 				valueClassName: "number",
 				value:
-					"rank_dropout" in networkArgs ? networkArgs.rank_dropout : "None",
+					networkArgs && "rank_dropout" in networkArgs ? networkArgs.rank_dropout : "None",
 			}),
 		),
 		h(
