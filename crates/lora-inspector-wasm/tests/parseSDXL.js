@@ -725,10 +725,10 @@ lora_unet_up_blocks_1_attentions_2_transformer_blocks_1_ff_net_0_proj
 lora_unet_up_blocks_1_attentions_2_transformer_blocks_1_ff_net_2`;
 
 test("test keys", (t) => {
-  const keys = rawKeys.split("\n");
-  for (const key in keys) {
-    const parsed = parseSDKey(keys[key]);
+	const keys = rawKeys.split("\n");
+	for (const key in keys) {
+		const parsed = parseSDKey(keys[key]);
 
-    t.truthy(parsed.name, `Did not parse correctly ${parsed}`);
-  }
+		t.truthy(parsed.name, `Did not parse correctly ${parsed}`);
+	}
 });
