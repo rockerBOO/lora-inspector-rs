@@ -431,6 +431,7 @@ async function getL2Norms(e) {
 			const [k, v] = item;
 
 			if (k === undefined) {
+				console.log(item);
 				console.error("Undefined key for norm reduction");
 				return acc;
 			}

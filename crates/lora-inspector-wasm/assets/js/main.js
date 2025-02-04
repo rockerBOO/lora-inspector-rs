@@ -267,7 +267,22 @@ function Network({ metadata }) {
 				valueClassName: "number",
 				value: metadata.get("ss_network_dropout"),
 			}),
-
+			h(MetaAttribute, {
+				name: "Module dropout",
+				valueClassName: "number",
+				value:
+					networkArgs && "module_dropout" in networkArgs ? networkArgs.module_dropout : "None",
+			}),
+			h(MetaAttribute, {
+				name: "Rank dropout",
+				valueClassName: "number",
+				value:
+					networkArgs && "rank_dropout" in networkArgs ? networkArgs.rank_dropout : "None",
+			}),
+		),
+		h(
+			"div",
+			{ key: "network-rank", className: "row space-apart" },
 			supportsDoRA(networkType) &&
 				h(MetaAttribute, {
 					name: "Weight decomposition (DoRA)",
@@ -975,6 +990,12 @@ function Loss({ metadata }) {
 				name: "Huber c",
 				valueClassName: "number",
 				value: metadata.get("ss_huber_c"),
+			}),
+		metadata.get("ss_loss_type") === "huber" &&
+			h(MetaAttribute, {
+				name: "Huber scale",
+				valueClassName: "number",
+				value: metadata.get("ss_huber_scale") ?? 1.0,
 			}),
 		h(MetaAttribute, {
 			name: "Debiased Estimation",

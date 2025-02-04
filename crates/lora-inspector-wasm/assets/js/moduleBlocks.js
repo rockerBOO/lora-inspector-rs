@@ -15,6 +15,11 @@ const FLUX_DOUBLE =
 const FLUX_SINGLE =
 	/lora_unet_(?<block_type>single_blocks)_(?<block_id>\d+)_(?<subblock_type>linear1|linear2|modulation_lin)/;
 
+const SDXL_RE =
+	/.*(?<block_type>input|output|middle)_blocks?_(?<block_id>\d+).*_(\d+_)?((?<type>transformer_blocks)_(?<subblock_id>\d+)_(?<subtype>attn\d+|ff)?_(?<subblock_type>to_k|to_out_0|to_q|to_v|net_0_proj|net_2).*|proj_in|proj_out)/;
+
+const SDXL_NUM_OF_BLOCKS = 26;
+
 function parseSDKey(key) {
 	let blockIdx = -1;
 	let idx;
@@ -64,6 +69,47 @@ function parseSDKey(key) {
 		name = `${blockKey}${padTwo(blockId)}`;
 
 		isAttention = true;
+	} else if (
+		key.includes("input_blocks") ||
+		key.includes("output_blocks") ||
+		key.includes("middle_block")
+	) {
+		const matches = key.match(SDXL_RE);
+		if (!matches) {
+			throw new Error(`UNet: Did not match on key: ${key} ${SDXL_RE}`);
+		}
+		const groups = matches.groups;
+
+		type = groups.type;
+		blockType = groups.block_type;
+		blockId = Number.parseInt(groups.block_id);
+		subBlockId = Number.parseInt(groups.subblock_id);
+
+		if (
+			groups.subtype === "attn1" ||
+			groups.subtype === "attn2" ||
+			groups.subtype === "ff"
+		) {
+			idx = 3 * blockId + subBlockId;
+			isAttention = true;
+		}
+		// } else if (groups.type === "resnets") {
+		//   idx = 3 * blockId + subBlockId;
+		//   isConv = true;
+		// } else if (groups.type === "upsamplers" || groups.type === "downsamplers") {
+		//   idx = 3 * blockId + 2;
+		//   isSampler = true;
+		// }
+
+		if (groups.block_type === "input") {
+			blockIdx = 1 + idx;
+			name = `IN${padTwo(idx)}`;
+		} else if (groups.block_type === "output") {
+			blockIdx = SDXL_NUM_OF_BLOCKS + 1 + idx;
+			name = `OUT${padTwo(idx)}`;
+		} else if (groups.block_type === "middle") {
+			blockIdx = SDXL_NUM_OF_BLOCKS;
+		}
 	} else if (key.includes("lora_te")) {
 		const matches = key.match(TE_SDRE);
 		if (!matches) {
@@ -160,6 +206,8 @@ function parseSDKey(key) {
 		isSampler,
 		key,
 	};
+
+	console.log(key, results);
 
 	return results;
 }

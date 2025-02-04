@@ -13,6 +13,8 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum NetworkModule {
     KohyaSSLoRA,
+    KohyaSSLoRAFlux,
+    KohyaSSLoRASD3,
     KohyaSSLoRAFA,
     KohyaSSDyLoRA,
     KohyaSSOFT,
@@ -30,6 +32,7 @@ pub enum WeightDecomposition {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum NetworkType {
     LoRA,
+    LoRAC3Lier,
     LoRAFA,
     LoCon,
     LoHA,
@@ -136,6 +139,10 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rs_lora: Option<bool>,
+
+    #[serde(deserialize_with = "de_optional_bool_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank_stabilized: Option<bool>,
 
     #[serde(deserialize_with = "de_optional_bool_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
