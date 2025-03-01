@@ -14,9 +14,10 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      # Check out code and perform setup steps
-      # ...
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          # https://woodruffw.github.io/zizmor/audits/#artipacked
+          persist-credentials: false
 
       - name: Set Node.js lts/*
         uses: actions/setup-node@v4

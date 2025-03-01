@@ -4,7 +4,7 @@ use std::fmt;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-extern crate console_error_panic_hook;
+// extern crate console_error_panic_hook;
 
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
@@ -212,10 +212,16 @@ impl LoraWorker {
                     .map(|norm_fn| {
                         (
                             norm_fn.name.to_owned(),
-                            (norm_fn.function)(scaled_weight.clone()).unwrap(),
+                            (norm_fn.function)(scaled_weight.clone())
+                                .map(Some)
+                                .map_err(|e| {
+                                    console::log_1(&format!("error: {:?}", e).into());
+                                    e
+                                })
+                                .unwrap_or(None),
                         )
                     })
-                    .collect::<HashMap<String, f64>>(),
+                    .collect::<HashMap<String, Option<f64>>>(),
             )?),
             Err(_) => Err(JsValue::from_str(&format!(
                 "could not get scaled weights for {}",
@@ -309,6 +315,7 @@ impl LoraWorker {
 
 #[cfg(test)]
 mod tests {
+    use crate::worker::console;
     use wasm_bindgen_test::wasm_bindgen_test_configure;
     use wasm_bindgen_test::*;
 
@@ -616,5 +623,39 @@ mod tests {
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
 
         assert_eq!(worker.network_type().unwrap(), "LoRA");
+    }
+
+    #[wasm_bindgen_test]
+    async fn check_norms_regression() -> Result<(), JsValue> {
+        wasm_bindgen_test_configure!(run_in_browser);
+        let buffer = load_test_file(file("Pixel Sorting.safetensors").as_str())
+            .await
+            .unwrap();
+
+        let worker = LoraWorker::new_from_buffer(&buffer, "Pixel Sorting.safetensors")
+            .expect("load from buffer");
+
+        for (i, base_name) in worker.base_names().into_iter().enumerate() {
+            let norms = worker.norms(
+                &base_name,
+                vec!["l2_norm".to_string(), "l1_norm".to_string(), "matrix_norm".to_string()],
+            )?;
+
+            console::log_1(&format!("base name {}", base_name).into());
+            console::log_1(&format!("norms {:?}", norms).into());
+            console::log_1(&norms);
+        }
+
+        let norms = worker.norms(
+            "lora_te_text_model_encoder_layers_11_mlp_fc1",
+            vec!["l2_norm".to_string(), "l1_norm".to_string(), "matrix_norm".to_string()],
+        )?;
+
+        console::log_1(&format!("norms {:?}", norms).into());
+        console::log_1(&norms);
+
+        Ok(())
+
+        // assert_eq!(worker., "LoRA");
     }
 }

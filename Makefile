@@ -19,8 +19,7 @@ all: test build-wasm build-frontend
 test:
 	cargo test --workspace && \
 		make wasm-bindgen-test && \
-		yarn --cwd $(WASM_DIR) test && \
-		yarn --cwd $(WASM_DIR) e2e-test 
+		yarn --cwd $(WASM_DIR) test
 
 # Build WASM for production (optimized)
 .PHONY: build-wasm

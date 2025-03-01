@@ -137,21 +137,24 @@ a:focus {
 .box.has-advanced-upload:focus {
   outline-color: var(--fg-color);
 }
+
 .box.has-advanced-upload .box__dragndrop {
   display: inline;
 }
+
 .box.has-advanced-upload .box__file {
   display: none;
 }
+
 .box.is-dragover {
   background-color: #3f6648;
 }
 
 .box__input label {
   cursor: pointer;
-  padding: 5em;
   user-select: none;
 }
+
 .box__input label strong {
   text-decoration: underline;
 }
