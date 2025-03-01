@@ -15,6 +15,8 @@ const FLUX_DOUBLE =
 const FLUX_SINGLE =
 	/lora_unet_(?<block_type>single_blocks)_(?<block_id>\d+)_(?<subblock_type>linear1|linear2|modulation_lin)/;
 
+const LUMINA_TRANSFORMER = /.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
+
 const SDXL_RE =
 	/.*(?<block_type>input|output|middle)_blocks?_(?<block_id>\d+).*_(\d+_)?((?<type>transformer_blocks)_(?<subblock_id>\d+)_(?<subtype>attn\d+|ff)?_(?<subblock_type>to_k|to_out_0|to_q|to_v|net_0_proj|net_2).*|proj_in|proj_out)/;
 
@@ -38,8 +40,23 @@ function parseSDKey(key) {
 
 	console.log("parsing keys");
 
+	if (key.includes("unet_layers") || key.includes("unet_noise_refiner") || key.includes("unet_context_refiner")) {
+		const matches = key.match(LUMINA_TRANSFORMER);
+		if (!matches) {
+			throw new Error(`Did not match on key: ${key} ${LUMINA_TRANSFORMER}`);
+		}
+		const groups = matches.groups;
+		type = "transformer";
+		blockId = Number.parseInt(groups.block_id);
+		blockType = groups.block_type;
+
+		const blockKey = `${blockType[0].toUpperCase()}B`;
+
+		name = `${blockKey}${padTwo(blockId)}`;
+
+		isAttention = true;
 	// Flux
-	if (key.includes("double_blocks")) {
+	} else if (key.includes("double_blocks")) {
 		const matches = key.match(FLUX_DOUBLE);
 		if (!matches) {
 			throw new Error(`Did not match on key: ${key} ${FLUX}`);
