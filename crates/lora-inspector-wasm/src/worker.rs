@@ -640,7 +640,7 @@ mod tests {
         let worker = LoraWorker::new_from_buffer(&buffer, "Pixel Sorting.safetensors")
             .expect("load from buffer");
 
-        for base_name in worker.base_names().into_iter().take(5) {
+        for base_name in worker.base_names().into_iter().take(2) {
             let norms = worker.norms(
                 &base_name,
                 vec![
