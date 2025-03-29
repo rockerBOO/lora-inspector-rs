@@ -9,12 +9,34 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           # https://woodruffw.github.io/zizmor/audits/#artipacked
           persist-credentials: false
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Set Node.js lts/*
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e
+        with:
+          node-version: lts/*
+
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Corepack 
+        run: corepack enable
+
+      - name: Run install
+        run: yarn --cwd crates/lora-inspector-wasm
+
+      - name: Run build
+        run: yarn --cwd crates/lora-inspector-wasm build
+
+      - name: Build wasm
+        run: wasm-pack build --target no-modules  --release crates/lora-inspector-wasm
+
+      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be
       - run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
