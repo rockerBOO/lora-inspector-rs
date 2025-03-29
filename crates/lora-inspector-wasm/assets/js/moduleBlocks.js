@@ -45,8 +45,6 @@ function parseSDKey(key) {
   let subBlockId;
   let name;
 
-  console.log("parsing keys");
-
   if (key.includes("single_transformer_blocks")) {
     const matches = key.match(FLUX_PEFT);
     if (!matches) {
@@ -62,7 +60,7 @@ function parseSDKey(key) {
     name = `${blockKey}${padTwo(blockId)}`;
 
     isAttention = true;
-  } else if (key.includes("transformer_blocks")) {
+  } else if (key.includes("transformer.transformer_blocks")) {
     const matches = key.match(FLUX_PEFT);
     if (!matches) {
       throw new Error(`Did not match on key: ${key} ${FLUX_PEFT}`);
@@ -314,7 +312,7 @@ function parseSDKey(key) {
     key,
   };
 
-  console.log(key, results);
+  // console.log(key, results);
 
   return results;
 }
