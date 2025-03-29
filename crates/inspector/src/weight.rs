@@ -2,8 +2,8 @@ use candle_core::{
     safetensors::{load_buffer, BufferedSafetensors, Load},
     Device, Tensor,
 };
-
 use serde::{Deserialize, Serialize};
+use std::ops::Div;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter},
@@ -136,6 +136,7 @@ pub struct DoRAScale(pub f32);
 pub struct BufferedLoRAWeight {
     buffered: BufferedSafetensors,
     device: Device,
+    format: LoRAFormat,
 }
 
 impl Debug for BufferedLoRAWeight {
@@ -236,23 +237,13 @@ impl Weight for BufferedLoRAWeight {
     }
 
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        let lora_up = format!("{}.lora_up.weight", base_name);
-        let lora_down = format!("{}.lora_down.weight", base_name);
-        let lora_alpha = format!("{}.alpha", base_name);
-        let up = self.get(&lora_up)?.detach()?;
-        let down = self
-            .buffered
-            .get(&lora_down)?
-            .load(&self.device)?
-            .detach()?;
-        let alpha = self.get(&lora_alpha)?.detach()?;
+        let up = self.up(base_name)?;
+        let down = self.down(base_name)?;
+        let alpha = self.alpha(base_name)?;
 
         let dims = down.dims();
 
-        let scale = alpha
-            .to_dtype(candle_core::DType::F64)?
-            .to_scalar::<f64>()?
-            / dims[0] as f64;
+        let scale = (alpha.0 / dims[0] as f32) as f64;
 
         if dims.len() == 2 {
             to_compatible_dtype(&up)?
@@ -441,21 +432,36 @@ impl Weight for BufferedLoRAWeight {
     }
 
     fn alphas(&self) -> HashSet<Alpha> {
-        self.buffered
-            .tensors()
-            .iter()
-            .filter(|(k, _v)| k.contains("alpha"))
-            .filter_map(|(k, _v)| {
-                self.get(k)
-                    .map(|v| v.to_dtype(candle_core::DType::F32)?.to_scalar::<f32>())
-                    .ok()
-            })
-            .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
-                if let Ok(v) = v {
-                    alphas.insert(Alpha(v));
-                }
-                alphas
-            })
+        match self.format {
+            LoRAFormat::Peft => self
+                .buffered
+                .tensors()
+                .iter()
+                .filter(|(k, _v)| k.contains("lora_A"))
+                .filter_map(|(k, _v)| self.get(k).map(|v| v.dims().first().cloned()).ok())
+                .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
+                    if let Some(alpha) = v {
+                        alphas.insert(Alpha(alpha as f32));
+                    }
+                    alphas
+                }),
+            _ => self
+                .buffered
+                .tensors()
+                .iter()
+                .filter(|(k, _v)| k.contains("alpha"))
+                .filter_map(|(k, _v)| {
+                    self.get(k)
+                        .map(|v| v.to_dtype(candle_core::DType::F32)?.to_scalar::<f32>())
+                        .ok()
+                })
+                .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
+                    if let Ok(v) = v {
+                        alphas.insert(Alpha(v));
+                    }
+                    alphas
+                }),
+        }
     }
 
     // fn dora_scales(&self) -> Vec<Vec<f32>> {
@@ -517,13 +523,71 @@ impl Weight for BufferedLoRAWeight {
                 acc
             })
     }
+
+    fn up(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        let lora_up = match self.format {
+            LoRAFormat::Peft => format!("{}.lora_B.weight", base_name),
+            _ => format!("{}.lora_up.weight", base_name),
+        };
+        self.get(&lora_up)
+    }
+
+    fn down(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        let lora_down = match self.format {
+            LoRAFormat::Peft => format!("{}.lora_A.weight", base_name),
+            _ => format!("{}.lora_down.weight", base_name),
+        };
+        self.get(&lora_down)
+    }
+
+    fn alpha(&self, base_name: &str) -> Result<Alpha, candle_core::Error> {
+        match self.format {
+            LoRAFormat::Peft => Ok(Alpha(self.rank(base_name)? as f32)),
+            _ => {
+                let lora_alpha = format!("{}.alpha", base_name);
+                let x = self.get(&lora_alpha);
+
+                match x {
+                    Ok(x) => Ok(Alpha(x.to_dtype(candle_core::DType::F32)?.to_scalar::<f32>()?)),
+                    Err(e) => Err(e),
+                }
+            }
+        }
+    }
+
+    fn rank(&self, base_name: &str) -> Result<usize, candle_core::Error> {
+        self.down(base_name)?
+            .dims()
+            .first()
+            .ok_or_else(|| candle_core::Error::Msg("No rank found".to_string()))
+            .cloned()
+    }
+
+    fn format(&self) -> LoRAFormat {
+        self.format
+    }
 }
 
 impl BufferedLoRAWeight {
     pub fn new(buffer: Vec<u8>, device: &Device) -> Result<Self, candle_core::Error> {
+        let buffered = BufferedSafetensors::new(buffer)?;
+        let keys = buffered
+            .tensors()
+            .iter()
+            .take(10)
+            .map(|(k, _v)| k.clone())
+            .collect();
+
+        let format = if is_peft(keys) {
+            LoRAFormat::Peft
+        } else {
+            LoRAFormat::Kohya
+        };
+
         Ok(Self {
-            buffered: BufferedSafetensors::new(buffer)?,
+            buffered,
             device: device.clone(),
+            format,
         })
     }
 
@@ -545,8 +609,14 @@ pub trait WeightKey {
 }
 
 pub trait Weight {
+    fn up(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+    fn down(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+    fn alpha(&self, base_name: &str) -> Result<Alpha, candle_core::Error>;
+    fn rank(&self, base_name: &str) -> Result<usize, candle_core::Error>;
+
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error>;
 
+    fn format(&self) -> LoRAFormat;
     fn precision(&self) -> Option<DType>;
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
     fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
@@ -563,8 +633,9 @@ pub trait Weight {
 /// Tensor weights
 #[derive(Debug, Clone)]
 pub struct LoRAWeight {
-    pub tensors: HashMap<String, Tensor>,
-    pub device: Device,
+    tensors: HashMap<String, Tensor>,
+    device: Device,
+    format: LoRAFormat,
 }
 
 /// Converts tensor into DType thats compatible with candle
@@ -578,9 +649,20 @@ fn to_compatible_dtype(tensor: &candle_core::Tensor) -> Result<Tensor, candle_co
 
 impl LoRAWeight {
     pub fn new(buffer: Vec<u8>, device: &Device) -> Result<Self, candle_core::Error> {
+        let tensors = load_buffer(&buffer, &Device::Cpu)?;
+
+        let keys = tensors.iter().take(10).map(|(k, _v)| k.clone()).collect();
+
+        let format = if is_peft(keys) {
+            LoRAFormat::Peft
+        } else {
+            LoRAFormat::Kohya
+        };
+
         Ok(Self {
-            tensors: load_buffer(&buffer, &Device::Cpu)?,
+            tensors,
             device: device.clone(),
+            format,
         })
     }
 }
@@ -640,12 +722,66 @@ impl WeightKey for LoRAWeight {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub enum LoRAFormat {
+    Kohya,
+    Lycoris,
+    Peft,
+}
+
+fn is_peft(keys: Vec<String>) -> bool {
+    keys.into_iter()
+        .take(10) // check first 10
+        .any(|k| k.contains("transformer."))
+}
+
 impl Weight for LoRAWeight {
+    fn up(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        let lora_up = match self.format {
+            LoRAFormat::Peft => format!("{}.lora_B.weight", base_name),
+            _ => format!("{}.lora_up.weight", base_name),
+        };
+        self.tensors
+            .get(&lora_up)
+            .ok_or_else(|| candle_core::Error::Msg("lora up not found".to_string()))
+            .cloned()
+    }
+
+    fn down(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        let lora_down = match self.format {
+            LoRAFormat::Peft => format!("{}.lora_A.weight", base_name),
+            _ => format!("{}.lora_down.weight", base_name),
+        };
+        self.tensors
+            .get(&lora_down)
+            .ok_or_else(|| candle_core::Error::Msg("lora down not found".to_string()))
+            .cloned()
+    }
+
+    fn alpha(&self, base_name: &str) -> Result<Alpha, candle_core::Error> {
+        match self.format {
+            LoRAFormat::Peft => Ok(Alpha(self.rank(base_name)? as f32)),
+            _ => {
+                let lora_alpha = format!("{}.alpha", base_name);
+                let x = self.tensors.get(&lora_alpha);
+
+                match x {
+                    Some(x) => Ok(Alpha(x.to_scalar::<f32>()?)),
+                    None => Err(candle_core::Error::Msg("No alpha found".to_string())),
+                }
+            }
+        }
+    }
+
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error> {
         self.tensors
             .get(key)
             .ok_or_else(|| candle_core::Error::Msg("Could not load error".to_string()))
             .cloned()
+    }
+
+    fn format(&self) -> LoRAFormat {
+        self.format
     }
 
     fn precision(&self) -> Option<DType> {
@@ -656,46 +792,79 @@ impl Weight for LoRAWeight {
     }
 
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        let lora_up = format!("{}.lora_up.weight", base_name);
-        let lora_down = format!("{}.lora_up.weight", base_name);
-        let lora_alpha = format!("{}.alpha", base_name);
-
-        let up = self
-            .tensors
-            .get(&lora_up)
-            .ok_or_else(|| candle_core::Error::Msg("no lora up".to_string()))?;
-        let down = self
-            .tensors
-            .get(&lora_down)
-            .ok_or_else(|| candle_core::Error::Msg("no lora down".to_string()))?;
-        let alpha = self
-            .tensors
-            .get(&lora_alpha)
-            .ok_or_else(|| candle_core::Error::Msg("no lora alpha".to_string()))?;
+        let up = self.up(base_name)?;
+        let down = self.down(base_name)?;
+        let alpha = self.alpha(base_name)?;
 
         let dims = down.dims();
+        let rank = self.rank(base_name)?;
 
-        let scale = alpha.to_scalar::<f64>()? / dims[0] as f64;
+        let scale = alpha.0.div(rank as f32) as f64;
 
         if dims.len() == 2 {
-            to_compatible_dtype(up)?
-                .matmul(&to_compatible_dtype(down)?)?
+            to_compatible_dtype(&up)?
+                .matmul(&to_compatible_dtype(&down)?)?
                 .mul(scale)
         } else if dims[2] == 1 && dims[3] == 1 {
-            to_compatible_dtype(up)?
+            to_compatible_dtype(&up)?
                 .squeeze(3)?
                 .squeeze(2)?
-                .matmul(&to_compatible_dtype(down)?.squeeze(3)?.squeeze(2)?)?
+                .matmul(&to_compatible_dtype(&down)?.squeeze(3)?.squeeze(2)?)?
                 .unsqueeze(2)?
                 .unsqueeze(3)?
                 .mul(scale)
+
+            // Convolution
         } else {
-            to_compatible_dtype(down)?
+            to_compatible_dtype(&down)?
                 .permute((1, 0, 2, 3))?
-                .conv2d(&to_compatible_dtype(up)?, 0, 1, 1, 1)?
+                .conv2d(&to_compatible_dtype(&up)?, 0, 1, 1, 1)?
                 .permute((1, 0, 2, 3))?
                 .mul(scale)
         }
+    }
+
+    fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        let w1a_key = format!("{}.a1.weight", base_name);
+        let w1b_key = format!("{}.b1.weight", base_name);
+
+        let w2a_key = format!("{}.a2.weight", base_name);
+        let w2b_key = format!("{}.b2.weight", base_name);
+
+        let alpha_key = format!("{}.alpha", base_name);
+
+        let alpha = self
+            .tensors
+            .get(&alpha_key)
+            .ok_or_else(|| candle_core::Error::Msg("no glora alpha".to_string()))?;
+
+        let w1a = self
+            .tensors
+            .get(&w1a_key)
+            .ok_or_else(|| candle_core::Error::Msg("no glora w1a weight".to_string()))?;
+        let w1b = self
+            .tensors
+            .get(&w1b_key)
+            .ok_or_else(|| candle_core::Error::Msg("no glora w1b weight".to_string()))?;
+
+        let w2a = self
+            .tensors
+            .get(&w2a_key)
+            .ok_or_else(|| candle_core::Error::Msg("no glora w2a weight".to_string()))?;
+
+        let w2b = self
+            .tensors
+            .get(&w2b_key)
+            .ok_or_else(|| candle_core::Error::Msg("no glora w2b weight".to_string()))?;
+
+        let dims = w1b.dims();
+
+        let scale = alpha
+            .to_dtype(candle_core::DType::F64)?
+            .to_scalar::<f64>()?
+            / dims[0] as f64;
+
+        w2b.matmul(w1b)?.add(&w2a.matmul(w1a)?)?.mul(scale)
     }
 
     fn scale_hada_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
@@ -862,63 +1031,43 @@ impl Weight for LoRAWeight {
         // return rebuild * scale
     }
 
-    fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        let w1a_key = format!("{}.a1.weight", base_name);
-        let w1b_key = format!("{}.b1.weight", base_name);
-
-        let w2a_key = format!("{}.a2.weight", base_name);
-        let w2b_key = format!("{}.b2.weight", base_name);
-
-        let alpha_key = format!("{}.alpha", base_name);
-
-        let alpha = self
-            .tensors
-            .get(&alpha_key)
-            .ok_or_else(|| candle_core::Error::Msg("no glora alpha".to_string()))?;
-
-        let w1a = self
-            .tensors
-            .get(&w1a_key)
-            .ok_or_else(|| candle_core::Error::Msg("no glora w1a weight".to_string()))?;
-        let w1b = self
-            .tensors
-            .get(&w1b_key)
-            .ok_or_else(|| candle_core::Error::Msg("no glora w1b weight".to_string()))?;
-
-        let w2a = self
-            .tensors
-            .get(&w2a_key)
-            .ok_or_else(|| candle_core::Error::Msg("no glora w2a weight".to_string()))?;
-
-        let w2b = self
-            .tensors
-            .get(&w2b_key)
-            .ok_or_else(|| candle_core::Error::Msg("no glora w2b weight".to_string()))?;
-
-        let dims = w1b.dims();
-
-        let scale = alpha
-            .to_dtype(candle_core::DType::F64)?
-            .to_scalar::<f64>()?
-            / dims[0] as f64;
-
-        w2b.matmul(w1b)?.add(&w2a.matmul(w1a)?)?.mul(scale)
+    fn rank(&self, base_name: &str) -> Result<usize, candle_core::Error> {
+        self.down(base_name)?
+            .dims()
+            .first()
+            .ok_or_else(|| candle_core::Error::Msg("No rank found".to_string()))
+            .cloned()
     }
 
     fn alphas(&self) -> HashSet<Alpha> {
-        self.tensors
-            .iter()
-            .filter(|(k, _v)| k.contains("alpha"))
-            .filter_map(|(_k, v)| {
-                v.to_dtype(candle_core::DType::F32)
-                    .map(|v| v.to_scalar::<f32>())
-                    .unwrap()
-                    .ok()
-            })
-            .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
-                alphas.insert(Alpha(v));
-                alphas
-            })
+        match self.format {
+            LoRAFormat::Peft => self
+                .tensors
+                .iter()
+                .filter(|(k, _v)| k.contains("lora_A"))
+                // alpha is dim
+                .filter_map(|(k, _v)| self.get(k).map(|v| v.dims().first().cloned()).ok())
+                .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
+                    if let Some(alpha) = v {
+                        alphas.insert(Alpha(alpha as f32));
+                    }
+                    alphas
+                }),
+            _ => self
+                .tensors
+                .iter()
+                .filter(|(k, _v)| k.contains("alpha"))
+                .filter_map(|(_k, v)| {
+                    v.to_dtype(candle_core::DType::F32)
+                        .map(|v| v.to_scalar::<f32>())
+                        .unwrap()
+                        .ok()
+                })
+                .fold(HashSet::new(), |mut alphas: HashSet<Alpha>, v| {
+                    alphas.insert(Alpha(v));
+                    alphas
+                }),
+        }
     }
 
     fn dora_scale(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
@@ -928,31 +1077,24 @@ impl Weight for LoRAWeight {
     fn dims(&self) -> HashSet<usize> {
         self.tensors
             .iter()
-            // Limiting to a single element for LoRA.
-            // .filter(|(k, _v)| k.contains("lora_down") || k.contains("oft_blocks"))
-            .filter_map(|(k, _v)| {
-                if k.contains("lora_down") {
-                    self.get(k).map(|v| v.dims()[0]).ok()
-                } else if k.contains("hada_w1_b") {
-                    self.get(k).map(|v| v.dims()[0]).ok()
-                } else if k.contains("lokr_w1") {
-                    self.get(k).map(|v| v.dims()[0]).ok()
-                } else if k.contains("b1.weight") {
-                    // dbg!(self.get(k).map(|v| v.dims().to_vec()).unwrap());
-                    // dbg!(self.get(k).map(|v| v.dims()[0]).ok());
-                    // self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
-                    self.get(k).map(|v| v.dims()[0]).ok()
-                } else if k.contains("oft_diag") {
-                    self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
-                } else if k.contains("oft_blocks") {
-                    // dbg!(self.get(k).map(|v| v.dims().to_vec()).unwrap());
-                    self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
+            .filter_map(|(k, v)| {
+                if k.contains("lora_down")
+                    || k.contains("hada_w1_b")
+                    || k.contains("lokr_w1")
+                    || k.contains("b1.weight")
+                {
+                    v.dims().first()
+                } else if k.contains("oft_diag") || k.contains("oft_blocks") {
+                    v.dims().last()
+                // PEFT
+                } else if k.contains("lora_A") {
+                    v.dims().first()
                 } else {
                     None
                 }
             })
             .fold(HashSet::new(), |mut dims: HashSet<usize>, res| {
-                dims.insert(res);
+                dims.insert(*res);
                 dims
             })
     }
@@ -971,8 +1113,13 @@ pub fn get_base_name(name: &str) -> String {
             !matches!(
                 *part,
                 "weight"
+                // Kohya
                     | "lora_up"
                     | "lora_down"
+                // PEFT
+                    | "lora_A"
+                    | "lora_B"
+                // Lycoris
                     | "lokr_w1"
                     | "lokr_w2"
                     | "hada_w1_a"
@@ -1003,8 +1150,6 @@ mod tests {
     use crate::norms;
 
     use super::*;
-
-    use std::fs;
 
     #[test]
     fn get_base_name_test() {
@@ -1040,10 +1185,10 @@ mod tests {
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
     }
 
-    fn load_keys_json() -> serde_json::Result<Vec<String>> {
-        let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
-        serde_json::from_str::<Vec<String>>(&keys)
-    }
+    // fn load_keys_json() -> serde_json::Result<Vec<String>> {
+    //     let keys = fs::read_to_string("./keys.json").expect("to read the keys json");
+    //     serde_json::from_str::<Vec<String>>(&keys)
+    // }
 
     // #[test]
     // fn test_key_parsing() {
@@ -1066,13 +1211,13 @@ mod tests {
         Ok(data)
     }
 
-    fn load_file(filename: &str) -> Result<Vec<u8>, io::Error> {
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
+    // fn load_file(filename: &str) -> Result<Vec<u8>, io::Error> {
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
 
     fn load_test_conv_file() -> Result<Vec<u8>, io::Error> {
         let filename = "./lora_unet_down_blocks_1_resnets_1_conv2.safetensors";
@@ -1094,15 +1239,15 @@ mod tests {
         Ok(data)
     }
 
-    fn load_test_dora_hada_block_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "dora_lora_unet_down_blocks_1_attentions_0_proj_in.safetensors";
-
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
+    // fn load_test_dora_hada_block_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "dora_lora_unet_down_blocks_1_attentions_0_proj_in.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
 
     fn load_test_hada_file() -> Result<Vec<u8>, io::Error> {
         let filename = "./loha.safetensors";
@@ -1114,8 +1259,78 @@ mod tests {
         Ok(data)
     }
 
-    fn load_test_hada_conv_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./loha_conv.safetensors";
+    // fn load_test_hada_conv_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./loha_conv.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_lokr_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./women-2024-05-14-200457-2450c2b2.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_diag_oft_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./diag_oft.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_boft_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./boft.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_boft_conv_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./boft_conv.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_glora_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./glora.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+    //
+    // fn load_test_glora_conv_file() -> Result<Vec<u8>, io::Error> {
+    //     let filename = "./glora_conv.safetensors";
+    //
+    //     let mut f = File::open(filename)?;
+    //     let mut data = vec![];
+    //     f.read_to_end(&mut data)?;
+    //
+    //     Ok(data)
+    // }
+
+    fn load_test_peft_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "./urae_2k_adapter.safetensors";
 
         let mut f = File::open(filename)?;
         let mut data = vec![];
@@ -1124,65 +1339,42 @@ mod tests {
         Ok(data)
     }
 
-    fn load_test_lokr_file() -> Result<Vec<u8>, io::Error> {
-        // let filename = "./lokr.safetensors";
-        let filename = "/mnt/900/lora/testing/women/women-2024-05-14-200457-2450c2b2.safetensors";
+    #[test]
+    fn lora_buffer_weight_peft() {
+        let buffer = load_test_peft_file().unwrap();
 
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
+        let lora_weight = LoRAWeight::new(buffer, &Device::Cpu).unwrap();
 
-        Ok(data)
+        let dims = lora_weight.dims();
+
+        assert_eq!(dims.len(), 1);
+        assert_eq!(dims.get(&16), Some(&16));
+
+        let alphas = lora_weight.alphas();
+
+        assert_eq!(lora_weight.format(), LoRAFormat::Peft);
+
+        assert_eq!(alphas.len(), 1);
+        assert_eq!(alphas.get(&Alpha(16.0)), Some(&Alpha(16.0)));
     }
 
-    fn load_test_diag_oft_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./diag_oft.safetensors";
+    #[test]
+    fn lora_buffer_scale_weight_peft() {
+        let buffer = load_test_peft_file().unwrap();
 
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
+        let lora_weight = LoRAWeight::new(buffer, &Device::Cpu).unwrap();
 
-        Ok(data)
-    }
+        let scaled_tensor = lora_weight
+            .scale_lora_weight("transformer.transformer_blocks.8.attn.to_q")
+            .unwrap();
 
-    fn load_test_boft_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./boft.safetensors";
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[3072, 3072]);
 
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
-
-    fn load_test_boft_conv_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./boft_conv.safetensors";
-
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
-
-    fn load_test_glora_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./glora.safetensors";
-
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
-    }
-
-    fn load_test_glora_conv_file() -> Result<Vec<u8>, io::Error> {
-        let filename = "./glora_conv.safetensors";
-
-        let mut f = File::open(filename)?;
-        let mut data = vec![];
-        f.read_to_end(&mut data)?;
-
-        Ok(data)
+        // Verify that the tensor values are within an acceptable range
+        for value in scaled_tensor.flatten_all().unwrap().to_vec0::<f32>().iter() {
+            assert!(*value >= 0. && *value <= 2.);
+        }
     }
 
     #[test]

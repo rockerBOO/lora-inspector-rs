@@ -82,13 +82,6 @@ impl LoRAFile {
             .unwrap_or_default()
     }
 
-    // pub fn dora_scales(&self) -> Vec<Vec<f32>> {
-    //     self.weights
-    //         .as_ref()
-    //         .map(|weights| weights.dora_scales())
-    //         .unwrap_or_default()
-    // }
-
     pub fn dims(&self) -> HashSet<usize> {
         self.weights
             .as_ref()
@@ -134,6 +127,13 @@ impl LoRAFile {
 
     pub fn shrink_scaled_to_fit(&mut self) {
         self.scaled_weights.shrink_to_fit();
+    }
+
+    pub fn format(&self) -> weight::LoRAFormat {
+        self.weights
+            .as_ref()
+            .map(|weights| weights.format())
+            .unwrap_or(weight::LoRAFormat::Kohya)
     }
 
     // pub fn scaled_weight(&self, base_name: &str) -> Option<&candle_core::Tensor> {
@@ -196,18 +196,19 @@ mod tests {
         io::{self, Read},
     };
 
-    macro_rules! assert_err {
-        ($expression:expr, $($pattern:tt)+) => {
-            match $expression {
-                $($pattern)+ => (),
-                ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
-            }
-        }
-    }
+    // macro_rules! assert_err {
+    //     ($expression:expr, $($pattern:tt)+) => {
+    //         match $expression {
+    //             $($pattern)+ => (),
+    //             ref e => panic!("expected `{}` but got `{:?}`", stringify!($($pattern)+), e),
+    //         }
+    //     }
+    // }
 
-    use candle_core::Device;
+    use candle_core::{DType, Device};
+    use safetensors::Dtype;
 
-    use crate::weight::{Alpha, self};
+    use crate::weight::{self, Alpha};
 
     use super::LoRAFile;
 
@@ -293,7 +294,6 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&buffer, filename, &Device::Cpu);
         let base_name = "error_weight";
-        let device = &Device::Cpu;
 
         let result = lora_file.scale_weight(base_name);
 
@@ -307,7 +307,6 @@ mod tests {
         let filename = "boo.safetensors";
         let lora_file = LoRAFile::new_from_buffer(&[1_u8], filename, &Device::Cpu);
         let base_name = "l1_error_weight";
-        let device = &Device::Cpu;
 
         let result = lora_file.scale_weight(base_name);
 
@@ -321,7 +320,6 @@ mod tests {
         let buffer = load_file(file)?;
         let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
 
-        let device = &Device::Cpu;
         let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
 
         let scaled_weight = lora_file

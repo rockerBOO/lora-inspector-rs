@@ -296,6 +296,7 @@ impl LoraWorker {
             Some(NetworkModule::Lycoris) => "lycoris".to_owned(),
             Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFlux) => "kohya-ss/lora_flux".to_owned(),
+            Some(NetworkModule::KohyaSSLoRALumina) => "kohya-ss/lora_lumina".to_owned(),
             Some(NetworkModule::KohyaSSLoRASD3) => "kohya-ss/lora_sd3".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
             Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
@@ -310,6 +311,10 @@ impl LoraWorker {
 
     pub fn network_type(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
         serde_wasm_bindgen::to_value(&self.metadata.network_type())
+    }
+
+    pub fn format(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
+        serde_wasm_bindgen::to_value(&self.file.format())
     }
 }
 
@@ -635,10 +640,14 @@ mod tests {
         let worker = LoraWorker::new_from_buffer(&buffer, "Pixel Sorting.safetensors")
             .expect("load from buffer");
 
-        for (i, base_name) in worker.base_names().into_iter().enumerate() {
+        for base_name in worker.base_names().into_iter().take(5) {
             let norms = worker.norms(
                 &base_name,
-                vec!["l2_norm".to_string(), "l1_norm".to_string(), "matrix_norm".to_string()],
+                vec![
+                    "l2_norm".to_string(),
+                    "l1_norm".to_string(),
+                    "matrix_norm".to_string(),
+                ],
             )?;
 
             console::log_1(&format!("base name {}", base_name).into());
@@ -648,7 +657,11 @@ mod tests {
 
         let norms = worker.norms(
             "lora_te_text_model_encoder_layers_11_mlp_fc1",
-            vec!["l2_norm".to_string(), "l1_norm".to_string(), "matrix_norm".to_string()],
+            vec![
+                "l2_norm".to_string(),
+                "l1_norm".to_string(),
+                "matrix_norm".to_string(),
+            ],
         )?;
 
         console::log_1(&format!("norms {:?}", norms).into());

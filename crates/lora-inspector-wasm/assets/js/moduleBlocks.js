@@ -15,6 +15,9 @@ const FLUX_DOUBLE =
 const FLUX_SINGLE =
   /lora_unet_(?<block_type>single_blocks)_(?<block_id>\d+)_(?<subblock_type>linear1|linear2|modulation_lin)/;
 
+const FLUX_PEFT =
+  /transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)\.(?<type>\w+)\.(?<subtype>\w+)/;
+
 const LUMINA_TRANSFORMER =
   /.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
 
@@ -44,7 +47,37 @@ function parseSDKey(key) {
 
   console.log("parsing keys");
 
-  if (key.includes("unet_final_layer")) {
+  if (key.includes("single_transformer_blocks")) {
+    const matches = key.match(FLUX_PEFT);
+    if (!matches) {
+      throw new Error(`Did not match on key: ${key} ${FLUX}`);
+    }
+    const groups = matches.groups;
+    type = "transformer";
+    blockId = Number.parseInt(groups.block_id);
+    blockType = groups.block_type;
+
+    const blockKey = "SB";
+
+    name = `${blockKey}${padTwo(blockId)}`;
+
+    isAttention = true;
+  } else if (key.includes("transformer_blocks")) {
+    const matches = key.match(FLUX_PEFT);
+    if (!matches) {
+      throw new Error(`Did not match on key: ${key} ${FLUX}`);
+    }
+    const groups = matches.groups;
+    type = "transformer";
+    blockId = Number.parseInt(groups.block_id);
+    blockType = groups.block_type;
+
+    const blockKey = "DB";
+
+    name = `${blockKey}${padTwo(blockId)}`;
+
+    isAttention = true;
+  } else if (key.includes("unet_final_layer")) {
     type = "mlp";
     blockId = 0;
     blockType = "linear";
