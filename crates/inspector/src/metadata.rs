@@ -72,6 +72,7 @@ impl Metadata {
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
             Some(NetworkModule::KohyaSSLoRAFlux) => Some(NetworkType::LoRA),
+            Some(NetworkModule::KohyaSSLoRALumina) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRASD3) => Some(NetworkType::LoRA),
             None => None,
         }

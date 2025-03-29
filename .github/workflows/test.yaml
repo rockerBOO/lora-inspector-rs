@@ -14,16 +14,17 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      # Check out code and perform setup steps
-      # ...
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # https://woodruffw.github.io/zizmor/audits/#artipacked
+          persist-credentials: false
 
       - name: Set Node.js lts/*
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e
         with:
           node-version: lts/*
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
         with:
           path: '**/node_modules'
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}

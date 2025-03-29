@@ -1,4 +1,3 @@
-// import { LineChart, easings } from "chartist";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import init from "/pkg";
@@ -10,8 +9,56 @@ function Header({ metadata }) {
 }
 
 function ModelSpec({ metadata }) {
+	const training = [
+		h("div", { className: "row space-apart", key: "training_timings" }, [
+			metadata.has("ss_training_started_at") &&
+				h(MetaAttribute, {
+					key: "started_at",
+					name: "Started",
+					value: new Date(
+						metadata.get("ss_training_started_at") * 1000,
+					).toString(),
+				}),
+			metadata.has("ss_training_finished_at") &&
+				h(MetaAttribute, {
+					key: "finished_at",
+					name: "Finished",
+					value: new Date(
+						metadata.get("ss_training_finished_at") * 1000,
+					).toString(),
+				}),
+			metadata.has("ss_training_finished_at") &&
+				h(MetaAttribute, {
+					key: "elapsed_at",
+					name: "Elapsed",
+					value: `${(
+						(metadata.get("ss_training_finished_at") -
+							metadata.get("ss_training_started_at")) /
+							60
+					).toPrecision(4)} minutes`,
+				}),
+		]),
+
+		h(
+			"div",
+			{ className: "row space-apart", key: "training_comments" },
+			metadata.has("ss_training_comment") &&
+				h(
+					"div",
+					{
+						key: "training_comment",
+						className: "row space-apart",
+					},
+					h(MetaAttribute, {
+						name: "Training comment",
+						value: metadata.get("ss_training_comment"),
+					}),
+				),
+		),
+	];
+
 	if (!metadata.has("modelspec.title")) {
-		return null;
+		return training;
 	}
 
 	return h(
@@ -271,13 +318,17 @@ function Network({ metadata }) {
 				name: "Module dropout",
 				valueClassName: "number",
 				value:
-					networkArgs && "module_dropout" in networkArgs ? networkArgs.module_dropout : "None",
+					networkArgs && "module_dropout" in networkArgs
+						? networkArgs.module_dropout
+						: "None",
 			}),
 			h(MetaAttribute, {
 				name: "Rank dropout",
 				valueClassName: "number",
 				value:
-					networkArgs && "rank_dropout" in networkArgs ? networkArgs.rank_dropout : "None",
+					networkArgs && "rank_dropout" in networkArgs
+						? networkArgs.rank_dropout
+						: "None",
 			}),
 		),
 		h(
@@ -351,13 +402,11 @@ function BOFTNetwork({ metadata }) {
 			setDims(resp.dims);
 		});
 	}, []);
-	return [
-		h(MetaAttribute, {
-			name: "Network factor",
-			valueClassName: "rank",
-			value: dims.join(", "),
-		}),
-	];
+	return h(MetaAttribute, {
+		name: "Network factor",
+		valueClassName: "rank",
+		value: dims.join(", "),
+	});
 }
 
 function LoKrNetwork({ metadata }) {
@@ -553,6 +602,17 @@ function Weight({ metadata, filename }) {
 					valueClassName: "number",
 					value: metadata.get("ss_full_fp16"),
 				}),
+			metadata.has("ss_full_bf16") &&
+				h(MetaAttribute, {
+					name: "Full bf16",
+					valueClassName: "number",
+					value: metadata.get("ss_full_bf16"),
+				}),
+			h(MetaAttribute, {
+				name: "fp8 base",
+				valueClassName: "number",
+				value: metadata.get("ss_fp8_base"),
+			}),
 		),
 		h(Blocks, { key: "blocks", metadata, filename }),
 	];
@@ -3166,6 +3226,111 @@ function Headline({ metadata, filename }) {
 	]);
 }
 
+function Support() {
+	const [modal, setModal] = React.useState(false);
+
+	React.useEffect(() => {
+		if (!modal) {
+			return;
+		}
+
+		function close(e) {
+			// escape
+			if (e.keyCode === 27) {
+				setModal(false);
+
+				window.removeEventListener("keydown", close);
+			}
+		}
+		window.addEventListener("keydown", close);
+
+		return function cleanup() {
+			window.removeEventListener("keydown", close);
+		};
+	}, [modal]);
+
+	if (modal) {
+		return h(
+			"div",
+			{ className: "modal" },
+			h(
+				"div",
+				{},
+				h(
+					"div",
+					{ style: { textAlign: "right", padding: "1em" } },
+					h(
+						"button",
+						{
+							onClick: () => {
+								setModal(false);
+							},
+						},
+						"Close",
+					),
+				),
+				h(
+					"p",
+					{ className: "primary-text" },
+					"Primary support through ",
+					h(
+						"a",
+						{
+							href: "https://github.com/rockerBOO/lora-inspector-rs/issues",
+							target: "_blank",
+						},
+
+						"Github Issues",
+					),
+				),
+				h(
+					"p",
+					{ className: "primary-text" },
+					"Looking to give support for this project? Through ",
+					h(
+						"a",
+						{
+							href: "https://github.com/sponsors/rockerBOO",
+							target: "_blank",
+						},
+						"Github Sponsors",
+					),
+				),
+				h(
+					"p",
+					{ className: "primary-text" },
+					"Come see the source code over on ",
+					h(
+						"a",
+						{
+							href: "https://github.com/rockerBOO/lora-inspector-rs",
+							target: "_blank",
+						},
+						"Github (lora-inspector-rs)",
+					),
+				),
+				h(
+					"p",
+					{
+						className: "primary-text",
+					},
+					"Thank you for your support! - Dave (rockerBOO)",
+				),
+			),
+		);
+	}
+
+	return h(
+		"button",
+		{
+			onClick: () => {
+				setModal(modal);
+			},
+		},
+		"Support",
+	);
+}
+
 function NoMetadata({ filename }) {
 	return h(
 		"main",
@@ -3188,33 +3353,8 @@ function Metadata({ metadata, filename }) {
 	];
 }
 
-// async function getAverageMagnitude(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_magnitude(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-// async function getAverageStrength(file) {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = function (e) {
-//       const buffer = new Uint8Array(e.target.result);
-//       const map = get_average_strength(buffer);
-//
-//       resolve(map);
-//     };
-//     reader.readAsArrayBuffer(file);
-//   });
-// }
-
-const isAdvancedUpload = (function () {
-	var div = document.createElement("div");
+const isAdvancedUpload = (() => {
+	const div = document.createElement("div");
 	return (
 		("draggable" in div || ("ondragstart" in div && "ondrop" in div)) &&
 		"FormData" in window &&
@@ -3228,20 +3368,23 @@ if (isAdvancedUpload) {
 
 const dropbox = document.querySelector("#dropbox");
 
-[
+const DRAG_EVENTS = [
 	"drag",
 	"dragstart",
 	"dragend",
 	"dragover",
 	"dragenter",
 	"dragleave",
-	// "drop",
-].forEach((evtName) =>
-	dropbox.addEventListener(evtName, (e) => {
+	"drop",
+];
+
+// Prevent propagation of events (maybe a bad idea)
+for (const eventName of DRAG_EVENTS) {
+	dropbox.addEventListener(eventName, (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-	}),
-);
+	});
+}
 
 ["dragover", "dragenter"].forEach((evtName) => {
 	dropbox.addEventListener(evtName, () => {
@@ -3255,16 +3398,8 @@ const dropbox = document.querySelector("#dropbox");
 	});
 });
 
-// ["drop"].forEach((evtName) => {
-//   document.addEventListener(evtName, async (e) => {
-//     e.preventDefault();
-//   });
-// });
-
 const files = new Map();
 let mainFilename;
-
-// let worker = new Worker("./assets/js/worker.js", {});
 
 const workers = new Map();
 
@@ -3272,7 +3407,6 @@ async function addWorker(file) {
 	const worker = new Worker(new URL("./worker.js", import.meta.url), {
 		type: "module",
 	});
-	// const worker = new InspectorWorker();
 
 	workers.set(file, worker);
 
@@ -3316,47 +3450,61 @@ function clearWorkers() {
 }
 
 init().then(() => {
-	["drop"].forEach((evtName) => {
-		document.addEventListener(evtName, async (e) => {
-			e.preventDefault();
-			e.stopPropagation();
+	const dropbox = document.querySelector("#dropbox");
+	dropbox.addEventListener("drop", async (e) => {
+		e.preventDefault();
+		if (e.dataTransfer.items) {
+			// Use DataTransferItemList interface to access the file(s)
+			[...e.dataTransfer.items].forEach((item, i) => {
 
-			const droppedFiles = e.dataTransfer.files;
-			for (let i = 0; i < droppedFiles.length; i++) {
-				if (files.item(i).type != "") {
+				if (item.type !== "") {
 					addErrorMessage("Invalid filetype. Try a .safetensors file.");
-					continue;
+					return;
 				}
 
-				processFile(droppedFiles.item(i));
-			}
-		});
+				// If dropped items aren't files, reject them
+				if (item.kind === "file") {
+					const file = item.getAsFile();
+					console.log(`data transfer items… file[${i}].name = ${file.name}`);
+
+					processFile(file);
+				}
+
+			});
+		} else {
+			// Use DataTransfer interface to access the file(s)
+			[...e.dataTransfer.files].forEach((file, i) => {
+				processFile(file.item(i));
+				console.log(`… file[${i}].name = ${file.name}`);
+			});
+		}
 	});
 
-	document
-		.querySelector("#file")
-		.addEventListener("change", async function (e) {
-			e.preventDefault();
-			e.stopPropagation();
+	document.querySelector("#file").addEventListener("change", async (e) => {
+		e.preventDefault();
+		e.stopPropagation();
 
-			const files = e.target.files;
+		const files = e.target.files;
 
-			for (let i = 0; i < files.length; i++) {
-				if (files.item(i).type != "") {
-					addErrorMessage("Invalid filetype. Try a .safetensors file.");
-					continue;
-				}
-
-				processFile(files.item(i));
+		for (let i = 0; i < files.length; i++) {
+			if (files.item(i).type !== "") {
+				addErrorMessage("Invalid filetype. Try a .safetensors file.");
+				continue;
 			}
-		});
+
+			processFile(files.item(i));
+		}
+	});
 });
 
 async function handleMetadata(metadata, filename) {
 	dropbox.classList.remove("box__open");
 	dropbox.classList.add("box__closed");
-	document.querySelector("#jumbo").classList.remove("jumbo__intro");
-	document.querySelector("#note").classList.add("hidden");
+	document.querySelector(".support").classList.remove("hidden");
+	document.querySelector(".home")?.classList.remove("home");
+	document.querySelector(".box").classList.remove("box__open");
+	document.querySelector(".box__intro").classList.add("hidden");
+	document.querySelector(".note").classList.add("hidden");
 	const domNode = document.getElementById("results");
 	const root = createRoot(domNode);
 	root.render(
@@ -3366,6 +3514,11 @@ async function handleMetadata(metadata, filename) {
 		}),
 	);
 }
+
+(() => {
+	const root = createRoot(document.querySelector(".support"));
+	root.render(h(Support, {}));
+})();
 
 let uploadTimeoutHandler;
 
@@ -3560,7 +3713,6 @@ async function listenProgress(messageType, file) {
 
 	return async function* listen() {
 		if (isFinished) {
-			console.log("IS FINISHEDD!!!");
 			return;
 		}
 

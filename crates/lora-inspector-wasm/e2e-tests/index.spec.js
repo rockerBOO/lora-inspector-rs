@@ -40,7 +40,7 @@ test("test", async ({ page }) => {
 		fileChooser.setFiles(["boo.safetensors"]);
 	});
 
-	await page.getByText("Choose a file").click();
+	await page.getByText("Choose a safetensors file").click();
 
 	// await expect(page.locator(".box__input input")).toBeVisible();
 

@@ -14,6 +14,7 @@ use wasm_bindgen::prelude::*;
 pub enum NetworkModule {
     KohyaSSLoRA,
     KohyaSSLoRAFlux,
+    KohyaSSLoRALumina,
     KohyaSSLoRASD3,
     KohyaSSLoRAFA,
     KohyaSSDyLoRA,
