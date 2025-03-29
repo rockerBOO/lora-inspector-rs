@@ -50,7 +50,7 @@ function parseSDKey(key) {
   if (key.includes("single_transformer_blocks")) {
     const matches = key.match(FLUX_PEFT);
     if (!matches) {
-      throw new Error(`Did not match on key: ${key} ${FLUX}`);
+      throw new Error(`Did not match on key: ${key} ${FLUX_PEFT}`);
     }
     const groups = matches.groups;
     type = "transformer";
@@ -65,7 +65,7 @@ function parseSDKey(key) {
   } else if (key.includes("transformer_blocks")) {
     const matches = key.match(FLUX_PEFT);
     if (!matches) {
-      throw new Error(`Did not match on key: ${key} ${FLUX}`);
+      throw new Error(`Did not match on key: ${key} ${FLUX_PEFT}`);
     }
     const groups = matches.groups;
     type = "transformer";
