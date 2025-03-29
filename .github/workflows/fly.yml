@@ -24,6 +24,12 @@ jobs:
           path: '**/node_modules'
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build wasm
+        run: wasm-pack build --target no-modules  --release crates/lora-inspector-wasm
+
       - name: Corepack 
         run: corepack enable
 
@@ -32,9 +38,6 @@ jobs:
 
       - name: Run build
         run: yarn --cwd crates/lora-inspector-wasm build
-
-      - name: Build wasm
-        run: wasm-pack build --target no-modules  --release crates/lora-inspector-wasm
 
       - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be
       - run: flyctl deploy --remote-only
