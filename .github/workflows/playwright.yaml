@@ -12,12 +12,12 @@ jobs:
       run:
         working-directory: ./crates/lora-inspector-wasm
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         # https://woodruffw.github.io/zizmor/audits/#artipacked
         persist-credentials: false
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e
       with:
         node-version: lts/*
     - name: Install rust
@@ -35,7 +35,7 @@ jobs:
       run: yarn playwright install --with-deps
     - name: Run Playwright tests
       run: yarn playwright test
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       if: always()
       with:
         name: playwright-report
