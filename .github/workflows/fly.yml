@@ -28,7 +28,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build wasm
-        run: wasm-pack build --target no-modules  --release crates/lora-inspector-wasm
+        run: wasm-pack build --target web --release crates/lora-inspector-wasm
 
       - name: Corepack 
         run: corepack enable
