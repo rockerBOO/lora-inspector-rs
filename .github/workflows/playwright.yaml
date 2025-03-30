@@ -20,9 +20,16 @@ jobs:
         node-version: lts/*
     - name: Install rust
       run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    - name: Build WASM
-      run: wasm-pack build --target web --out-dir pkg crates/lora-inspector-wasm --release
-      working-directory: ./
+
+    - name: Build wasm
+      run: 
+        wasm-pack build --target web --out-name lora-inspector 
+        --release --weak-refs crates/lora-inspector-wasm
+
+    - name: Build wasm SIMD
+      run: 
+        RUSTFLAGS="-C target-feature=+simd128" wasm-pack build --target web 
+        --out-name lora-inspector-simd --release --weak-refs crates/lora-inspector-wasm
 
     - name: Corepack
       run: corepack enable
