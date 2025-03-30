@@ -3250,81 +3250,92 @@ function Support() {
 	}, [modal]);
 
 	if (modal) {
-		return h(
-			"div",
-			{ className: "modal" },
+		return [
+			h(
+				"button",
+				{
+					onClick: () => {
+						setModal(true);
+					},
+				},
+				"Support",
+			),
 			h(
 				"div",
-				{},
+				{ className: "modal fade-in" },
 				h(
 					"div",
-					{ style: { textAlign: "right", padding: "1em" } },
+					{},
 					h(
-						"button",
-						{
-							onClick: () => {
-								setModal(false);
+						"div",
+						{ style: { textAlign: "right", padding: "1em" } },
+						h(
+							"button",
+							{
+								onClick: () => {
+									setModal(false);
+								},
 							},
-						},
-						"Close",
+							"Close",
+						),
 					),
-				),
-				h(
-					"p",
-					{ className: "primary-text" },
-					"Primary support through ",
 					h(
-						"a",
-						{
-							href: "https://github.com/rockerBOO/lora-inspector-rs/issues",
-							target: "_blank",
-						},
+						"p",
+						{ className: "primary-text" },
+						"Primary support through ",
+						h(
+							"a",
+							{
+								href: "https://github.com/rockerBOO/lora-inspector-rs/issues",
+								target: "_blank",
+							},
 
-						"Github Issues",
+							"Github Issues",
+						),
 					),
-				),
-				h(
-					"p",
-					{ className: "primary-text" },
-					"Looking to give support for this project? Through ",
 					h(
-						"a",
-						{
-							href: "https://github.com/sponsors/rockerBOO",
-							target: "_blank",
-						},
-						"Github Sponsors",
+						"p",
+						{ className: "primary-text" },
+						"Looking to give support for this project? Through ",
+						h(
+							"a",
+							{
+								href: "https://github.com/sponsors/rockerBOO",
+								target: "_blank",
+							},
+							"Github Sponsors",
+						),
 					),
-				),
-				h(
-					"p",
-					{ className: "primary-text" },
-					"Come see the source code over on ",
 					h(
-						"a",
-						{
-							href: "https://github.com/rockerBOO/lora-inspector-rs",
-							target: "_blank",
-						},
-						"Github (lora-inspector-rs)",
+						"p",
+						{ className: "primary-text" },
+						"Come see the source code over on ",
+						h(
+							"a",
+							{
+								href: "https://github.com/rockerBOO/lora-inspector-rs",
+								target: "_blank",
+							},
+							"Github (lora-inspector-rs)",
+						),
 					),
-				),
-				h(
-					"p",
-					{
-						className: "primary-text",
-					},
-					"Thank you for your support! - Dave (rockerBOO)",
+					h(
+						"p",
+						{
+							className: "primary-text",
+						},
+						"Thank you for your support! - Dave (rockerBOO)",
+					),
 				),
 			),
-		);
+		];
 	}
 
 	return h(
 		"button",
 		{
 			onClick: () => {
-				setModal(modal);
+				setModal(true);
 			},
 		},
 		"Support",
@@ -3456,7 +3467,6 @@ init().then(() => {
 		if (e.dataTransfer.items) {
 			// Use DataTransferItemList interface to access the file(s)
 			[...e.dataTransfer.items].forEach((item, i) => {
-
 				if (item.type !== "") {
 					addErrorMessage("Invalid filetype. Try a .safetensors file.");
 					return;
@@ -3469,7 +3479,6 @@ init().then(() => {
 
 					processFile(file);
 				}
-
 			});
 		} else {
 			// Use DataTransfer interface to access the file(s)

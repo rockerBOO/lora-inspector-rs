@@ -5,10 +5,11 @@ WASM_DIR := crates/lora-inspector-wasm
 OUT_DIR := pkg
 # TARGET := --target bundler 
 TARGET :=  --target web 
-# RELEASE := --release
+RELEASE := --release
 RELEASE := 
-# WEAK_REFS := --weak-refs
+WEAK_REFS := --weak-refs
 WEAK_REFS := 
+SIMD := RUSTFLAGS="-C target-feature=+simd128"
 
 # Default target
 .PHONY: all
@@ -24,7 +25,11 @@ test:
 # Build WASM for production (optimized)
 .PHONY: build-wasm
 build-wasm:
-	wasm-pack build $(TARGET) --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
+	wasm-pack build $(TARGET) --out-name lora-inspector --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
+
+.PHONY: build-wasm-simd
+build-wasm-simd:
+	$(SIMD) wasm-pack build $(TARGET) --out-name lora-inspector-simd --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
 
 .PHONY: build-frontend
 build-frontend:
@@ -32,15 +37,16 @@ build-frontend:
 
 .PHONY: build-frontend
 preview:
-	make build-wasm && yarn --cwd $(WASM_DIR) preview
+	yarn --cwd $(WASM_DIR) preview
 
 build:
-	make build-wasm && make build-frontend
+	 make build-wasm && make build-wasm-simd && make build-frontend
 
 # Start a local HTTP server for serving the WASM package (simple)
 .PHONY: dev-wasm
 dev-wasm:
 	make build-wasm && \
+	make build-wasm-simd && \
 		cd $(WASM_DIR) && \
 		yarn vite
 

@@ -1,5 +1,5 @@
-import init, { LoraWorker } from "/pkg/lora_inspector_wasm";
 import { parseSDKey } from "./moduleBlocks";
+import { simd } from "wasm-feature-detect";
 
 const files = new Map();
 
@@ -41,205 +41,224 @@ function getWorker(workerName) {
 }
 
 async function init_wasm_in_worker() {
+	let worker;
+	// if (await simd()) {
+	// 	const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
+	// 	worker = LoraWorker;
+	// 	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url")).default;
+	// 	await fetch(resolvedUrl)
+	// 		.then((response) => response.arrayBuffer())
+	// 		.then((bytes) => {
+	// 			return initSync(bytes);
+	// 		});
+	// } else {
+	const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
+	worker = LoraWorker;
+	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
+		.default;
+	await fetch(resolvedUrl)
+		.then((response) => response.arrayBuffer())
+		.then((bytes) => {
+			return initSync(bytes);
+		});
+	// }
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
-	init().then(() => {
-		self.onerror = (error) => {
-			console.log("There is an error inside your worker!", error);
-		};
+	self.onerror = (error) => {
+		console.log("There is an error inside your worker!", error);
+	};
 
-		self.onmessage = async (e) => {
-			if (e.data.messageType === "file_upload") {
-				fileUploadHandler(e);
-			} else if (e.data.messageType === "unload") {
-				unloadWorker(e).then(() => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "is_available",
-						});
-					}
-				});
-			} else if (e.data.messageType === "is_available") {
+	self.onmessage = async (e) => {
+		if (e.data.messageType === "file_upload") {
+			fileUploadHandler(e, worker);
+		} else if (e.data.messageType === "unload") {
+			unloadWorker(e).then(() => {
 				if (e.data.reply) {
 					self.postMessage({
 						messageType: "is_available",
 					});
 				}
-			} else if (e.data.messageType === "network_module") {
-				getNetworkModule(e).then((networkModule) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "network_module",
-							networkModule,
-						});
-					}
-				});
-			} else if (e.data.messageType === "network_args") {
-				getNetworkArgs(e).then((networkArgs) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "network_args",
-							networkArgs,
-						});
-					}
-				});
-			} else if (e.data.messageType === "network_type") {
-				getNetworkType(e).then((networkType) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "network_type",
-							networkType,
-						});
-					}
-				});
-			} else if (e.data.messageType === "weight_keys") {
-				getWeightKeys(e);
-			} else if (e.data.messageType === "keys") {
-				getKeys(e).then((keys) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "keys",
-							keys,
-						});
-					}
-				});
-			} else if (e.data.messageType === "text_encoder_keys") {
-				getTextEncoderKeys(e).then((textEncoderKeys) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "text_encoder_keys",
-							textEncoderKeys,
-						});
-					}
-				});
-			} else if (e.data.messageType === "unet_keys") {
-				getUnetKeys(e).then((unetKeys) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "unet_keys",
-							unetKeys,
-						});
-					}
-				});
-			} else if (e.data.messageType === "base_names") {
-				getBaseNames(e).then((baseNames) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "base_names",
-							baseNames,
-						});
-					}
-				});
-			} else if (e.data.messageType === "scale_weights") {
-				scaleWeights(e).then((baseNames) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "scale_weights",
-						});
-					}
-				});
-			} else if (e.data.messageType === "scale_weights_with_progress") {
-				iterScaleWeights(e).then((baseNames) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "scale_weights_with_progress",
-						});
-					}
-				});
-			} else if (e.data.messageType === "scale_weight") {
-				scaleWeight(e).then((baseNames) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "scale_weight",
-						});
-					}
-				});
-			} else if (e.data.messageType === "l2_norm") {
-				getL2Norms(e).then((norms) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "l2_norm",
-							norms,
-						});
-					}
-				});
-			} else if (e.data.messageType === "norms") {
-				getNorms(e).then(([norms, error]) => {
-					if (e.data.reply) {
-						if (error) {
-							self.postMessage({
-								messageType: "norms",
-								error,
-								norms,
-								baseName: e.data.baseName,
-							});
-						} else {
-							self.postMessage({
-								messageType: "norms",
-								norms,
-								baseName: e.data.baseName,
-							});
-						}
-					}
-				});
-			} else if (e.data.messageType === "alpha_keys") {
-				getAlphaKeys(e);
-			} else if (e.data.messageType === "dims") {
-				getDims(e).then((dims) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "dims",
-							dims,
-						});
-					}
-				});
-			} else if (e.data.messageType === "precision") {
-				getPrecision(e).then((precision) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "precision",
-							precision,
-						});
-					}
-				});
-			} else if (e.data.messageType === "alphas") {
-				getAlphas(e).then((alphas) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "alphas",
-							alphas,
-						});
-					}
-				});
-			} else if (e.data.messageType === "weight_decomposition") {
-				getWeightDecomposition(e).then((weightDecomposition) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "weight_decomposition",
-							weightDecomposition,
-						});
-					}
-				});
-			} else if (e.data.messageType === "rank_stabilized") {
-				getRankStabilized(e).then((rankStabilized) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "rank_stabilized",
-							rankStabilized,
-						});
-					}
-				});
-			} else if (e.data.messageType === "dora_scales") {
-				getDoraScales(e).then((doraScales) => {
-					if (e.data.reply) {
-						self.postMessage({
-							messageType: "dora_scales",
-							doraScales,
-						});
-					}
+			});
+		} else if (e.data.messageType === "is_available") {
+			if (e.data.reply) {
+				self.postMessage({
+					messageType: "is_available",
 				});
 			}
-		};
-	});
+		} else if (e.data.messageType === "network_module") {
+			getNetworkModule(e).then((networkModule) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "network_module",
+						networkModule,
+					});
+				}
+			});
+		} else if (e.data.messageType === "network_args") {
+			getNetworkArgs(e).then((networkArgs) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "network_args",
+						networkArgs,
+					});
+				}
+			});
+		} else if (e.data.messageType === "network_type") {
+			getNetworkType(e).then((networkType) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "network_type",
+						networkType,
+					});
+				}
+			});
+		} else if (e.data.messageType === "weight_keys") {
+			getWeightKeys(e);
+		} else if (e.data.messageType === "keys") {
+			getKeys(e).then((keys) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "keys",
+						keys,
+					});
+				}
+			});
+		} else if (e.data.messageType === "text_encoder_keys") {
+			getTextEncoderKeys(e).then((textEncoderKeys) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "text_encoder_keys",
+						textEncoderKeys,
+					});
+				}
+			});
+		} else if (e.data.messageType === "unet_keys") {
+			getUnetKeys(e).then((unetKeys) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "unet_keys",
+						unetKeys,
+					});
+				}
+			});
+		} else if (e.data.messageType === "base_names") {
+			getBaseNames(e).then((baseNames) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "base_names",
+						baseNames,
+					});
+				}
+			});
+		} else if (e.data.messageType === "scale_weights") {
+			scaleWeights(e).then((baseNames) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "scale_weights",
+					});
+				}
+			});
+		} else if (e.data.messageType === "scale_weights_with_progress") {
+			iterScaleWeights(e).then((baseNames) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "scale_weights_with_progress",
+					});
+				}
+			});
+		} else if (e.data.messageType === "scale_weight") {
+			scaleWeight(e).then((baseNames) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "scale_weight",
+					});
+				}
+			});
+		} else if (e.data.messageType === "l2_norm") {
+			getL2Norms(e).then((norms) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "l2_norm",
+						norms,
+					});
+				}
+			});
+		} else if (e.data.messageType === "norms") {
+			getNorms(e).then(([norms, error]) => {
+				if (e.data.reply) {
+					if (error) {
+						self.postMessage({
+							messageType: "norms",
+							error,
+							norms,
+							baseName: e.data.baseName,
+						});
+					} else {
+						self.postMessage({
+							messageType: "norms",
+							norms,
+							baseName: e.data.baseName,
+						});
+					}
+				}
+			});
+		} else if (e.data.messageType === "alpha_keys") {
+			getAlphaKeys(e);
+		} else if (e.data.messageType === "dims") {
+			getDims(e).then((dims) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "dims",
+						dims,
+					});
+				}
+			});
+		} else if (e.data.messageType === "precision") {
+			getPrecision(e).then((precision) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "precision",
+						precision,
+					});
+				}
+			});
+		} else if (e.data.messageType === "alphas") {
+			getAlphas(e).then((alphas) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "alphas",
+						alphas,
+					});
+				}
+			});
+		} else if (e.data.messageType === "weight_decomposition") {
+			getWeightDecomposition(e).then((weightDecomposition) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "weight_decomposition",
+						weightDecomposition,
+					});
+				}
+			});
+		} else if (e.data.messageType === "rank_stabilized") {
+			getRankStabilized(e).then((rankStabilized) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "rank_stabilized",
+						rankStabilized,
+					});
+				}
+			});
+		} else if (e.data.messageType === "dora_scales") {
+			getDoraScales(e).then((doraScales) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "dora_scales",
+						doraScales,
+					});
+				}
+			});
+		}
+	};
 }
 
 init_wasm_in_worker();
@@ -258,11 +277,11 @@ async function readFile(file) {
 	});
 }
 
-async function loadWorker(file) {
+async function loadWorker(file, worker) {
 	const buffer = await readFile(file);
 
 	try {
-		const loraWorker = addWorker(file.name, new LoraWorker(buffer, file.name));
+		const loraWorker = addWorker(file.name, new worker(buffer, file.name));
 
 		console.timeEnd("file_upload");
 		self.postMessage({
@@ -281,11 +300,11 @@ async function loadWorker(file) {
 	}
 }
 
-async function fileUploadHandler(e) {
+async function fileUploadHandler(e, worker) {
 	console.time("file_upload");
 	const file = e.data.file;
 	files.set(file.name, file);
-	loadWorker(file);
+	loadWorker(file, worker);
 }
 
 async function unloadWorker(e) {

@@ -6,6 +6,9 @@ export default defineConfig({
 	//   // Enable classic web workers
 	//   type: "classic",
 	// },
+	worker: {
+		format: "es"
+	},
 	plugins: [wasm()],
 	build: {
 		// main: {

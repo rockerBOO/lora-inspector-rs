@@ -5,7 +5,7 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@biomejs/biome@npm:1.9.4":
+"@biomejs/biome@npm:^1.9.4":
   version: 1.9.4
   resolution: "@biomejs/biome@npm:1.9.4"
   dependencies:
@@ -2534,7 +2534,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "lora-inspector-wasm@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:1.9.4"
+    "@biomejs/biome": "npm:^1.9.4"
     "@playwright/test": "npm:^1.51.1"
     "@types/node": "npm:^20.11.5"
     autoprefixer: "npm:^10.4.20"
@@ -2548,6 +2548,7 @@ __metadata:
     react-dom: "npm:^18.3.1"
     vite: "npm:^5.4.10"
     vite-plugin-wasm: "npm:^3.3.0"
+    wasm-feature-detect: "npm:^1.8.0"
   languageName: unknown
   linkType: soft
 
@@ -4379,6 +4380,13 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/f8a4893bf9d57fe3ded6dc0a2278e8ded707fc9cf38d5a3255fe3caaeea41c52f29bf4deb5e85c9e8dbc8848e9046a7306727ca3fb7b67847d75ee2f2afda5e5
+  languageName: node
+  linkType: hard
+
+"wasm-feature-detect@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "wasm-feature-detect@npm:1.8.0"
+  checksum: 10c0/2cb43e91bbf7aa7c121bc76b3133de3ab6dc4f482acc1d2dc46c528e8adb7a51c72df5c2aacf1d219f113c04efd1706f18274d5790542aa5dd49e0644e3ee665
   languageName: node
   linkType: hard
 
