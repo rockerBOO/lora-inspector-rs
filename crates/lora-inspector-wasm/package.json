@@ -24,6 +24,7 @@
 		"build": "vite build",
 		"test": "ava tests",
 		"preview": "vite preview",
+		"format": "biome format assets --write",
 		"e2e-test": "ava e2e-tests"
 	},
 	"packageManager": "yarn@4.5.1",

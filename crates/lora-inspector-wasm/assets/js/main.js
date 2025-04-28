@@ -938,12 +938,11 @@ function Batch({ metadata }) {
 		if (metadata.has("ss_datasets")) {
 			let datasets;
 			try {
-			datasets = JSON.parse(metadata.get("ss_datasets"));
+				datasets = JSON.parse(metadata.get("ss_datasets"));
 			} catch (e) {
-
 				console.log(metadata.get("ss_datasets"));
 				console.error(e);
-				datasets = []
+				datasets = [];
 			}
 
 			for (const dataset of datasets) {
@@ -1121,12 +1120,11 @@ function Dataset({ metadata }) {
 	let datasets;
 	if (metadata.has("ss_datasets")) {
 		try {
-		datasets = JSON.parse(metadata.get("ss_datasets"));
+			datasets = JSON.parse(metadata.get("ss_datasets"));
 		} catch (e) {
 			console.log(metadata.get("ss_datasets"));
 			console.error(e);
 			datasets = [];
-
 		}
 	} else {
 		datasets = [];
@@ -1169,22 +1167,24 @@ function Buckets({ dataset, metadata }) {
 		),
 
 		h("div", { key: "bucket-info" }, h(BucketInfo, { metadata, dataset })),
-		"subsets" in dataset && h(
-			"h3",
-			{ key: "subsets-header", className: "row space-apart" },
-			"Subsets:",
-		),
-		"subsets" in dataset && h(
-			"div",
-			{ key: "subsets", className: "subsets" },
-			dataset.subsets.map((subset, i) =>
-				h(Subset, {
-					key: `subset-${subset.image_dir}-${i}`,
-					metadata,
-					subset,
-				}),
+		"subsets" in dataset &&
+			h(
+				"h3",
+				{ key: "subsets-header", className: "row space-apart" },
+				"Subsets:",
 			),
-		),
+		"subsets" in dataset &&
+			h(
+				"div",
+				{ key: "subsets", className: "subsets" },
+				dataset.subsets.map((subset, i) =>
+					h(Subset, {
+						key: `subset-${subset.image_dir}-${i}`,
+						metadata,
+						subset,
+					}),
+				),
+			),
 		h("h3", { key: "header-tag-frequencies" }, "Tag frequencies"),
 		h(
 			"div",
@@ -1233,7 +1233,7 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-	const tf = (v, defaults = undefined, opts={}) => {
+	const tf = (v, defaults = undefined, opts = {}) => {
 		let className = "";
 		if (v === true) {
 			if (v !== defaults) {
