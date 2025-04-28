@@ -1990,8 +1990,8 @@ function parseSDKey(key) {
 	let isConv = false;
 	let isAttention = false;
 	let isSampler = false;
-	let isProjection = false;
-	let isFeedForward = false;
+	const isProjection = false;
+	const isFeedForward = false;
 
 	let type;
 	let blockType;
@@ -2005,7 +2005,7 @@ function parseSDKey(key) {
 		if (matches) {
 			const groups = matches.groups;
 			type = "encoder";
-			blockId = parseInt(groups["block_id"]);
+			blockId = Number.parseInt(groups["block_id"]);
 			blockType = groups["block_type"];
 
 			name = `TE${padTwo(blockId)}`;
@@ -2022,8 +2022,8 @@ function parseSDKey(key) {
 
 			type = groups["type"];
 			blockType = groups["block_type"];
-			blockId = parseInt(groups["block_id"]);
-			subBlockId = parseInt(groups["subblock_id"]);
+			blockId = Number.parseInt(groups["block_id"]);
+			subBlockId = Number.parseInt(groups["subblock_id"]);
 
 			if (groups["type"] === "attentions") {
 				idx = 3 * blockId + subBlockId;
@@ -2058,8 +2058,8 @@ function parseSDKey(key) {
 
 				type = groups["type"];
 				blockType = groups["block_type"];
-				blockId = parseInt(groups["block_id"]);
-				subBlockId = parseInt(groups["subblock_id"]);
+				blockId = Number.parseInt(groups["block_id"]);
+				subBlockId = Number.parseInt(groups["subblock_id"]);
 
 				name = `MID${padTwo(blockId)}`;
 
@@ -2295,7 +2295,7 @@ function compileUnetLayers(bases) {
 			continue;
 		}
 
-		let parsedKey = parseSDKey(base.baseName);
+		const parsedKey = parseSDKey(base.baseName);
 
 		// TODO need layer id
 		layer = ensureLayer(layer, parsedKey.name);
