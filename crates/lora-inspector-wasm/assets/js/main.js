@@ -936,11 +936,19 @@ function Batch({ metadata }) {
 	} else {
 		// The batch size is found inside the datasets.
 		if (metadata.has("ss_datasets")) {
-			const datasets = JSON.parse(metadata.get("ss_datasets"));
+			let datasets;
+			try {
+			datasets = JSON.parse(metadata.get("ss_datasets"));
+			} catch (e) {
+
+				console.log(metadata.get("ss_datasets"));
+				console.error(e);
+				datasets = []
+			}
 
 			for (const dataset of datasets) {
 				if ("batch_size_per_device" in dataset) {
-					batchSize = dataset["batch_size_per_device"];
+					batchSize = dataset.batch_size_per_device;
 				}
 			}
 		}
@@ -980,7 +988,7 @@ function Noise({ metadata }) {
 			name: "IP noise gamma",
 			valueClassName: "number",
 			value: metadata.get("ss_ip_noise_gamma"),
-			...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+			...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
 				secondaryName: "Random strength:",
 				secondary: metadata.get("ss_ip_noise_gamma_random_strength")
 					? "True"
@@ -1072,7 +1080,7 @@ function Loss({ metadata }) {
 			valueClassName: "boolean",
 			value: metadata.get("ss_zero_terminal_snr"),
 		}),
-		metadata.has("ss_masked_loss") != undefined &&
+		metadata.has("ss_masked_loss") !== undefined &&
 			h(MetaAttribute, {
 				name: "Masked Loss",
 				value: metadata.get("ss_masked_loss"),
@@ -1112,7 +1120,14 @@ function CaptionDropout({ metadata }) {
 function Dataset({ metadata }) {
 	let datasets;
 	if (metadata.has("ss_datasets")) {
+		try {
 		datasets = JSON.parse(metadata.get("ss_datasets"));
+		} catch (e) {
+			console.log(metadata.get("ss_datasets"));
+			console.error(e);
+			datasets = [];
+
+		}
 	} else {
 		datasets = [];
 	}
@@ -1134,37 +1149,37 @@ function Buckets({ dataset, metadata }) {
 			{ key: "buckets", className: "row space-apart" },
 			h(MetaAttribute, {
 				name: "Buckets",
-				value: dataset["enable_bucket"] ? "True" : "False",
+				value: dataset.enable_bucket ? "True" : "False",
 			}),
 			h(MetaAttribute, {
 				name: "Min bucket resolution",
 				valueClassName: "number",
-				value: dataset["min_bucket_reso"],
+				value: dataset.min_bucket_reso,
 			}),
 			h(MetaAttribute, {
 				name: "Max bucket resolution",
 				valueClassName: "number",
-				value: dataset["max_bucket_reso"],
+				value: dataset.max_bucket_reso,
 			}),
 			h(MetaAttribute, {
 				name: "Resolution",
 				valueClassName: "number",
-				value: `${dataset["resolution"][0]}x${dataset["resolution"][0]}`,
+				value: `${dataset.resolution[0]}x${dataset.resolution[0]}`,
 			}),
 		),
 
 		h("div", { key: "bucket-info" }, h(BucketInfo, { metadata, dataset })),
-		h(
+		"subsets" in dataset && h(
 			"h3",
 			{ key: "subsets-header", className: "row space-apart" },
 			"Subsets:",
 		),
-		h(
+		"subsets" in dataset && h(
 			"div",
 			{ key: "subsets", className: "subsets" },
-			dataset["subsets"].map((subset, i) =>
+			dataset.subsets.map((subset, i) =>
 				h(Subset, {
-					key: `subset-${subset["image_dir"]}-${i}`,
+					key: `subset-${subset.image_dir}-${i}`,
 					metadata,
 					subset,
 				}),
@@ -1174,7 +1189,7 @@ function Buckets({ dataset, metadata }) {
 		h(
 			"div",
 			{ key: "tag-frequencies", className: "tag-frequencies row space-apart" },
-			Object.entries(dataset["tag_frequency"]).map(([dir, frequency]) =>
+			Object.entries(dataset.tag_frequency).map(([dir, frequency]) =>
 				h(
 					"div",
 					{ key: dir },
@@ -1218,14 +1233,14 @@ function BucketInfo({ metadata, dataset }) {
 }
 
 function Subset({ subset, metadata }) {
-	const tf = (v, defaults = undefined, opts) => {
+	const tf = (v, defaults = undefined, opts={}) => {
 		let className = "";
 		if (v === true) {
 			if (v !== defaults) {
 				className = "changed";
 			}
 			return {
-				valueClassName: opts?.valueClassName ?? "" + " option " + className,
+				valueClassName: opts?.valueClassName ?? ` option ${className}`,
 				value: "true",
 			};
 		}
@@ -1233,7 +1248,7 @@ function Subset({ subset, metadata }) {
 			className = "changed";
 		}
 		return {
-			valueClassName: opts?.valueClassName ?? "" + " option " + className,
+			valueClassName: opts?.valueClassName ?? ` option ${className}`,
 			value: "false",
 		};
 	};
