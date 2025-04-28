@@ -724,11 +724,55 @@ lora_unet_up_blocks_1_attentions_2_transformer_blocks_1_attn2_to_v
 lora_unet_up_blocks_1_attentions_2_transformer_blocks_1_ff_net_0_proj
 lora_unet_up_blocks_1_attentions_2_transformer_blocks_1_ff_net_2`;
 
-test("test keys", (t) => {
-	const keys = rawKeys.split("\n");
-	for (const key in keys) {
-		const parsed = parseSDKey(keys[key]);
+test("test keys", async (t) => {
+  const keys = rawKeys.split("\n");
+  for (const key of keys) {
+    if (!key.trim()) continue;  // Skip empty lines
+    
+    const parsed = parseSDKey(key);
+    
+    // Test that all required properties exist and have the correct types
+    t.truthy(parsed, `Failed to parse key: ${key}`);
+    t.is(typeof parsed.name, 'string', `'name' should be a string for key: ${key}`);
+    t.is(typeof parsed.blockIdx, 'number', `'blockIdx' should be a number for key: ${key}`);
+    t.is(typeof parsed.idx, 'number', `'idx' should be a number for key: ${key}`);
+    // t.is(typeof parsed.blockId, 'string', `'blockId' should be a string for key: ${key}`);
+    // t.is(typeof parsed.subBlockId, 'string', `'subBlockId' should be a string for key: ${key}`);
+    t.is(typeof parsed.type, 'string', `'type' should be a string for key: ${key}`);
+    t.is(typeof parsed.blockType, 'string', `'blockType' should be a string for key: ${key}`);
+    t.is(typeof parsed.isConv, 'boolean', `'isConv' should be a boolean for key: ${key}`);
+    t.is(typeof parsed.isAttention, 'boolean', `'isAttention' should be a boolean for key: ${key}`);
+    t.is(typeof parsed.isSampler, 'boolean', `'isSampler' should be a boolean for key: ${key}`);
+    t.is(parsed.key, key, `'key' should contain the original key string for key: ${key}`);
+    
+    // Test that the values are consistent with expectations
+    if (parsed.isConv) {
+      t.is(parsed.type, 'resnet', `When isConv is true, type should be 'resnet' for key: ${key}`);
+    }
 
-		t.truthy(parsed.name, `Did not parse correctly ${parsed}`);
-	}
+    if (parsed.isSampler) {
+      t.true(['upscaler', 'downscaler'].includes(parsed.type), 
+        `When isSampler is true, type should be 'upscaler' or 'downscaler' for key: ${key}`);
+    }
+    
+    // Test that blockIdx is within the expected range
+    t.true(parsed.blockIdx >= -1 && parsed.blockIdx <= 48, 
+      `'blockIdx' (${parsed.blockIdx}) should be between 0 and 48 for key: ${key}`);
+    
+ //    if (parsed.isAttention) {
+	// 		const firstTry = await t.try((tt, p) => {
+ //      tt.is(p.type, 'attentions', `When isAttention is true, type should be 'attentions' for key: ${key}`);
+	// 		}, parsed);
+	//
+	// 			if (firstTry.passed) {
+	// 	firstTry.commit();
+	// }
+	//
+	// 			const secondTry = await t.try((tt, p) => {
+ //      tt.is(p.type, 'transformer', `When isAttention is true, type should be 'transformer' for key: ${key}`);
+	// }, parsed);
+	// secondTry.commit();
+ //    }
+    
+  }
 });

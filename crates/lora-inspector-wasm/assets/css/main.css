@@ -5,6 +5,9 @@
 	--accent-color-b: #c9e836;
 	--color: #9ddfab;
 	--color-fade: #6ea87a;
+	/* --color: #2ad4d4; */
+	/* --bg-color: #2a2a55; */
+	color: #ccf8d5;
 }
 
 html,
@@ -105,10 +108,12 @@ a:focus {
 	justify-items: center;
 	align-items: center;
 	text-align: center;
-	background-image: url("/assets/img/logo.png");
+	/* background-image: url("/assets/img/logo.png"); */
+	background-image: url("/assets/img/00042_dithered_pixelized.png");
 	background-repeat: no-repeat;
-	background-blend-mode: overlay;
+	background-blend-mode: soft-light;
 	background-position: center;
+	/* background-position: cover; */
 	background-size: 50vw;
 	transition: outline 240ms ease-in;
 }
@@ -160,8 +165,22 @@ a:focus {
 	text-decoration: underline;
 }
 
+.box > div {
+	backdrop-filter: blur(5px);
+	border-radius: 1em;
+	padding: 1em;
+	display: grid;
+	grid-gap: 1em;
+}
+
+.box__closed > div {
+	padding: 0em;
+}
+
+.box__intro p,
 .note {
 	font-size: 0.8em;
+	opacity: 0.9;
 }
 
 /**
@@ -558,7 +577,7 @@ text {
 }
 
 .support > button {
-	width: 5em;
+	width: 8em;
 	height: 2em;
 	font-weight: 900;
 }
@@ -595,7 +614,6 @@ text {
 .fade-in {
 	animation: fade-in 0.6s ease-in-out;
 }
-
 
 @keyframes fade-in {
 	from {

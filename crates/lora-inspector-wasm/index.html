@@ -39,32 +39,34 @@
       data-cf-beacon='{"token": "75b409a5a7904b8abe0888dd0f2086c3"}'
     ></script>
     <!-- End Cloudflare Web Analytics -->
-		<script src="/assets/js-lib/chartist.min.js"></script>
-		<script src="/assets/js-lib/chartist-plugin-pointlabels.min.js"></script>
+    <script src="/assets/js-lib/chartist.min.js"></script>
+    <script src="/assets/js-lib/chartist-plugin-pointlabels.min.js"></script>
   </head>
   <body>
     <header class="home">
       <form class="box box__open" id="dropbox" enctype="multipart/form-data">
-        <div class="box__intro">
-          <h1>LoRA Inspector</h1>
-          <p>View metadata of your LoRA files, supporting Kohya-ss LoRAs</p>
-        </div>
-        <div class="box__input">
-          <input
-            class="box__file"
-            type="file"
-            name="files[]"
-            id="file"
-            data-multiple-caption="{count} files selected"
-            multiple
-          />
-          <label for="file">
-            <strong>Choose a safetensors file</strong>
-            <span class="box__dragndrop"> or drag it here</span>.
-          </label>
-        </div>
-        <div class="note">
-          <p><em>Metadata directly in the browser, locally.</em></p>
+        <div>
+          <div class="box__intro">
+            <h1>LoRA Inspector</h1>
+            <p>View metadata of your LoRA files, supporting Kohya-ss LoRAs</p>
+          </div>
+          <div class="box__input">
+            <input
+              class="box__file"
+              type="file"
+              name="files[]"
+              id="file"
+              data-multiple-caption="{count} files selected"
+              multiple
+            />
+            <label for="file">
+              <strong>Choose a safetensors file</strong>
+              <span class="box__dragndrop"> or drag it here</span>.
+            </label>
+          </div>
+          <div class="note">
+            <p><em>Metadata directly in the browser, locally.</em></p>
+          </div>
         </div>
       </form>
       <div class="support hidden"></div>
