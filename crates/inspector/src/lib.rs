@@ -23,8 +23,8 @@ pub mod network;
 pub mod norms;
 mod parser;
 pub mod statistic;
-mod weight;
 mod tensor;
+mod weight;
 
 #[cfg(test)]
 mod tensor_test;
