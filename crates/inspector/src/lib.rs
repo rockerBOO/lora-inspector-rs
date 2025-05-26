@@ -38,6 +38,7 @@ pub enum InspectorError {
     Msg(String),
     NotFound,
     UnsupportedNetworkType,
+    SerdeJson(serde_json::Error),
     SerdeWasmBindgenError(serde_wasm_bindgen::Error),
 }
 
@@ -74,6 +75,7 @@ impl fmt::Display for InspectorError {
         match self {
             InspectorError::Candle(e) => write!(f, "Candle Error {:#?}", e),
             InspectorError::SafeTensor(e) => write!(f, "SafeTensor Error {:#?}", e),
+            InspectorError::SerdeJson(e) => write!(f, "Serde JSON Error {}", e),
             InspectorError::SerdeWasmBindgenError(e) => {
                 write!(f, "Serde WASM Bindgen error: {}", e)
             }
@@ -95,6 +97,12 @@ impl From<JsValue> for InspectorError {
 impl From<serde_wasm_bindgen::Error> for InspectorError {
     fn from(value: serde_wasm_bindgen::Error) -> Self {
         InspectorError::SerdeWasmBindgenError(value)
+    }
+}
+
+impl From<serde_json::Error> for InspectorError {
+    fn from(value: serde_json::Error) -> Self {
+        InspectorError::SerdeJson(value)
     }
 }
 

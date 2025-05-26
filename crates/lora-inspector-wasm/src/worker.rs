@@ -181,13 +181,7 @@ impl LoraWorker {
                 "std_dev" => norms::NormFn {
                     name: "std_dev".to_string(),
                     function: Box::new(|t| {
-                        statistic::std_deviation(&t.to_dtype(candle_core::DType::F64)?)?.ok_or_else(
-                            || {
-                                InspectorError::Msg(
-                                    "Could not get the standard deviation calculation".to_string(),
-                                )
-                            },
-                        )
+                        statistic::std_dev::<f64>(&t.to_dtype(candle_core::DType::F64)?)
                     }),
                 },
                 "median" => norms::NormFn {
