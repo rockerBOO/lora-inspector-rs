@@ -8,6 +8,35 @@ on:
 
 permissions: read-all
 jobs:
+  biome:
+    defaults:
+      run:
+        working-directory: crates/lora-inspector-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # https://woodruffw.github.io/zizmor/audits/#artipacked
+          persist-credentials: false
+
+      - name: Set Node.js lts/*
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e
+        with:
+          node-version: lts/*
+
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Corepack 
+        run: corepack enable
+
+      - name: Run install
+        run: yarn install
+
+      - name: Biome check
+        run: yarn biome ci assets/js
   test:
     strategy:
       # Don't cancel test runs if one fails
@@ -48,4 +77,5 @@ jobs:
         env:
           CI_NODE_INDEX: ${{ matrix.node_index }}
           CI_NODE_TOTAL: ${{ matrix.total_nodes }}
+
 

@@ -1,5 +1,5 @@
-import { parseSDKey } from "./moduleBlocks";
 import { simd } from "wasm-feature-detect";
+import { parseSDKey } from "./moduleBlocks";
 
 const files = new Map();
 
@@ -42,26 +42,27 @@ function getWorker(workerName) {
 
 async function init_wasm_in_worker() {
 	let worker;
-	// if (await simd()) {
-	// 	const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
-	// 	worker = LoraWorker;
-	// 	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url")).default;
-	// 	await fetch(resolvedUrl)
-	// 		.then((response) => response.arrayBuffer())
-	// 		.then((bytes) => {
-	// 			return initSync(bytes);
-	// 		});
-	// } else {
-	const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
-	worker = LoraWorker;
-	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
-		.default;
-	await fetch(resolvedUrl)
-		.then((response) => response.arrayBuffer())
-		.then((bytes) => {
-			return initSync(bytes);
-		});
-	// }
+	if (await simd()) {
+		const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
+		worker = LoraWorker;
+		const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
+			.default;
+		await fetch(resolvedUrl)
+			.then((response) => response.arrayBuffer())
+			.then((bytes) => {
+				return initSync(bytes);
+			});
+	} else {
+		const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
+		worker = LoraWorker;
+		const resolvedUrl = (await import("/pkg/lora-inspector_bg.wasm?url"))
+			.default;
+		await fetch(resolvedUrl)
+			.then((response) => response.arrayBuffer())
+			.then((bytes) => {
+				return initSync(bytes);
+			});
+	}
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	self.onerror = (error) => {
 		console.log("There is an error inside your worker!", error);
@@ -528,4 +529,3 @@ async function getNetworkType(e) {
 
 	return loraWorker.network_type();
 }
-
