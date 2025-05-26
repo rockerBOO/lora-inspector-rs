@@ -100,6 +100,9 @@ init().then(() => {
 	});
 });
 
+const domNode = document.getElementById("results");
+const root = createRoot(domNode);
+
 async function handleMetadata(metadata, filename, worker) {
 	dropbox.classList.remove("box__open");
 	dropbox.classList.add("box__closed");
@@ -108,8 +111,6 @@ async function handleMetadata(metadata, filename, worker) {
 	document.querySelector(".box").classList.remove("box__open");
 	document.querySelector(".box__intro").classList.add("hidden");
 	document.querySelector(".note").classList.add("hidden");
-	const domNode = document.getElementById("results");
-	const root = createRoot(domNode);
 	root.render(
 		h(
 			StrictMode,

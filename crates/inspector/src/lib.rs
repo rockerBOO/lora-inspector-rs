@@ -23,7 +23,11 @@ pub mod network;
 pub mod norms;
 mod parser;
 pub mod statistic;
+mod tensor;
 mod weight;
+
+#[cfg(test)]
+mod tensor_test;
 
 // pub use wasm_bindgen_rayon::init_thread_pool;
 

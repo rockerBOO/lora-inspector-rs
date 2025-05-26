@@ -1,7 +1,5 @@
 export default {
-	"ava": {
-		"files": [
-			"tests/**/*",
-		],
-	}
-}
+	ava: {
+		files: ["tests/**/*"],
+	},
+};
