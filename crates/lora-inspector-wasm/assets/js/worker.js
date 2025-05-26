@@ -41,6 +41,7 @@ function getWorker(workerName) {
 }
 
 async function init_wasm_in_worker() {
+	let worker;
 	if (await simd()) {
 		const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
 		worker = LoraWorker;
@@ -53,7 +54,7 @@ async function init_wasm_in_worker() {
 			});
 	} else {
 		const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
-		const worker = LoraWorker;
+		worker = LoraWorker;
 		const resolvedUrl = (await import("/pkg/lora-inspector_bg.wasm?url"))
 			.default;
 		await fetch(resolvedUrl)

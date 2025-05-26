@@ -4,57 +4,52 @@ import { Metadata, Support } from "./components.js";
 import {
 	addWorker,
 	clearWorkers,
-	getWorker,
 	terminatePreviousProcessing,
 } from "./workers";
 import init from "/pkg";
 
 const h = React.createElement;
 
-const isAdvancedUpload = (() => {
-	const div = document.createElement("div");
-	return (
-		("draggable" in div || ("ondragstart" in div && "ondrop" in div)) &&
-		"FormData" in window &&
-		"FileReader" in window
-	);
-})();
+function attachDragEvents() {
+	const dropbox = document.querySelector("#dropbox");
 
-if (isAdvancedUpload) {
-	document.querySelector("#dropbox").classList.add("has-advanced-upload");
+	// const DRAG_EVENTS = [
+	// 	"drag",
+	// 	"dragstart",
+	// 	"dragend",
+	// 	"dragover",
+	// 	"dragenter",
+	// 	"dragleave",
+	// 	"drop",
+	// ];
+
+	for (const eventName of ["dragover", "dragenter"]) {
+		dropbox.addEventListener(eventName, () => {
+			dropbox.classList.add("is-dragover");
+		});
+	}
+
+	for (const eventName of ["dragleave", "dragend", "drop"]) {
+		dropbox.addEventListener(eventName, () => {
+			dropbox.classList.remove("is-dragover");
+		});
+	}
+
+	const isAdvancedUpload = (() => {
+		const div = document.createElement("div");
+		return (
+			("draggable" in div || ("ondragstart" in div && "ondrop" in div)) &&
+			"FormData" in window &&
+			"FileReader" in window
+		);
+	})();
+
+	if (isAdvancedUpload) {
+		document.querySelector("#dropbox").classList.add("has-advanced-upload");
+	}
 }
 
-const dropbox = document.querySelector("#dropbox");
-
-const DRAG_EVENTS = [
-	"drag",
-	"dragstart",
-	"dragend",
-	"dragover",
-	"dragenter",
-	"dragleave",
-	"drop",
-];
-
-// Prevent propagation of events (maybe a bad idea)
-for (const eventName of DRAG_EVENTS) {
-	dropbox.addEventListener(eventName, (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-	});
-}
-
-["dragover", "dragenter"].forEach((evtName) => {
-	dropbox.addEventListener(evtName, () => {
-		dropbox.classList.add("is-dragover");
-	});
-});
-
-["dragleave", "dragend", "drop"].forEach((evtName) => {
-	dropbox.addEventListener(evtName, () => {
-		dropbox.classList.remove("is-dragover");
-	});
-});
+attachDragEvents();
 
 const files = new Map();
 let mainFilename;
@@ -113,7 +108,6 @@ async function handleMetadata(metadata, filename, worker) {
 	document.querySelector(".box").classList.remove("box__open");
 	document.querySelector(".box__intro").classList.add("hidden");
 	document.querySelector(".note").classList.add("hidden");
-	console.log("worker", worker);
 	const domNode = document.getElementById("results");
 	const root = createRoot(domNode);
 	root.render(
