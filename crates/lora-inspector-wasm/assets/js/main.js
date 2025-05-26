@@ -1,4 +1,4 @@
-import React from "react";
+import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Metadata, Support } from "./components.js";
 import {
@@ -117,17 +117,21 @@ async function handleMetadata(metadata, filename, worker) {
 	const domNode = document.getElementById("results");
 	const root = createRoot(domNode);
 	root.render(
-		h(Metadata, {
-			metadata,
-			filename,
-			worker,
-		}),
+		h(
+			StrictMode,
+			null,
+			h(Metadata, {
+				metadata,
+				filename,
+				worker,
+			}),
+		),
 	);
 }
 
 (() => {
 	const root = createRoot(document.querySelector(".support"));
-	root.render(h(Support, {}));
+	root.render(h(StrictMode, null, h(Support, {})));
 })();
 
 let uploadTimeoutHandler;

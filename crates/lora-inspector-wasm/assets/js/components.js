@@ -1608,13 +1608,13 @@ function Advanced({ filename, worker }) {
 		]),
 		!canHaveStatistics
 			? h(BaseNames, { key: "base-names", baseNames })
-			: h(Statistics, { key: "statistics", baseNames, filename }),
+			: h(Statistics, { key: "statistics", baseNames, filename, worker }),
 	];
 }
 
 const DEBUG = new URLSearchParams(document.location.search).has("DEBUG");
 
-function Statistics({ baseNames, filename }) {
+function Statistics({ baseNames, filename, worker }) {
 	const [calcStatistics, setCalcStatistics] = React.useState(false);
 	const [hasStatistics, setHasStatistics] = React.useState(false);
 	const [bases, setBases] = React.useState([]);
@@ -1624,11 +1624,6 @@ function Statistics({ baseNames, filename }) {
 
 	const [startTime, setStartTime] = React.useState(undefined);
 	const [currentBaseName, setCurrentBaseName] = React.useState("");
-
-	// const [scaleWeightProgress, setScaleWeightProgress] = React.useState(0);
-	// const [currentScaleWeightCount, setCurrentScaleWeightCount] =
-	//   React.useState(0);
-	// const [totalScaleWeightCount, setTotalScaleWeightCount] = React.useState(0);
 
 	React.useEffect(() => {
 		if (!calcStatistics) {
@@ -1640,47 +1635,31 @@ function Statistics({ baseNames, filename }) {
 		}
 
 		console.time("scale weights");
-		// trySyncMessage(
-		//   {
-		//     messageType: "scale_weights_with_progress",
-		//     name: filename,
-		//     reply: true,
-		//   },
-		//   filename,
-		// ).then(() => {
 		console.timeEnd("scale weights");
 		console.log("Calculating statistics...");
 		console.time("get statistics");
 
 		setStartTime(performance.now());
 
-		// listenProgress("statistics_progress", filename)
-		//   .then(async (getProgress) => {
-		//     let progress;
-		//     while ((progress = await getProgress().next())) {
-		//       const value = progress.value;
-		//       setCurrentBaseName(value.baseName);
-		//       setCurrentCount(value.currentCount);
-		//       setTotalCount(value.totalCount);
-		//       setNormProgress(value.currentCount / value.totalCount);
-		//     }
-		//   })
-		//   .then(() => {
 		let progress = 0;
 		Promise.allSettled(
 			baseNames.map(async (baseName) => {
 				return trySyncMessage(
 					{ messageType: "norms", name: filename, baseName },
-					filename,
+					worker,
 					["messageType", "baseName"],
 				).then((resp) => {
 					progress += 1;
-					// console.log("progress", progress / baseNames.length, resp);
+
+					console.log("norms", resp);
 
 					setCurrentBaseName(resp.baseName);
 					setCurrentCount(progress);
 					setTotalCount(baseNames.length);
 					setStatisticProgress(progress / baseNames.length);
+
+					bases.push({ baseName: resp.baseName, stat: resp.norms });
+					setBases(bases);
 
 					return { baseName: resp.baseName, stat: resp.norms };
 				});
@@ -1694,9 +1673,7 @@ function Statistics({ baseNames, filename }) {
 			setHasStatistics(true);
 			console.timeEnd("get statistics");
 		});
-		// });
-		// });
-	}, [filename, calcStatistics, baseNames]);
+	}, [filename, calcStatistics, baseNames, worker]);
 
 	React.useEffect(() => {
 		if (!calcStatistics) {
@@ -1750,63 +1727,8 @@ function Statistics({ baseNames, filename }) {
 		);
 	}
 
-	if (calcStatistics && !hasStatistics) {
-		const elapsedTime = performance.now() - startTime;
-		const remaining =
-			(elapsedTime * totalCount) / statisticProgress -
-				elapsedTime * totalCount || 0;
-		const perSecond = currentCount / (elapsedTime / 1_000);
-
-		// if (currentCount === 0) {
-		//   const elapsedTime = performance.now() - startTime;
-		//   const perSecond = currentScaleWeightCount / (elapsedTime / 1_000);
-		//
-		//   if (scaleWeightProgress === 0) {
-		//     return h(
-		//       "div",
-		//       { className: "block-weights-container" },
-		//       "Waiting for worker, please wait...",
-		//     );
-		//   }
-		//
-		//   const remaining =
-		//     (elapsedTime * totalScaleWeightCount) / scaleWeightProgress -
-		//     elapsedTime * totalScaleWeightCount;
-		//   return h(
-		//     "div",
-		//     { className: "block-weights-container" },
-		//     h(
-		//       "span",
-		//       null,
-		//       `Scaling weights... ${(scaleWeightProgress * 100).toFixed(
-		//         2,
-		//       )}% ${currentScaleWeightCount}/${totalScaleWeightCount} ${perSecond.toFixed(
-		//         2,
-		//       )}it/s ${(remaining / 1_000_000).toFixed(
-		//         2,
-		//       )}s remaining ${currentBaseName} `,
-		//     ),
-		//   );
-		// }
-
-		return h(
-			"div",
-			{ className: "block-weights-container" },
-			// { className: "marquee" },
-			h(
-				"span",
-				null,
-				`Loading statistics... ${(statisticProgress * 100).toFixed(
-					2,
-				)}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(
-					remaining / 1_000_000
-				).toFixed(2)}s remaining ${currentBaseName} `,
-			),
-		);
-	}
-
-	const teLayers = compileTextEncoderLayers(bases);
-	const unetLayers = compileUnetLayers(bases);
+	// const teLayers = compileTextEncoderLayers(bases);
+	// const unetLayers = compileUnetLayers(bases);
 
 	return [
 		DEBUG &&
@@ -1836,198 +1758,95 @@ function Statistics({ baseNames, filename }) {
 					"debug stats",
 				),
 			),
-		h("table", null, [
-			h("thead", null, [
-				h("th", null, "base name"),
-				h("th", null, "l1 norm"),
-				h("th", null, "l2 norm"),
-				h("th", null, "matrix norm"),
-				h("th", null, "min"),
-				h("th", null, "max"),
-				h("th", null, "median"),
-				h("th", null, "std_dev"),
-			]),
-			bases.map((base) => {
-				return h(StatisticRow, {
-					baseName: base.baseName,
-					l1Norm: base.stat?.get("l1_norm"),
-					l2Norm: base.stat?.get("l2_norm"),
-					matrixNorm: base.stat?.get("matrix_norm"),
-					min: base.stat?.get("min"),
-					max: base.stat?.get("max"),
-					median: base.stat?.get("median"),
-					stdDev: base.stat?.get("std_dev"),
-				});
+		calcStatistics &&
+			!hasStatistics &&
+			h(Progress, {
+				totalCount,
+				currentCount,
+				statisticProgress,
+				startTime,
+				currentItemName: currentBaseName
 			}),
+		h("table", { key: "table" }, [
+			h(
+				"thead",
+				{ key: "header" },
+				h("tr", null, [
+					h("th", { key: "base-name" }, "base name"),
+					h("th", { key: "l1-norm" }, "l1 norm"),
+					h("th", { key: "l2" }, "l2 norm"),
+					h("th", { key: "matrix" }, "matrix norm"),
+					h("th", { key: "min" }, "min"),
+					h("th", { key: "max" }, "max"),
+					h("th", { key: "median" }, "median"),
+					h("th", { key: "std_dev" }, "std_dev"),
+				]),
+			),
+			h(
+				"tbody",
+				{ key: "body" },
+				bases.map((base, i) => {
+					return h(StatisticRow, {
+						key: `base-${i}`,
+						baseName: base.baseName,
+						l1Norm: base.stat?.get("l1_norm"),
+						l2Norm: base.stat?.get("l2_norm"),
+						matrixNorm: base.stat?.get("matrix_norm"),
+						min: base.stat?.get("min"),
+						max: base.stat?.get("max"),
+						median: base.stat?.get("median"),
+						stdDev: base.stat?.get("std_dev"),
+					});
+				}),
+			),
 		]),
 
-		teLayers.length > 0 && [
-			h("div", null, h("h2", null, "Text Encoder Architecture")),
-			h(
-				"div",
-				{ id: "te-architecture" },
-				h(TEArchitecture, { layers: teLayers }),
-			),
-		],
-		h("div", null, h("h2", null, "UNet Architecture")),
-		h(
-			"div",
-			{ id: "unet-architecture" },
-			h(UNetArchitecture, { layers: unetLayers }),
-		),
+		// teLayers.length > 0 && [
+		// 	h("div", null, h("h2", null, "Text Encoder Architecture")),
+		// 	h(
+		// 		"div",
+		// 		{ id: "te-architecture" },
+		// 		h(TEArchitecture, { layers: teLayers }),
+		// 	),
+		// ],
+		// h("div", null, h("h2", null, "UNet Architecture")),
+		// h(
+		// 	"div",
+		// 	{ id: "unet-architecture" },
+		// 	h(UNetArchitecture, { layers: unetLayers }),
+		// ),
 	];
 }
 
-function compileTextEncoderLayers(bases) {
-	// we have a list of names and we want to extract the different components and put back together to use
-	// with Attention
+function Progress({
+	totalCount,
+	currentCount,
+	statisticProgress,
+	startTime,
+	currentItemName,
+}) {
+	const elapsedTime = performance.now() - startTime;
+	const remaining =
+		(elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount ||
+		0;
+	const perSecond = currentCount / (elapsedTime / 1_000);
 
-	// return [
-	//   {
-	//     mlp: {
-	//       fc1: 0.08874939821570828,
-	//       fc2: 0.05158995647743977,
-	//     },
-	//     attn: {
-	//       k: 0.04563352340448522,
-	//       out: 0.026101619710240453,
-	//       q: 0.046494255017048534,
-	//       v: 0.03780647423398955,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.12399202308592269,
-	//       fc2: 0.03210216086766441,
-	//     },
-	//     attn: {
-	//       k: 0.025577711354884597,
-	//       out: 0.026762534720483375,
-	//       q: 0.024220520916595146,
-	//       v: 0.04206973022947387,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.07114190129556483,
-	//       fc2: 0.03149272871458899,
-	//     },
-	//     attn: {
-	//       k: 0.04921840851517207,
-	//       out: 0.03451791010418351,
-	//       q: 0.04933284289751113,
-	//       v: 0.03181333654645837,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.09089861052045024,
-	//       fc2: 0.036574718216460855,
-	//     },
-	//     attn: {
-	//       k: 0.027225555334912124,
-	//       out: 0.035934416130131236,
-	//       q: 0.04121116314738675,
-	//       v: 0.02635890848588376,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.11041730547456188,
-	//       fc2: 0.03660948051587213,
-	//     },
-	//     attn: {
-	//       k: 0.02081813800317196,
-	//       out: 0.03266481012845906,
-	//       q: 0.03326618360212101,
-	//       v: 0.04313162519570171,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.09382505505569123,
-	//       fc2: 0.04881491512305284,
-	//     },
-	//     attn: {
-	//       k: 0.027084868460153178,
-	//       out: 0.02916151803845624,
-	//       q: 0.030878825945429452,
-	//       v: 0.03581210590498464,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.16926477249623614,
-	//       fc2: 0.060107987530549974,
-	//     },
-	//     attn: {
-	//       k: 0.021157331055974435,
-	//       out: 0.038227226907503555,
-	//       q: 0.02008383666415178,
-	//       v: 0.03220566378701195,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.18332479856218353,
-	//       fc2: 0.07735364019766472,
-	//     },
-	//     attn: {
-	//       k: 0.052471287828089935,
-	//       out: 0.04615887378544053,
-	//       q: 0.05866832936442163,
-	//       v: 0.05664404590023604,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.1707969344954549,
-	//       fc2: 0.09448986346023289,
-	//     },
-	//     attn: {
-	//       k: 0.030359661684254257,
-	//       out: 0.056143544527776396,
-	//       q: 0.025398295302331834,
-	//       v: 0.06037875987513326,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.17792257660064115,
-	//       fc2: 0.114627288229075,
-	//     },
-	//     attn: {
-	//       k: 0.03419246336571407,
-	//       out: 0.05962438148295599,
-	//       q: 0.07194235688840948,
-	//       v: 0.05362023547165919,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.20935853343383742,
-	//       fc2: 0.11889095484740982,
-	//     },
-	//     attn: {
-	//       k: 0.04287766335118002,
-	//       out: 0.0655448747177529,
-	//       q: 0.04876705274789889,
-	//       v: 0.07943745730205916,
-	//     },
-	//   },
-	//   {
-	//     mlp: {
-	//       fc1: 0.24074216424406336,
-	//       fc2: 0.11492956004568068,
-	//     },
-	//     attn: {
-	//       k: 0.028727625051787244,
-	//       out: 0.06771910506228172,
-	//       q: 0.02736007475905027,
-	//       v: 0.10721855772929091,
-	//     },
-	//   },
-	// ];
+	return h(
+		"div",
+		{ className: "block-weights-container" },
+		h(
+			"span",
+			null,
+			`Loading statistics... ${(statisticProgress * 100).toFixed(
+				2,
+			)}% ${currentCount}/${totalCount} ${perSecond.toFixed(2)}it/s ${(
+				remaining / 1_000_000
+			).toFixed(2)}s remaining ${currentItemName} `,
+		),
+	);
+}
+
+function compileTextEncoderLayers(bases) {
 	const re =
 		/lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
 
@@ -2091,380 +1910,101 @@ function compileTextEncoderLayers(bases) {
 	return layers;
 }
 
-// const SDRE =
-// 	/.*(?<block_type>up|down|mid)_blocks?_.*(?<block_id>\d+).*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<subblock_id>\d+).*/;
-//
-// const MID_SDRE =
-// 	/.*(?<block_type>up|down|mid)_block_.*(?<type>resnets|attentions|upsamplers|downsamplers)_(?<block_id>\d+)_.*(?<subblock_id>\d+)?.*/;
-// const TE_SDRE = /(?<block_id>\d+).*(?<block_type>self_attn|mlp)/;
-// const NUM_OF_BLOCKS = 12;
-//
-// function parseSDKey(key) {
-// 	let blockIdx = -1;
-// 	let idx;
-//
-// 	let isConv = false;
-// 	let isAttention = false;
-// 	let isSampler = false;
-// 	const isProjection = false;
-// 	const isFeedForward = false;
-//
-// 	let type;
-// 	let blockType;
-// 	let blockId;
-// 	let subBlockId;
-// 	let name;
-//
-// 	// Handle the text encoder
-// 	if (key.includes("te_text_model")) {
-// 		const matches = key.match(TE_SDRE);
-// 		if (matches) {
-// 			const groups = matches.groups;
-// 			type = "encoder";
-// 			blockId = Number.parseInt(groups["block_id"]);
-// 			blockType = groups["block_type"];
-//
-// 			name = `TE${padTwo(blockId)}`;
-//
-// 			if (blockType === "self_attn") {
-// 				isAttention = true;
-// 			}
-// 		}
-// 		// Handling the UNet values
-// 	} else {
-// 		const matches = key.match(SDRE);
-// 		if (matches) {
-// 			const groups = matches.groups;
-//
-// 			type = groups["type"];
-// 			blockType = groups["block_type"];
-// 			blockId = Number.parseInt(groups["block_id"]);
-// 			subBlockId = Number.parseInt(groups["subblock_id"]);
-//
-// 			if (groups["type"] === "attentions") {
-// 				idx = 3 * blockId + subBlockId;
-// 				isAttention = true;
-// 			} else if (groups["type"] === "resnets") {
-// 				idx = 3 * blockId + subBlockId;
-// 				isConv = true;
-// 			} else if (
-// 				groups["type"] === "upsamplers" ||
-// 				groups["type"] === "downsamplers"
-// 			) {
-// 				idx = 3 * blockId + 2;
-// 				isSampler = true;
-// 			}
-//
-// 			if (groups["block_type"] === "down") {
-// 				blockIdx = 1 + idx;
-// 				name = `IN${padTwo(idx)}`;
-// 			} else if (groups["block_type"] === "up") {
-// 				blockIdx = NUM_OF_BLOCKS + 1 + idx;
-// 				name = `OUT${padTwo(idx)}`;
-// 			} else if (groups["block_type"] === "mid") {
-// 				blockIdx = NUM_OF_BLOCKS;
-// 			}
-// 			// Handle the mid block
-// 		} else if (key.includes("mid_block_")) {
-// 			const midMatch = key.match(MID_SDRE);
-// 			name = `MID`;
-//
-// 			if (midMatch) {
-// 				const groups = midMatch.groups;
-//
-// 				type = groups["type"];
-// 				blockType = groups["block_type"];
-// 				blockId = Number.parseInt(groups["block_id"]);
-// 				subBlockId = Number.parseInt(groups["subblock_id"]);
-//
-// 				name = `MID${padTwo(blockId)}`;
-//
-// 				if (groups.type == "attentions") {
-// 					isAttention = true;
-// 				} else if (groups.type === "resnets") {
-// 					isConv = true;
-// 				}
-// 			}
-//
-// 			blockIdx = NUM_OF_BLOCKS;
-// 		}
-// 	}
-//
-// 	return {
-// 		// Used in commmon format IN01
-// 		idx,
-// 		// Block index between 1 and 24
-// 		blockIdx,
-// 		// Common name IN01
-// 		name,
-// 		// name of the block up, down, mid
-// 		// id of the block (up_0, down_1)
-// 		blockId,
-// 		// id of the subblock (resnet, attentions)
-// 		subBlockId,
-// 		// resnets, attentions, upscalers, downscalers
-// 		type,
-// 		//
-// 		blockType,
-// 		// is a convolution key
-// 		isConv,
-// 		// is an attention key
-// 		isAttention,
-// 		// is a upscaler/downscaler
-// 		isSampler,
-// 		key,
-// 	};
-// }
-//
-// function padTwo(number, padWith = "0") {
-// 	if (number < 10) {
-// 		return `${padWith}${number}`;
-// 	}
-//
-// 	return `${number}`;
-// }
-//
-// function compileUnetLayers(bases) {
-// 	// we have a list of names and we want to extract the different components and put back together to use
-// 	// with Attention
-//
-// 	// return {
-// 	//   down: {
-// 	//     IN00: {
-// 	//       proj_in: 0.5835438035224952,
-// 	//       attn1: {
-// 	//         k: 0.7724846822186459,
-// 	//         q: 0.8470290780768107,
-// 	//         v: 0.5306325923819631,
-// 	//         out: 0.6966399804009704,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 2.820660007479423,
-// 	//         q: 1.1666530560013166,
-// 	//         v: 0.788413276490551,
-// 	//         out: 0.7739225866097094,
-// 	//       },
-// 	//       ff1: 2.8923656530518334,
-// 	//       ff2: 1.4149907236171593,
-// 	//       proj_out: 0.7232647789837462,
-// 	//       conv1: 0.7169271612272715,
-// 	//       conv2: 0.784292949111798,
-// 	//       time_emb_proj: 1.1519044797930735,
-// 	//     },
-// 	//     IN01: {
-// 	//       proj_in: 0.6407039401972426,
-// 	//       attn1: {
-// 	//         k: 0.7638138874376035,
-// 	//         q: 0.8438892577092059,
-// 	//         v: 0.5692621046551364,
-// 	//         out: 0.7930231090174562,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 1.8876336042150899,
-// 	//         q: 1.0693218042423827,
-// 	//         v: 1.3098261604459667,
-// 	//         out: 0.6458149416617049,
-// 	//       },
-// 	//       ff1: 2.586747191787799,
-// 	//       ff2: 1.4862982665952245,
-// 	//       proj_out: 0.8232362020418263,
-// 	//       conv1: 1.3327894552241408,
-// 	//       conv2: 1.3229192972339334,
-// 	//       time_emb_proj: 1.6733557758755002,
-// 	//     },
-// 	//     IN02: {
-// 	//       attn1: {},
-// 	//       attn2: {},
-// 	//       conv: 2.35427675751467,
-// 	//     },
-// 	//   },
-// 	//   mid: {},
-// 	//   up: {
-// 	//     OUT08: {
-// 	//       proj_in: 1.7769853066258527,
-// 	//       attn1: {
-// 	//         k: 4.772022244669916,
-// 	//         q: 4.008297087030857,
-// 	//         v: 2.1360581197918473,
-// 	//         out: 1.957634060338022,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 4.408301328593163,
-// 	//         q: 3.3735284340123792,
-// 	//         v: 1.4676879333177373,
-// 	//         out: 1.7915439777615563,
-// 	//       },
-// 	//       ff1: 9.172188318044737,
-// 	//       ff2: 3.638717008716509,
-// 	//       proj_out: 2.1340296767331397,
-// 	//       conv1: 6.416774669716237,
-// 	//       conv2: 3.1118551594311783,
-// 	//       conv_shortcut: 1.7328171138493016,
-// 	//       time_emb_proj: 5.685051613370558,
-// 	//       conv: 3.1030022051916775,
-// 	//     },
-// 	//     OUT09: {
-// 	//       proj_in: 0.7951332912669751,
-// 	//       attn1: {
-// 	//         k: 1.2786685525113588,
-// 	//         q: 1.4811242408744274,
-// 	//         v: 0.7510071869900969,
-// 	//         out: 0.9010832945689117,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 2.3476239220834954,
-// 	//         q: 1.44050725810973,
-// 	//         v: 0.8934114728460721,
-// 	//         out: 0.5778640528083228,
-// 	//       },
-// 	//       ff1: 3.3040693711947604,
-// 	//       ff2: 1.4768289033483628,
-// 	//       proj_out: 0.9967308251899586,
-// 	//       conv1: 3.056591979337983,
-// 	//       conv2: 1.2906941898525774,
-// 	//       conv_shortcut: 0.7425445422443783,
-// 	//       time_emb_proj: 1.924128192701365,
-// 	//     },
-// 	//     OUT10: {
-// 	//       proj_in: 0.6305214170387302,
-// 	//       attn1: {
-// 	//         k: 0.9343660072417308,
-// 	//         q: 1.013432606622726,
-// 	//         v: 0.6000705542423088,
-// 	//         out: 0.6296002281883292,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 2.8600073822587073,
-// 	//         q: 1.2318967798236578,
-// 	//         v: 0.6400245685661953,
-// 	//         out: 0.609398158974776,
-// 	//       },
-// 	//       ff1: 2.834280464365902,
-// 	//       ff2: 1.228979416115511,
-// 	//       proj_out: 0.8828615754836663,
-// 	//       conv1: 2.2751839253291393,
-// 	//       conv2: 0.9173411747213964,
-// 	//       conv_shortcut: 0.6309656205236726,
-// 	//       time_emb_proj: 2.824342966119458,
-// 	//     },
-// 	//     OUT11: {
-// 	//       proj_in: 0.5870043961700094,
-// 	//       attn1: {
-// 	//         k: 1.335164474060957,
-// 	//         q: 1.8194330761308897,
-// 	//         v: 0.794061194299154,
-// 	//         out: 0.6549539950277664,
-// 	//       },
-// 	//       attn2: {
-// 	//         k: 1.5748038833446982,
-// 	//         q: 1.3774989787665628,
-// 	//         v: 0.2612527544408402,
-// 	//         out: 0.4808003135439534,
-// 	//       },
-// 	//       ff1: 3.447681531040988,
-// 	//       ff2: 2.3266240441119534,
-// 	//       proj_out: 0.9813447720472999,
-// 	//       conv1: 1.4686158105766736,
-// 	//       conv2: 0.906270858910067,
-// 	//       conv_shortcut: 0.5799562447119877,
-// 	//       time_emb_proj: 3.145315279683768,
-// 	//     },
-// 	//   },
-// 	// };
-// 	const re =
-// 		/lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
-//
-// 	const layers = {
-// 		down: {},
-// 		// { "00": layer }
-// 		mid: {},
-// 		up: {},
-// 	};
-//
-// 	const ensureLayer = (layer, id) => {
-// 		if (!layer[id]) {
-// 			layer[id] = {
-// 				proj_in: undefined,
-// 				attn1: { k: undefined, q: undefined, v: undefined, out: undefined },
-// 				attn2: { k: undefined, q: undefined, v: undefined, out: undefined },
-// 				ff1: undefined,
-// 				ff2: undefined,
-// 				proj_out: undefined,
-// 			};
-// 		}
-//
-// 		return layer[id];
-// 	};
-//
-// 	for (const i in bases) {
-// 		const base = bases[i];
-//
-// 		let layer;
-//
-// 		if (base.baseName.includes("down")) {
-// 			layer = layers.down;
-// 		} else if (base.baseName.includes("up")) {
-// 			layer = layers.up;
-// 		} else if (base.baseName.includes("mid")) {
-// 			layer = layers.mid;
-// 		} else {
-// 			continue;
-// 		}
-//
-// 		const parsedKey = parseSDKey(base.baseName);
-//
-// 		// TODO need layer id
-// 		layer = ensureLayer(layer, parsedKey.name);
-//
-// 		if (parsedKey.isAttention) {
-// 			if (base.baseName.includes("attn1")) {
-// 				if (base.baseName.includes("to_q")) {
-// 					layer["attn1"]["q"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_k")) {
-// 					layer["attn1"]["k"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_v")) {
-// 					layer["attn1"]["v"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_out")) {
-// 					layer["attn1"]["out"] = base.stat?.get("l2_norm");
-// 				}
-// 			} else if (base.baseName.includes("attn2")) {
-// 				if (base.baseName.includes("to_q")) {
-// 					layer["attn2"]["q"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_k")) {
-// 					layer["attn2"]["k"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_v")) {
-// 					layer["attn2"]["v"] = base.stat?.get("l2_norm");
-// 				} else if (base.baseName.includes("to_out")) {
-// 					layer["attn2"]["out"] = base.stat?.get("l2_norm");
-// 				}
-// 			} else if (base.baseName.includes("ff_net_0_proj")) {
-// 				layer["ff1"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("ff_net_2")) {
-// 				layer["ff2"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("proj_in")) {
-// 				layer["proj_in"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("proj_out")) {
-// 				layer["proj_out"] = base.stat?.get("l2_norm");
-// 			}
-// 		} else if (parsedKey.isConv) {
-// 			if (base.baseName.includes("conv1")) {
-// 				layer["conv1"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("time_emb_proj")) {
-// 				layer["time_emb_proj"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("conv2")) {
-// 				layer["conv2"] = base.stat?.get("l2_norm");
-// 			} else if (base.baseName.includes("conv_shortcut")) {
-// 				layer["conv_shortcut"] = base.stat?.get("l2_norm");
-// 			}
-// 		} else if (parsedKey.isSampler) {
-// 			if (base.baseName.includes("conv")) {
-// 				layer["conv"] = base.stat?.get("l2_norm");
-// 			}
-// 		}
-// 	}
-//
-// 	return layers;
-// }
+function compileUnetLayers(bases) {
+	const re =
+		/lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
+
+	const layers = {
+		down: {},
+		// { "00": layer }
+		mid: {},
+		up: {},
+	};
+
+	const ensureLayer = (layer, id) => {
+		if (!layer[id]) {
+			layer[id] = {
+				proj_in: undefined,
+				attn1: { k: undefined, q: undefined, v: undefined, out: undefined },
+				attn2: { k: undefined, q: undefined, v: undefined, out: undefined },
+				ff1: undefined,
+				ff2: undefined,
+				proj_out: undefined,
+			};
+		}
+
+		return layer[id];
+	};
+
+	for (const i in bases) {
+		const base = bases[i];
+
+		let layer;
+
+		if (base.baseName.includes("down")) {
+			layer = layers.down;
+		} else if (base.baseName.includes("up")) {
+			layer = layers.up;
+		} else if (base.baseName.includes("mid")) {
+			layer = layers.mid;
+		} else {
+			continue;
+		}
+
+		const parsedKey = parseSDKey(base.baseName);
+
+		// TODO need layer id
+		layer = ensureLayer(layer, parsedKey.name);
+
+		if (parsedKey.isAttention) {
+			if (base.baseName.includes("attn1")) {
+				if (base.baseName.includes("to_q")) {
+					layer["attn1"]["q"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_k")) {
+					layer["attn1"]["k"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_v")) {
+					layer["attn1"]["v"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_out")) {
+					layer["attn1"]["out"] = base.stat?.get("l2_norm");
+				}
+			} else if (base.baseName.includes("attn2")) {
+				if (base.baseName.includes("to_q")) {
+					layer["attn2"]["q"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_k")) {
+					layer["attn2"]["k"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_v")) {
+					layer["attn2"]["v"] = base.stat?.get("l2_norm");
+				} else if (base.baseName.includes("to_out")) {
+					layer["attn2"]["out"] = base.stat?.get("l2_norm");
+				}
+			} else if (base.baseName.includes("ff_net_0_proj")) {
+				layer["ff1"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("ff_net_2")) {
+				layer["ff2"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("proj_in")) {
+				layer["proj_in"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("proj_out")) {
+				layer["proj_out"] = base.stat?.get("l2_norm");
+			}
+		} else if (parsedKey.isConv) {
+			if (base.baseName.includes("conv1")) {
+				layer["conv1"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("time_emb_proj")) {
+				layer["time_emb_proj"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("conv2")) {
+				layer["conv2"] = base.stat?.get("l2_norm");
+			} else if (base.baseName.includes("conv_shortcut")) {
+				layer["conv_shortcut"] = base.stat?.get("l2_norm");
+			}
+		} else if (parsedKey.isSampler) {
+			if (base.baseName.includes("conv")) {
+				layer["conv"] = base.stat?.get("l2_norm");
+			}
+		}
+	}
+
+	return layers;
+}
 
 function StatisticRow({
 	baseName,

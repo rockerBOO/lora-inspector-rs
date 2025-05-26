@@ -41,7 +41,6 @@ function getWorker(workerName) {
 }
 
 async function init_wasm_in_worker() {
-	let worker;
 	// if (await simd()) {
 	// 	const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
 	// 	worker = LoraWorker;
@@ -53,7 +52,7 @@ async function init_wasm_in_worker() {
 	// 		});
 	// } else {
 	const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
-	worker = LoraWorker;
+	const worker = LoraWorker;
 	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
 		.default;
 	await fetch(resolvedUrl)
@@ -61,13 +60,13 @@ async function init_wasm_in_worker() {
 		.then((bytes) => {
 			return initSync(bytes);
 		});
-	// }
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	self.onerror = (error) => {
 		console.log("There is an error inside your worker!", error);
 	};
 
 	self.onmessage = async (e) => {
+		console.log(e.data)
 		if (e.data.messageType === "file_upload") {
 			fileUploadHandler(e, worker);
 		} else if (e.data.messageType === "unload") {
