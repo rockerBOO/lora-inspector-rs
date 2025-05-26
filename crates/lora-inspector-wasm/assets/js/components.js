@@ -276,7 +276,7 @@ function Network({ metadata, filename, worker }) {
 		).then((resp) => {
 			setRankStabilized(resp.rankStabilized);
 		});
-	}, [worker]);
+	}, [filename, worker]);
 
 	let networkOptions;
 
@@ -636,12 +636,6 @@ function Precision({ filename, worker }) {
 // Chart.defaults.font.size = 16;
 // Chart.defaults.font.family = "monospace";
 
-function scale_weight() {
-	// get base_names
-	// get scale weight
-	// get progress
-}
-
 function Blocks({ filename, worker }) {
 	const [hasBlockWeights, setHasBlockWeights] = React.useState(false);
 	const [magBlocks, setMagBlocks] = React.useState({});
@@ -665,13 +659,14 @@ function Blocks({ filename, worker }) {
 		setStartTime(performance.now());
 
 		listenProgress("l2_norms_progress", filename).then(async (getProgress) => {
-			let progress;
-			while ((progress = await getProgress().next())) {
+			let progress = await getProgress().next();
+			while (progress) {
 				const value = progress.value;
 				setCurrentBaseName(value.baseName);
 				setCurrentCount(value.currentCount);
 				setTotalCount(value.totalCount);
 				setNormProgress(value.currentCount / value.totalCount);
+				progress = await getProgress().next();
 			}
 		});
 
@@ -722,7 +717,7 @@ function Blocks({ filename, worker }) {
 				labels: dataset.map(([k, _]) => k),
 				// Our series array that contains series objects or in this case series data arrays
 				series: [
-					dataset.map(([_k, v]) => v["mean"]),
+					dataset.map(([_k, v]) => v.mean),
 					// dataset.map(([k, v]) => strBlocks.get(k)),
 				],
 			};
@@ -799,7 +794,7 @@ function Blocks({ filename, worker }) {
 
 				makeChart(
 					// We are removing elements that are 0 because they cause the chart to find them as undefined
-					Array.from(magBlocks[k]).filter(([_k, v]) => v["mean"] !== 0),
+					Array.from(magBlocks[k]).filter(([_k, v]) => v.mean !== 0),
 					chartRefs.current[i],
 				);
 			});
@@ -824,7 +819,7 @@ function Blocks({ filename, worker }) {
 					className: "primary",
 					onClick: (e) => {
 						e.preventDefault();
-						setHasBlockWeights((state) => (state ? false : true));
+						setHasBlockWeights((state) => !state);
 					},
 				},
 				"Get block weights",
@@ -994,7 +989,7 @@ function Noise({ metadata }) {
 			name: "Noise offset",
 			valueClassName: "number",
 			value: metadata.get("ss_noise_offset"),
-			...(metadata.get("ss_ip_noise_gamma_random_strength") != undefined && {
+			...(metadata.get("ss_ip_noise_gamma_random_strength") !== undefined && {
 				secondaryName: "Random strength:",
 				secondary: metadata.get("ss_noise_offset_random_strength")
 					? "True"
@@ -1317,7 +1312,7 @@ function Buckets({ dataset, metadata }) {
 	];
 }
 
-function BucketInfo({ metadata, dataset }) {
+function BucketInfo({ dataset }) {
 	// No bucket info
 	if (!dataset.bucket_info) {
 		return;
@@ -1439,7 +1434,7 @@ function Subset({ subset }) {
 	);
 }
 
-function TagFrequency({ tagFrequency, metadata }) {
+function TagFrequency({ tagFrequency }) {
 	const [showMore, setShowMore] = React.useState(false);
 
 	const allTags = Object.entries(tagFrequency).sort((a, b) => a[1] < b[1]);
@@ -1673,7 +1668,7 @@ function Statistics({ baseNames, filename, worker }) {
 			setHasStatistics(true);
 			console.timeEnd("get statistics");
 		});
-	}, [filename, calcStatistics, baseNames, worker]);
+	}, [filename, calcStatistics, bases, baseNames, worker]);
 
 	React.useEffect(() => {
 		if (!calcStatistics) {
@@ -1765,7 +1760,7 @@ function Statistics({ baseNames, filename, worker }) {
 				currentCount,
 				statisticProgress,
 				startTime,
-				currentItemName: currentBaseName
+				currentItemName: currentBaseName,
 			}),
 		h("table", { key: "table" }, [
 			h(
@@ -1846,165 +1841,165 @@ function Progress({
 	);
 }
 
-function compileTextEncoderLayers(bases) {
-	const re =
-		/lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
-
-	const layers = [];
-
-	for (const i in bases) {
-		const base = bases[i];
-
-		const match = base.baseName.match(re);
-
-		if (match) {
-			const layerId = match.groups.layer_id;
-			const layerType = match.groups.layer_type;
-			const subType = match.groups.sub_type;
-
-			const layerKey = layerType === "self_attn" ? "attn" : "mlp";
-			/* 			let value; */
-			let subKey;
-
-			switch (subType) {
-				case "k_proj":
-					subKey = "k";
-					break;
-
-				case "q_proj":
-					subKey = "q";
-					break;
-
-				case "v_proj":
-					subKey = "v";
-					break;
-
-				case "out_proj":
-					subKey = "out";
-					break;
-
-				case "fc1":
-					subKey = "fc1";
-					break;
-
-				case "fc2":
-					subKey = "fc2";
-					break;
-			}
-
-			if (!layers[layerId]) {
-				layers[layerId] = {
-					[layerKey]: {
-						[subKey]: base.stat?.get("l2_norm"),
-					},
-				};
-			} else {
-				if (!layers[layerId][layerKey]) {
-					layers[layerId][layerKey] = {};
-				}
-				layers[layerId][layerKey][subKey] = base.stat?.get("l2_norm");
-			}
-		}
-	}
-
-	return layers;
-}
-
-function compileUnetLayers(bases) {
-	const re =
-		/lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
-
-	const layers = {
-		down: {},
-		// { "00": layer }
-		mid: {},
-		up: {},
-	};
-
-	const ensureLayer = (layer, id) => {
-		if (!layer[id]) {
-			layer[id] = {
-				proj_in: undefined,
-				attn1: { k: undefined, q: undefined, v: undefined, out: undefined },
-				attn2: { k: undefined, q: undefined, v: undefined, out: undefined },
-				ff1: undefined,
-				ff2: undefined,
-				proj_out: undefined,
-			};
-		}
-
-		return layer[id];
-	};
-
-	for (const i in bases) {
-		const base = bases[i];
-
-		let layer;
-
-		if (base.baseName.includes("down")) {
-			layer = layers.down;
-		} else if (base.baseName.includes("up")) {
-			layer = layers.up;
-		} else if (base.baseName.includes("mid")) {
-			layer = layers.mid;
-		} else {
-			continue;
-		}
-
-		const parsedKey = parseSDKey(base.baseName);
-
-		// TODO need layer id
-		layer = ensureLayer(layer, parsedKey.name);
-
-		if (parsedKey.isAttention) {
-			if (base.baseName.includes("attn1")) {
-				if (base.baseName.includes("to_q")) {
-					layer["attn1"]["q"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_k")) {
-					layer["attn1"]["k"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_v")) {
-					layer["attn1"]["v"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_out")) {
-					layer["attn1"]["out"] = base.stat?.get("l2_norm");
-				}
-			} else if (base.baseName.includes("attn2")) {
-				if (base.baseName.includes("to_q")) {
-					layer["attn2"]["q"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_k")) {
-					layer["attn2"]["k"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_v")) {
-					layer["attn2"]["v"] = base.stat?.get("l2_norm");
-				} else if (base.baseName.includes("to_out")) {
-					layer["attn2"]["out"] = base.stat?.get("l2_norm");
-				}
-			} else if (base.baseName.includes("ff_net_0_proj")) {
-				layer["ff1"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("ff_net_2")) {
-				layer["ff2"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("proj_in")) {
-				layer["proj_in"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("proj_out")) {
-				layer["proj_out"] = base.stat?.get("l2_norm");
-			}
-		} else if (parsedKey.isConv) {
-			if (base.baseName.includes("conv1")) {
-				layer["conv1"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("time_emb_proj")) {
-				layer["time_emb_proj"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("conv2")) {
-				layer["conv2"] = base.stat?.get("l2_norm");
-			} else if (base.baseName.includes("conv_shortcut")) {
-				layer["conv_shortcut"] = base.stat?.get("l2_norm");
-			}
-		} else if (parsedKey.isSampler) {
-			if (base.baseName.includes("conv")) {
-				layer["conv"] = base.stat?.get("l2_norm");
-			}
-		}
-	}
-
-	return layers;
-}
+// function compileTextEncoderLayers(bases) {
+// 	const re =
+// 		/lora_te_text_model_encoder_layers_(?<layer_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
+//
+// 	const layers = [];
+//
+// 	for (const i in bases) {
+// 		const base = bases[i];
+//
+// 		const match = base.baseName.match(re);
+//
+// 		if (match) {
+// 			const layerId = match.groups.layer_id;
+// 			const layerType = match.groups.layer_type;
+// 			const subType = match.groups.sub_type;
+//
+// 			const layerKey = layerType === "self_attn" ? "attn" : "mlp";
+// 			/* 			let value; */
+// 			let subKey;
+//
+// 			switch (subType) {
+// 				case "k_proj":
+// 					subKey = "k";
+// 					break;
+//
+// 				case "q_proj":
+// 					subKey = "q";
+// 					break;
+//
+// 				case "v_proj":
+// 					subKey = "v";
+// 					break;
+//
+// 				case "out_proj":
+// 					subKey = "out";
+// 					break;
+//
+// 				case "fc1":
+// 					subKey = "fc1";
+// 					break;
+//
+// 				case "fc2":
+// 					subKey = "fc2";
+// 					break;
+// 			}
+//
+// 			if (!layers[layerId]) {
+// 				layers[layerId] = {
+// 					[layerKey]: {
+// 						[subKey]: base.stat?.get("l2_norm"),
+// 					},
+// 				};
+// 			} else {
+// 				if (!layers[layerId][layerKey]) {
+// 					layers[layerId][layerKey] = {};
+// 				}
+// 				layers[layerId][layerKey][subKey] = base.stat?.get("l2_norm");
+// 			}
+// 		}
+// 	}
+//
+// 	return layers;
+// }
+//
+// function compileUnetLayers(bases) {
+// 	const re =
+// 		/lora_unet_(down_blocks|mid_block|up_blocks)_(?<block_id>\d+)_(?<layer_type>mlp|self_attn)_(?<sub_type>k_proj|q_proj|v_proj|out_proj|fc1|fc2)/;
+//
+// 	const layers = {
+// 		down: {},
+// 		// { "00": layer }
+// 		mid: {},
+// 		up: {},
+// 	};
+//
+// 	const ensureLayer = (layer, id) => {
+// 		if (!layer[id]) {
+// 			layer[id] = {
+// 				proj_in: undefined,
+// 				attn1: { k: undefined, q: undefined, v: undefined, out: undefined },
+// 				attn2: { k: undefined, q: undefined, v: undefined, out: undefined },
+// 				ff1: undefined,
+// 				ff2: undefined,
+// 				proj_out: undefined,
+// 			};
+// 		}
+//
+// 		return layer[id];
+// 	};
+//
+// 	for (const i in bases) {
+// 		const base = bases[i];
+//
+// 		let layer;
+//
+// 		if (base.baseName.includes("down")) {
+// 			layer = layers.down;
+// 		} else if (base.baseName.includes("up")) {
+// 			layer = layers.up;
+// 		} else if (base.baseName.includes("mid")) {
+// 			layer = layers.mid;
+// 		} else {
+// 			continue;
+// 		}
+//
+// 		const parsedKey = parseSDKey(base.baseName);
+//
+// 		// TODO need layer id
+// 		layer = ensureLayer(layer, parsedKey.name);
+//
+// 		if (parsedKey.isAttention) {
+// 			if (base.baseName.includes("attn1")) {
+// 				if (base.baseName.includes("to_q")) {
+// 					layer["attn1"]["q"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_k")) {
+// 					layer["attn1"]["k"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_v")) {
+// 					layer["attn1"]["v"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_out")) {
+// 					layer["attn1"]["out"] = base.stat?.get("l2_norm");
+// 				}
+// 			} else if (base.baseName.includes("attn2")) {
+// 				if (base.baseName.includes("to_q")) {
+// 					layer["attn2"]["q"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_k")) {
+// 					layer["attn2"]["k"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_v")) {
+// 					layer["attn2"]["v"] = base.stat?.get("l2_norm");
+// 				} else if (base.baseName.includes("to_out")) {
+// 					layer["attn2"]["out"] = base.stat?.get("l2_norm");
+// 				}
+// 			} else if (base.baseName.includes("ff_net_0_proj")) {
+// 				layer["ff1"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("ff_net_2")) {
+// 				layer["ff2"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("proj_in")) {
+// 				layer["proj_in"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("proj_out")) {
+// 				layer["proj_out"] = base.stat?.get("l2_norm");
+// 			}
+// 		} else if (parsedKey.isConv) {
+// 			if (base.baseName.includes("conv1")) {
+// 				layer["conv1"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("time_emb_proj")) {
+// 				layer["time_emb_proj"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("conv2")) {
+// 				layer["conv2"] = base.stat?.get("l2_norm");
+// 			} else if (base.baseName.includes("conv_shortcut")) {
+// 				layer["conv_shortcut"] = base.stat?.get("l2_norm");
+// 			}
+// 		} else if (parsedKey.isSampler) {
+// 			if (base.baseName.includes("conv")) {
+// 				layer["conv"] = base.stat?.get("l2_norm");
+// 			}
+// 		}
+// 	}
+//
+// 	return layers;
+// }
 
 function StatisticRow({
 	baseName,

@@ -41,9 +41,9 @@ export function removeWorker(file) {
 }
 
 export function clearWorkers() {
-	Array.from(workers.keys()).forEach((key) => {
+	for (const key of Array.from(workers.keys())) {
 		removeWorker(key);
-	});
+	}
 }
 
 // if we are processing the uploaded file
