@@ -58,6 +58,9 @@ dev-wasm-cors:
 deploy:
 	fly deploy
 
+run:
+	cargo run --manifest-path crates/lora-inspector/cargo.toml
+
 .PHONY: 
 wasm-bindgen-test: 
 	wasm-pack test --headless --firefox crates/lora-inspector-wasm

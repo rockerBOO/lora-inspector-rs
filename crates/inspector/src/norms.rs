@@ -45,11 +45,17 @@ pub fn sparsity(t: &Tensor) -> Result<f64> {
 }
 
 pub fn max(t: &Tensor) -> Result<f64> {
-    Ok(t.flatten_all()?.max(0)?.to_dtype(candle_core::DType::F64)?.to_scalar::<f64>()?)
+    Ok(t.flatten_all()?
+        .max(0)?
+        .to_dtype(candle_core::DType::F64)?
+        .to_scalar::<f64>()?)
 }
 
 pub fn min(t: &Tensor) -> Result<f64> {
-    Ok(t.flatten_all()?.min(0)?.to_dtype(candle_core::DType::F64)?.to_scalar::<f64>()?)
+    Ok(t.flatten_all()?
+        .min(0)?
+        .to_dtype(candle_core::DType::F64)?
+        .to_scalar::<f64>()?)
 }
 
 pub fn spectral(t: &Tensor) -> Result<f64> {

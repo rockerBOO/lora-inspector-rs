@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - main
+
+permissions: read-all
+
 jobs:
   deploy:
     name: Deploy app

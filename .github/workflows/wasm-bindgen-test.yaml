@@ -1,8 +1,15 @@
+name: Wasm Bindgen Test
 on:
   push:
-    branches:
-      - main
+    branches: [ main, master ]
+    paths:
+      - 'crates/lora-inspector-wasm/assets/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'crates/lora-inspector-wasm/assets/**'
 
+permissions: read-all
 jobs:
   test:
     runs-on: ubuntu-latest

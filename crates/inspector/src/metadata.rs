@@ -7,28 +7,21 @@ use crate::network::{NetworkArgs, NetworkModule, NetworkType, WeightDecompositio
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
-    size: usize,
     pub metadata: Option<HashMap<String, String>>,
 }
 
 impl Metadata {
     pub fn new_from_buffer(buffer: &[u8]) -> crate::Result<Metadata> {
         Ok(
-            SafeTensors::read_metadata(buffer).map(|(size, metadata)| Metadata {
-                size,
+            SafeTensors::read_metadata(buffer).map(|(_size, metadata)| Metadata {
                 metadata: metadata.metadata().clone(),
             })?,
         )
     }
 
-    // pub fn get(&self, key: &str) -> Option<String> {
-    //     self.metadata.get(key).to_owned().cloned()
-    // }
-    //
-    // pub fn insert(&mut self, key: &str, value: String) -> Option<String> {
-    //     self.metadata.insert(key.to_string(), value)
-    // }
-
+    pub fn metadata_size(&self) -> usize {
+        self.metadata.as_ref().map_or(0, |m| m.len())
+    }
     pub fn network_args(&self) -> Option<NetworkArgs> {
         match &self.metadata.as_ref().map(|v| v.get("ss_network_args")) {
             Some(Some(network_args)) => match serde_json::from_str::<NetworkArgs>(network_args) {
@@ -111,8 +104,78 @@ impl Metadata {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct DiffChanged {
+    pub old: String,
+    pub new: String,
+}
+
+#[derive(Debug, Default)]
+pub struct Diff {
+    pub added: HashMap<String, String>,
+    pub removed: HashMap<String, String>,
+    pub changed: HashMap<String, DiffChanged>,
+}
+
+pub fn compare_metadata(m1: &Metadata, m2: &Metadata) -> Diff {
+    // Only removed since nothing remains
+    if let (Some(m1_meta), None) = (&m1.metadata, &m2.metadata) {
+        let mut removed = HashMap::new();
+        for (k, v) in m1_meta.iter() {
+            removed.insert(k.clone(), v.clone());
+        }
+
+        Diff {
+            removed,
+            added: HashMap::new(),
+            changed: HashMap::new(),
+        }
+    } else if let (Some(m1_meta), Some(m2_meta)) = (&m1.metadata, &m2.metadata) {
+        let mut added = HashMap::new();
+        let mut removed = HashMap::new();
+        let mut changed: HashMap<String, DiffChanged> = HashMap::new();
+
+        for (k, v) in m1_meta.iter() {
+            if let Some(v2) = m2_meta.get(k) {
+                if v != v2 {
+                    changed.insert(
+                        k.clone(),
+                        DiffChanged {
+                            old: v.clone(),
+                            new: v2.clone(),
+                        },
+                    );
+                }
+            } else {
+                println!("Removed {}", k);
+                removed.insert(k.clone(), v.clone());
+            }
+        }
+
+        for (k, v) in m2_meta.iter() {
+            if !m1_meta.contains_key(k) {
+                added.insert(k.clone(), v.clone());
+            }
+        }
+        if !added.is_empty() || !removed.is_empty() || !changed.is_empty() {
+            Diff {
+                added,
+                removed,
+                changed,
+            }
+        } else {
+            Diff::default()
+        }
+    } else {
+        Diff::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
     use std::{
         fs::File,
         io::{self, Read},
@@ -126,8 +189,6 @@ mod tests {
             }
         }
     }
-
-    use super::*;
 
     fn load_test_file() -> Result<Vec<u8>, io::Error> {
         let filename = "boo.safetensors";
@@ -281,5 +342,159 @@ mod tests {
         assert!(metadata.weight_decomposition().is_none());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_compare_metadata_no_changes() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        assert!(diff.removed.is_empty());
+        assert!(diff.changed.is_empty());
+    }
+
+    #[test]
+    fn test_compare_metadata_added() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([("key1".to_string(), "value1".to_string())])),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert_eq!(diff.added.len(), 1);
+        assert_eq!(diff.added.get("key2"), Some(&"value2".to_string()));
+        assert!(diff.removed.is_empty());
+        assert!(diff.changed.is_empty());
+    }
+
+    #[test]
+    fn test_compare_metadata_removed() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::from([("key1".to_string(), "value1".to_string())])),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        assert_eq!(diff.removed.len(), 1);
+        assert_eq!(diff.removed.get("key2"), Some(&"value2".to_string()));
+        assert!(diff.changed.is_empty());
+    }
+
+    #[test]
+    fn test_compare_metadata_changed() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([("key1".to_string(), "value1".to_string())])),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::from([(
+                "key1".to_string(),
+                "new_value1".to_string(),
+            )])),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        assert!(diff.removed.is_empty());
+        assert_eq!(diff.changed.len(), 1);
+        let changed = diff.changed.get("key1").unwrap();
+        assert_eq!(changed.old, "value1");
+        assert_eq!(changed.new, "new_value1");
+    }
+
+    #[test]
+    fn test_compare_metadata_multiple_changes() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::from([
+                ("key1".to_string(), "new_value1".to_string()),
+                ("key3".to_string(), "value3".to_string()),
+            ])),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert_eq!(diff.added.len(), 1);
+        assert_eq!(diff.added.get("key3"), Some(&"value3".to_string()));
+        assert_eq!(diff.removed.len(), 1);
+        assert_eq!(diff.removed.get("key2"), Some(&"value2".to_string()));
+        assert_eq!(diff.changed.len(), 1);
+        let changed = diff.changed.get("key1").unwrap();
+        assert_eq!(changed.old, "value1");
+        assert_eq!(changed.new, "new_value1");
+    }
+    #[test]
+    fn test_compare_metadata_none() {
+        let m1 = Metadata { metadata: None };
+
+        let m2 = Metadata { metadata: None };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        assert!(diff.removed.is_empty());
+        assert!(diff.changed.is_empty());
+    }
+
+    #[test]
+    fn test_compare_metadata_some_none() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::from([("key1".to_string(), "value1".to_string())])),
+        };
+
+        let m2 = Metadata { metadata: None };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        println!("{:?}", diff);
+        assert_eq!(diff.removed.len(), 1);
+        assert_eq!(diff.removed.get("key1"), Some(&"value1".to_string()));
+        assert!(diff.changed.is_empty());
+    }
+
+    #[test]
+    fn test_compare_metadata_empty() {
+        let m1 = Metadata {
+            metadata: Some(HashMap::new()),
+        };
+
+        let m2 = Metadata {
+            metadata: Some(HashMap::new()),
+        };
+
+        let diff = compare_metadata(&m1, &m2);
+        assert!(diff.added.is_empty());
+        assert!(diff.removed.is_empty());
+        assert!(diff.changed.is_empty());
     }
 }

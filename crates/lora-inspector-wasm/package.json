@@ -28,7 +28,7 @@
 		"lint": "biome lint assets",
 		"e2e-test": "ava e2e-tests"
 	},
-	"packageManager": "yarn@4.5.1",
+	"packageManager": "yarn@4.9.1",
 	"dependencies": {
 		"chartist": "^1.3.0",
 		"react": "^18.3.1",

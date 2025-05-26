@@ -205,8 +205,7 @@ mod tests {
     //     }
     // }
 
-    use candle_core::{DType, Device};
-    use safetensors::Dtype;
+    use candle_core::Device;
 
     use crate::weight::{self, Alpha};
 

@@ -100,4 +100,3 @@ impl From<serde_wasm_bindgen::Error> for InspectorError {
         InspectorError::SerdeWasmBindgenError(value)
     }
 }
-

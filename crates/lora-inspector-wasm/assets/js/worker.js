@@ -528,3 +528,4 @@ async function getNetworkType(e) {
 
 	return loraWorker.network_type();
 }
+

@@ -6,9 +6,6 @@ license = "MIT"
 repository = "https://github.com/rockerBOO/lora-inspector-rs"
 description = "LoRA inspector for Stable Diffusion"
 
-[profile.dev.package]
-insta.opt-level = 3
-
 [workspace]
 members = ["crates/*"]
 resolver = "2"
@@ -21,18 +18,6 @@ license = "MIT"
 repository = "https://github.com/rockerBOO/lora-inspector-rs"
 description = "LoRA inspector for Stable Diffusion"
 
-# [features]
-# default = ["console_error_panic_hook"]
-
-# [dependencies]
-# candle-core = { version = "0.3.2" }
-# console_error_panic_hook = { version = "0.1.6", optional = true }
-# safetensors = "0.3.1"
-# serde-wasm-bindgen = "0.4"
-# serde_json = "1.0.108"
-# serde_with = "3.4.0"
-# wasm-bindgen = "0.2"
-#
 [workspace.dependencies]
 candle-core = { version = "0.3.2" }
 getrandom = { version = "0.2", features = ["js"] }
@@ -41,15 +26,11 @@ pest = "2.6"
 pest_derive = "2.6"
 safetensors = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
-serde-wasm-bindgen = "0.4"
 serde_json = "1.0.108"
 serde_with = "3.4.0"
-wasm-bindgen = "0.2"
 
-# [profile.release]
-# lto = true
-# opt-level = 's'
-# panic = "abort"
+[profile.dev.package]
+insta.opt-level = 3
 
 [profile.release]
 lto = true
