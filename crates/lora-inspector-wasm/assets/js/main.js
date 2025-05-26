@@ -1,12 +1,12 @@
 import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import init from "/pkg";
 import { Metadata, Support } from "./components.js";
 import {
 	addWorker,
 	clearWorkers,
 	terminatePreviousProcessing,
 } from "./workers";
-import init from "/pkg";
 
 const h = React.createElement;
 

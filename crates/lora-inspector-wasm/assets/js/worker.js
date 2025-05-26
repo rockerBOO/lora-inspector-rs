@@ -1,5 +1,5 @@
-import { parseSDKey } from "./moduleBlocks";
 import { simd } from "wasm-feature-detect";
+import { parseSDKey } from "./moduleBlocks";
 
 const files = new Map();
 

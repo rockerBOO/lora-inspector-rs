@@ -43,9 +43,13 @@ jobs:
       - name: Run install
         run: yarn install
 
+      - name: Biome check
+        run: yarn biome ci assets/js
+
       - name: Test
         run: yarn test
         env:
           CI_NODE_INDEX: ${{ matrix.node_index }}
           CI_NODE_TOTAL: ${{ matrix.total_nodes }}
+
 
