@@ -12,6 +12,8 @@ use std::{fmt, ops::Mul};
 
 use wasm_bindgen::prelude::*;
 
+use crate::tensor::kron;
+
 // BufferedLoRAWeight
 //   Load weights only when required
 // LoRAWeight
@@ -52,6 +54,11 @@ pub fn get_base_name(name: &str) -> String {
                     | "oft_diag"
                     | "hada_w2_b"
                     | "alpha"
+                    | "lokr_w1_a"
+                    | "lokr_w1_b"
+                    | "lokr_w2_a"
+                    | "lokr_w2_b"
+                    | "oft_blocks"
             )
         })
         .fold(String::new(), |acc, v| {
@@ -61,6 +68,64 @@ pub fn get_base_name(name: &str) -> String {
                 format!("{acc}.{v}")
             }
         })
+}
+
+fn reshape_keep_first_dim(tensor: &Tensor) -> candle_core::Result<Tensor> {
+    // Equivalent to tensor.reshape(tensor.size(0), -1)
+    let shape = tensor.shape();
+    let first_dim = shape.dims()[0];
+    let remaining_size: usize = shape.dims()[1..].iter().product();
+    tensor.reshape(&[first_dim, remaining_size])
+}
+
+fn reshape_keep_last_dim(tensor: &Tensor) -> candle_core::Result<Tensor> {
+    // Equivalent to tensor.reshape(-1, tensor.size(-1))
+    let shape = tensor.shape();
+    let last_dim = shape.dims()[shape.dims().len() - 1];
+    let remaining_size: usize = shape.dims()[..shape.dims().len() - 1].iter().product();
+    tensor.reshape(&[remaining_size, last_dim])
+}
+
+/// Rebuild Tucker decomposition: einsum "i j ..., i p, j r -> p r ..."
+/// This contracts tensor t with wa along dimension i and wb along dimension j
+fn rebuild_tucker(t: &Tensor, wa: &Tensor, wb: &Tensor) -> candle_core::Result<Tensor> {
+    // t shape: [i, j, ...]
+    // wa shape: [i, p]
+    // wb shape: [j, r]
+    // output shape: [p, r, ...]
+
+    // Method 1: Using two sequential matrix multiplications
+    // Step 1: Contract wa with t along dimension i
+    // wa.T @ t: [p, i] @ [i, j, ...] -> [p, j, ...]
+    let wa_t = wa.transpose(0, 1)?; // [p, i]
+    let temp = wa_t.matmul(t)?; // [p, j, ...]
+
+    // Step 2: Contract temp with wb along dimension j
+    // temp @ wb: [p, j, ...] @ [j, r] -> [p, r, ...]
+    let result = temp.matmul(wb)?;
+
+    Ok(result)
+}
+
+fn rebuild_lokr_w2(w2_a: &Tensor, w2_b: &Tensor) -> Result<Tensor, candle_core::Error> {
+    // r, o, *k = w2b.shape
+    let w2b_shape = w2_b.shape();
+    let r = w2b_shape.dims()[0];
+    let o = w2b_shape.dims()[1];
+    let k_dims = &w2b_shape.dims()[2..]; // remaining dimensions
+
+    // w2b.view(r, -1) - flatten all dimensions after r
+    let k_total: usize = k_dims.iter().product();
+    let w2b_reshaped = w2_b.reshape(&[r, o * k_total])?;
+
+    // w2 = w2a @ w2b.view(r, -1)
+    let w2_flat = w2_a.matmul(&w2b_reshaped)?;
+
+    // w2.view(-1, o, *k) - reshape to [w2a_dim0, o, ...k_dims]
+    let w2a_out_dim = w2_a.dim(0)?;
+    let mut final_shape = vec![w2a_out_dim, o];
+    final_shape.extend_from_slice(k_dims);
+    w2_flat.reshape(final_shape)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -325,62 +390,29 @@ impl Weight for BufferedLoRAWeight {
             .to_scalar::<f64>()?
             / dims[0] as f64;
 
-        // w1a = self.w1a.to(orig_weight.device)
-        // w1b = self.w1b.to(orig_weight.device)
-        // w2a = self.w2a.to(orig_weight.device)
-        // w2b = self.w2b.to(orig_weight.device)
-        //
-        // output_shape = [w1a.size(0), w1b.size(1)]
-        //
-        // if self.t1 is not None:
-        //     output_shape = [w1a.size(1), w1b.size(1)]
-        //     t1 = self.t1.to(orig_weight.device)
-        //     updown1 = lyco_helpers.make_weight_cp(t1, w1a, w1b)
-        //     output_shape += t1.shape[2:]
-        // else:
-        //     if len(w1b.shape) == 4:
-        //         output_shape += w1b.shape[2:]
-        //     updown1 = lyco_helpers.rebuild_conventional(w1a, w1b, output_shape)
-        //
-        // if self.t2 is not None:
-        //     t2 = self.t2.to(orig_weight.device)
-        //     updown2 = lyco_helpers.make_weight_cp(t2, w2a, w2b)
-        // else:
-        //     updown2 = lyco_helpers.rebuild_conventional(w2a, w2b, output_shape)
-        //
-        // updown = updown1 * updown2
+        let rebuilt = match (self.get(&hada_t1), self.get(&hada_t2)) {
+            (Ok(t1), Ok(t2)) => {
+                let rebuild1 = w1_b.transpose(0, 1)?.matmul(&t1.matmul(&w1_a)?)?;
+                let rebuild2 = w2_b.transpose(0, 1)?.matmul(&t2.matmul(&w2_a)?)?;
 
-        if let Ok(t1) = self.get(&hada_t1) {
-            let t2 = self.get(&hada_t2)?;
+                rebuild1.matmul(&rebuild2)?
+            }
+            _ => {
+                let w1_d = reshape_keep_first_dim(&w1_b)?;
+                let w1_u = reshape_keep_last_dim(&w1_a)?;
+                let w2_d = reshape_keep_first_dim(&w2_b)?;
+                let w2_u = reshape_keep_last_dim(&w2_a)?;
 
-            let t1_transposed = t1.transpose(1, 2)?.reshape((0, 1))?;
-            let w1_a_transposed = w1_a.transpose(0, 1)?;
-            let w1_b_transposed = w1_b.transpose(0, 1)?;
+                w1_u.matmul(&w1_d)?.mul(&w2_u.matmul(&w2_d)?)?
+            }
+        };
 
-            let t2_transposed = t2.transpose(1, 2)?.reshape((0, 1))?;
-            let w2_a_transposed = w2_a.transpose(0, 1)?;
-            let w2_b_transposed = w2_b.transpose(0, 1)?;
-
-            let rebuild1 = t1_transposed
-                .matmul(&w1_a_transposed)?
-                .matmul(&w1_b_transposed)?;
-            let rebuild2 = t2_transposed
-                .matmul(&w2_a_transposed)?
-                .matmul(&w2_b_transposed)?;
-
-            // return rebuild1 * rebuild2 * scale
-            rebuild1.mul(rebuild2)?.mul(scale)
-        } else {
-            let one = w1_a.matmul(&w1_b)?;
-            let two = w2_a.matmul(&w2_b)?;
-
-            one.mul(two)?.mul(scale)
-        }
+        rebuilt.mul(scale)
     }
 
     fn scale_lokr_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
         let lokr_w1 = format!("{}.lokr_w1", base_name);
-        // let lokr_w2 = format!("{}.lokr_w2", base_name);
+        let lokr_w2 = format!("{}.lokr_w2", base_name);
 
         let lokr_w1_a = format!("{}.lokr_w1_a", base_name);
         let lokr_w1_b = format!("{}.lokr_w1_b", base_name);
@@ -394,45 +426,100 @@ impl Weight for BufferedLoRAWeight {
 
         let alpha = self.get(&alpha_key)?;
 
-        if let Ok(w1_a) = self.get(&lokr_w1_a) {
-            let w1_b = self.get(&lokr_w1_b)?;
-            let w2_a = self.get(&lokr_w2_a)?;
-            let w2_b = self.get(&lokr_w2_b)?;
+        let w1 = self.get(&lokr_w1);
+        let w2 = self.get(&lokr_w2);
 
-            let w1 = w1_a.matmul(&w1_b)?;
-            let w2 = w2_a.matmul(&w2_b)?;
+        let (mut w1, w2, scale) = match (w1, w2) {
+            (Ok(w1), Ok(w2)) => Ok((w1, w2, 1.0)),
+            (
+                Ok(w1),
+                Err(candle_core::Error::SafeTensor(safetensors::SafeTensorError::TensorNotFound(
+                    _,
+                ))),
+            ) => {
+                // need to get w2
+                let w2_a = self.get(&lokr_w2_a)?;
+                let w2_b = self.get(&lokr_w2_b)?;
 
-            let dims = w1_b.dims();
+                let w2 = if let Ok(t1) = self.get(&lokr_t2) {
+                    rebuild_tucker(&t1, &w2_a, &w2_b)?
+                } else {
+                    rebuild_lokr_w2(&w2_a, &w2_b)?
+                };
 
-            let scale = alpha
-                .to_dtype(candle_core::DType::F64)?
-                .to_scalar::<f64>()?
-                / dims[0] as f64;
-            w1.matmul(&w2)?.mul(scale)
-        } else if let Ok(t2) = self.get(&lokr_t2) {
-            let w2_a = self.get(&lokr_w2_a)?;
-            let w2_b = self.get(&lokr_w2_b)?;
-            w2_a.matmul(&w2_b)?.mul(t2)
-        } else {
-            let w1 = self.get(&lokr_w1)?;
-            let w2 = self.get(&lokr_w1)?;
+                let dims = w2_a.dims();
 
-            let dims = w1.dims();
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
 
-            let scale = alpha
-                .to_dtype(candle_core::DType::F64)?
-                .to_scalar::<f64>()?
-                / dims[0] as f64;
+                Ok((w1, w2, scale))
+            }
+            (
+                Err(candle_core::Error::SafeTensor(safetensors::SafeTensorError::TensorNotFound(
+                    _,
+                ))),
+                Ok(w2),
+            ) => {
+                let w1_a = self.get(&lokr_w1_a)?;
+                let w1 = w1_a.matmul(&self.get(&lokr_w1_b)?)?;
+                let dims = w1_a.dims();
 
-            w1.matmul(&w2)?.mul(scale)
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
+                Ok((w1, w2, scale))
+            }
+            (
+                Err(candle_core::Error::SafeTensor(safetensors::SafeTensorError::TensorNotFound(
+                    _,
+                ))),
+                Err(candle_core::Error::SafeTensor(safetensors::SafeTensorError::TensorNotFound(
+                    _,
+                ))),
+            ) => {
+                let w1_a = self.get(&lokr_w1_a)?;
+                // need to get w1 and w2
+                let w1 = w1_a.matmul(&self.get(&lokr_w1_b)?)?;
+
+                // need to get w2
+                let w2_a = self.get(&lokr_w2_a)?;
+                let w2_b = self.get(&lokr_w2_b)?;
+
+                let w2 = if let Ok(t1) = self.get(&lokr_t2) {
+                    rebuild_tucker(&t1, &w2_a, &w2_b)?
+                } else {
+                    rebuild_lokr_w2(&w2_a, &w2_b)?
+                };
+
+                let dims = w1_a.dims();
+
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
+
+                Ok((w1, w2, scale))
+            }
+            _ => Err(candle_core::Error::CannotFindTensor {
+                path: format!("{lokr_w1_a},{lokr_w1_b},{lokr_w2_a},{lokr_w2_b}"),
+            }),
+        }?;
+
+        for _ in 0..w2.dims().len() - w1.dims().len() {
+            w1 = w1.unsqueeze(candle_core::D::Minus1)?;
         }
 
-        // if len(w2.shape) == 4:
-        //     w1 = w1.unsqueeze(2).unsqueeze(2)
-        // w2 = w2.contiguous()
-        // rebuild = torch.kron(w1, w2)
-        //
-        // return rebuild * scale
+        // TODO: Need to handle different size dimensions between w1 and w2
+        let rebuild = kron(&w1, &w2.contiguous()?)?;
+
+        if scale != 1.0 {
+            rebuild.mul(scale)
+        } else {
+            Ok(rebuild)
+        }
     }
 
     fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
@@ -460,6 +547,19 @@ impl Weight for BufferedLoRAWeight {
             / dims[0] as f64;
 
         w2b.matmul(&w1b)?.add(&w2a.matmul(&w1a)?)?.mul(scale)
+    }
+
+    fn scale_diag_oft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        // Diag OFT are not scaled by alpha
+        let oft_diag_key = format!("{}.oft_diag", base_name);
+        self.get(&oft_diag_key)
+    }
+
+    fn scale_boft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        // Diag OFT are not scaled by alpha
+        let oft_blocks_key = format!("{}.oft_blocks", base_name);
+
+        self.get(&oft_blocks_key)
     }
 
     fn alphas(&self) -> HashSet<Alpha> {
@@ -640,6 +740,9 @@ pub trait Weight {
     fn scale_hada_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
     #[allow(dead_code)]
     fn scale_lokr_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+
+    fn scale_diag_oft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
+    fn scale_boft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
 
     fn alphas(&self) -> HashSet<Alpha>;
     #[allow(dead_code)]
@@ -911,41 +1014,24 @@ impl Weight for LoRAWeight {
             .to_scalar::<f64>()?
             / dims[0] as f64;
 
-        if let Some(t1) = self.tensors.get(&hada_t1) {
-            let t2 = self
-                .tensors
-                .get(&hada_t2)
-                .ok_or_else(|| candle_core::Error::Msg("no hada tucker t2".to_string()))?;
+        let rebuilt = match (self.get(&hada_t1), self.get(&hada_t2)) {
+            (Ok(t1), Ok(t2)) => {
+                let rebuild1 = w1_b.transpose(0, 1)?.matmul(&t1.matmul(w1_a)?)?;
+                let rebuild2 = w2_b.transpose(0, 1)?.matmul(&t2.matmul(w2_a)?)?;
 
-            let one = w1_a.matmul(w1_b)?;
-            let two = w2_a.matmul(w2_b)?;
+                rebuild1.matmul(&rebuild2)?
+            }
+            _ => {
+                let w1_d = reshape_keep_first_dim(&w1_a)?;
+                let w1_u = reshape_keep_last_dim(&w1_b)?;
+                let w2_d = reshape_keep_first_dim(&w2_a)?;
+                let w2_u = reshape_keep_last_dim(&w2_b)?;
 
-            let t1_w1 = t1.mul(&one)?;
-            let t2_w2 = t2.mul(&two)?;
+                w1_u.matmul(&w1_d)?.mul(&w2_u.matmul(&w2_d)?)?
+            }
+        };
 
-            t1_w1.matmul(&t2_w2)? * scale
-        } else {
-            let one = w1_a.matmul(w1_b)?;
-            let two = w2_a.matmul(w2_b)?;
-
-            one.mul(two)?.mul(scale)
-        }
-
-        // if dims.len() == 2 {
-        //     up.matmul(&down)?.mul(scale)
-        // } else if dims[2] == 1 && dims[3] == 1 {
-        //     up.squeeze(3)?
-        //         .squeeze(2)?
-        //         .matmul(&down.squeeze(3)?.squeeze(2)?)?
-        //         .unsqueeze(2)?
-        //         .unsqueeze(3)?
-        //         .mul(scale)
-        // } else {
-        //     down.permute((1, 0, 2, 3))?
-        //         .conv2d(&up, 0, 1, 1, 1)?
-        //         .permute((1, 0, 2, 3))?
-        //         .mul(scale)
-        // }
+        rebuilt.mul(scale)
     }
 
     fn scale_lokr_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
@@ -967,68 +1053,90 @@ impl Weight for LoRAWeight {
             .get(&alpha_key)
             .ok_or_else(|| candle_core::Error::Msg("no lokr alpha".to_string()))?;
 
-        if let Some(w1_a) = self.tensors.get(&lokr_w1_a) {
-            let w1_b = self
-                .tensors
-                .get(&lokr_w1_b)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w1_b".to_string()))?;
-            let w2_a = self
-                .tensors
-                .get(&lokr_w2_a)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w2_a".to_string()))?;
+        let w1 = self.tensors.get(&lokr_w1);
+        let w2 = self.tensors.get(&lokr_w2);
 
-            let w2_b = self
-                .tensors
-                .get(&lokr_w2_b)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w2_b".to_string()))?;
+        let (w1, w2, scale) = match (w1, w2) {
+            (None, Some(w2)) => {
+                let w1_a = self.get(&lokr_w1_a)?;
+                let w1 = w1_a.matmul(&self.get(&lokr_w1_b)?)?;
+                let dims = w1_a.dims();
 
-            let w1 = w1_a.matmul(w1_b)?;
-            let w2 = w2_a.matmul(w2_b)?;
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
+                (w1, w2.clone(), scale)
+            }
+            (None, None) => {
+                let w1_a = self.get(&lokr_w1_a)?;
+                // need to get w1 and w2
+                let w1 = w1_a.matmul(&self.get(&lokr_w1_b)?)?;
 
-            let dims = w1_b.dims();
+                // need to get w2
+                let w2_a = self.get(&lokr_w2_a)?;
+                let w2_b = self.get(&lokr_w2_b)?;
 
-            let scale = alpha
-                .to_dtype(candle_core::DType::F64)?
-                .to_scalar::<f64>()?
-                / dims[0] as f64;
-            w1.matmul(&w2)?.mul(scale)
-        } else if let Ok(t2) = self.get(&lokr_t2) {
-            let w2_a = self
-                .tensors
-                .get(&lokr_w2_a)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w2_a".to_string()))?;
-            let w2_b = self
-                .tensors
-                .get(&lokr_w2_b)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w2_b".to_string()))?;
-            w2_a.matmul(w2_b)?.mul(t2)
+                let w2 = if let Ok(t1) = self.get(&lokr_t2) {
+                    rebuild_tucker(&t1, &w2_a, &w2_b)?
+                } else {
+                    rebuild_lokr_w2(&w2_a, &w2_b)?
+                };
+
+                let dims = w1_a.dims();
+
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
+
+                (w1, w2, scale)
+            }
+            (Some(w1), Some(w2)) => (w1.clone(), w2.clone(), 1.0),
+            (Some(w1), None) => {
+                // need to get w2
+                let w2_a = self.get(&lokr_w2_a)?;
+                let w2_b = self.get(&lokr_w2_b)?;
+
+                let w2 = if let Ok(t1) = self.get(&lokr_t2) {
+                    rebuild_tucker(&t1, &w2_a, &w2_b)?
+                } else {
+                    rebuild_lokr_w2(&w2_a, &w2_b)?
+                };
+
+                let dims = w2_a.dims();
+
+                let scale = alpha
+                    .to_dtype(candle_core::DType::F64)?
+                    .to_scalar::<f64>()?
+                    / dims[0] as f64;
+
+                (w1.clone(), w2, scale)
+            }
+        };
+
+        // TODO: Need to handle different size dimensions between w1 and w2
+        let rebuild = kron(&w1, &w2.contiguous()?)?;
+
+        if scale != 1.0 {
+            rebuild.mul(scale)
         } else {
-            let w1 = self
-                .tensors
-                .get(&lokr_w1)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w1".to_string()))?;
-
-            let w2 = self
-                .tensors
-                .get(&lokr_w2)
-                .ok_or_else(|| candle_core::Error::Msg("no lokr w2".to_string()))?;
-
-            let dims = w1.dims();
-
-            let scale = alpha
-                .to_dtype(candle_core::DType::F64)?
-                .to_scalar::<f64>()?
-                / dims[0] as f64;
-
-            w1.matmul(w2)?.mul(scale)
+            Ok(rebuild)
         }
+    }
 
-        // if len(w2.shape) == 4:
-        //     w1 = w1.unsqueeze(2).unsqueeze(2)
-        // w2 = w2.contiguous()
-        // rebuild = torch.kron(w1, w2)
-        //
-        // return rebuild * scale
+    fn scale_diag_oft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        // Diag OFT are not scaled by alpha
+        let oft_diag_key = format!("{}.oft_diag", base_name);
+
+        self.get(&oft_diag_key)
+    }
+
+    fn scale_boft_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
+        // Diag OFT are not scaled by alpha
+        let oft_blocks_key = format!("{}.oft_blocks", base_name);
+
+        self.get(&oft_blocks_key)
     }
 
     fn rank(&self, base_name: &str) -> Result<usize, candle_core::Error> {
@@ -1237,45 +1345,45 @@ mod tests {
     //     Ok(data)
     // }
     //
-    // fn load_test_lokr_file() -> Result<Vec<u8>, io::Error> {
-    //     let filename = "./women-2024-05-14-200457-2450c2b2.safetensors";
-    //
-    //     let mut f = File::open(filename)?;
-    //     let mut data = vec![];
-    //     f.read_to_end(&mut data)?;
-    //
-    //     Ok(data)
-    // }
-    //
-    // fn load_test_diag_oft_file() -> Result<Vec<u8>, io::Error> {
-    //     let filename = "./diag_oft.safetensors";
-    //
-    //     let mut f = File::open(filename)?;
-    //     let mut data = vec![];
-    //     f.read_to_end(&mut data)?;
-    //
-    //     Ok(data)
-    // }
-    //
-    // fn load_test_boft_file() -> Result<Vec<u8>, io::Error> {
-    //     let filename = "./boft.safetensors";
-    //
-    //     let mut f = File::open(filename)?;
-    //     let mut data = vec![];
-    //     f.read_to_end(&mut data)?;
-    //
-    //     Ok(data)
-    // }
-    //
-    // fn load_test_boft_conv_file() -> Result<Vec<u8>, io::Error> {
-    //     let filename = "./boft_conv.safetensors";
-    //
-    //     let mut f = File::open(filename)?;
-    //     let mut data = vec![];
-    //     f.read_to_end(&mut data)?;
-    //
-    //     Ok(data)
-    // }
+    fn load_test_lokr_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "./women-2024-05-14-200457-2450c2b2.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_diag_oft_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "./diag_oft.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_boft_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "./boft.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
+
+    fn load_test_boft_conv_file() -> Result<Vec<u8>, io::Error> {
+        let filename = "./boft_conv.safetensors";
+
+        let mut f = File::open(filename)?;
+        let mut data = vec![];
+        f.read_to_end(&mut data)?;
+
+        Ok(data)
+    }
     //
     // fn load_test_glora_file() -> Result<Vec<u8>, io::Error> {
     //     let filename = "./glora.safetensors";
@@ -1460,15 +1568,12 @@ mod tests {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
     #[test]
-    fn buffered_scale_hada_weight() {
+    fn buffered_scale_hada_weight() -> candle_core::Result<()> {
         let buffer = load_test_hada_file().unwrap();
 
         let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
 
-        dbg!(lora_weight.base_names());
-
-        let result =
-            dbg!(lora_weight.scale_hada_weight("lora_unet_up_blocks_1_attentions_0_proj_out"));
+        let result = lora_weight.scale_hada_weight("lora_unet_up_blocks_1_attentions_0_proj_out");
 
         assert!(result.is_ok());
 
@@ -1481,6 +1586,8 @@ mod tests {
 
         // Verify that the tensor has the correct shape or dimensions
         assert_eq!(scaled_tensor.dims(), &[1280, 1280]);
+
+        Ok(())
     }
 
     // TODO: Need LoHa conv layers working
@@ -1540,6 +1647,104 @@ mod tests {
     //         // break;
     //     }
     // }
+
+    // LoKr
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+    #[test]
+    fn buffered_scale_lokr_weight() -> candle_core::Result<()> {
+        let buffer = load_test_lokr_file().unwrap();
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let result = lora_weight.scale_lokr_weight("lora_unet_up_blocks_1_attentions_0_proj_out");
+
+        assert!(result.is_ok());
+
+        let scaled_tensor = result.unwrap();
+
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            4.809399
+        );
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[1280, 1280, 1, 1]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn buffered_scale_diag_oft_weight() -> candle_core::Result<()> {
+        let buffer = load_test_diag_oft_file().unwrap();
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let result =
+            dbg!(lora_weight.scale_diag_oft_weight("lora_unet_up_blocks_1_attentions_0_proj_out"));
+
+        assert!(result.is_ok());
+
+        let scaled_tensor = result.unwrap();
+
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            35.77691
+        );
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[160, 8, 8]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn buffered_scale_boft_weight() -> candle_core::Result<()> {
+        let buffer = load_test_boft_file().unwrap();
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let result = lora_weight.scale_boft_weight(
+            "lora_unet_up_blocks_3_attentions_2_transformer_blocks_0_attn2_to_k",
+        );
+
+        assert!(result.is_ok());
+
+        let scaled_tensor = result.unwrap();
+
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            0.116758764
+        );
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[6, 32, 10, 10]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn buffered_scale_boft_conv_weight() -> candle_core::Result<()> {
+        let buffer = load_test_boft_conv_file().unwrap();
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let result = dbg!(lora_weight.scale_boft_weight("lora_unet_up_blocks_3_resnets_1_conv1"));
+
+        assert!(result.is_ok());
+
+        let scaled_tensor = result.unwrap();
+
+        assert_eq!(
+            norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
+            0.0
+        );
+
+        // Verify that the tensor has the correct shape or dimensions
+        assert_eq!(scaled_tensor.dims(), &[6, 32, 10, 10]);
+
+        Ok(())
+    }
 
     // #[test]
     // fn weight_norm_handles_scale_weight_lorafa() {

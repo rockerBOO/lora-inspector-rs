@@ -281,11 +281,11 @@ function Network({ metadata, filename, worker }) {
 	let networkOptions;
 
 	if (networkType === "DiagOFT") {
-		networkOptions = h(DiagOFTNetwork, { metadata });
+		networkOptions = h(DiagOFTNetwork, { metadata, filename, worker });
 	} else if (networkType === "BOFT") {
-		networkOptions = h(BOFTNetwork, { metadata });
+		networkOptions = h(BOFTNetwork, { metadata, filename, worker });
 	} else if (networkType === "LoKr") {
-		networkOptions = h(LoKrNetwork, { metadata });
+		networkOptions = h(LoKrNetwork, { metadata, filename, worker });
 	} else {
 		networkOptions = h(LoRANetwork, { metadata, filename, worker });
 	}
@@ -371,16 +371,16 @@ function Network({ metadata, filename, worker }) {
 	// ]),
 }
 
-function DiagOFTNetwork({ metadata }) {
+function DiagOFTNetwork({ metadata, filename, worker }) {
 	const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
 	React.useEffect(() => {
 		trySyncMessage(
-			{ messageType: "dims", name: mainFilename },
-			mainFilename,
+			{ messageType: "dims", name: filename },
+			worker,
 		).then((resp) => {
 			setDims(resp.dims);
 		});
-	}, []);
+	}, [filename, worker]);
 	return [
 		h(MetaAttribute, {
 			name: "Network blocks",
@@ -390,16 +390,16 @@ function DiagOFTNetwork({ metadata }) {
 	];
 }
 
-function BOFTNetwork({ metadata }) {
+function BOFTNetwork({ metadata, filename, worker }) {
 	const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
 	React.useEffect(() => {
 		trySyncMessage(
-			{ messageType: "dims", name: mainFilename },
-			mainFilename,
+			{ messageType: "dims", name: filename },
+			worker,
 		).then((resp) => {
 			setDims(resp.dims);
 		});
-	}, []);
+	}, [filename, worker]);
 	return h(MetaAttribute, {
 		name: "Network factor",
 		valueClassName: "rank",
@@ -642,6 +642,7 @@ function Blocks({ filename, worker }) {
 	const [normProgress, setNormProgress] = React.useState(0);
 	const [currentCount, setCurrentCount] = React.useState(0);
 	const [totalCount, setTotalCount] = React.useState(0);
+	const [blockFilename, setBlockFilename] = React.useState("");
 
 	const [startTime, setStartTime] = React.useState(undefined);
 	const [currentBaseName, setCurrentBaseName] = React.useState("");
@@ -650,6 +651,21 @@ function Blocks({ filename, worker }) {
 	const chartRefs = React.useRef(
 		Array.from(Array(4).keys()).map(() => React.createRef()),
 	);
+
+	// Reset 
+	React.useEffect(() => {
+		if (blockFilename !== filename) {
+			setHasBlockWeights(false);
+			setMagBlocks({});
+			setCurrentCount(0);
+			setNormProgress(0);
+			setTotalCount(0);
+			setStartTime(undefined);
+			setCanHaveBlockWeights(false);
+
+			setBlockFilename(filename);
+		}
+	}, [blockFilename, filename]);
 
 	React.useEffect(() => {
 		if (!hasBlockWeights) {
@@ -662,6 +678,11 @@ function Blocks({ filename, worker }) {
 			let progress = await getProgress().next();
 			while (progress) {
 				const value = progress.value;
+
+				if (!value) {
+					break;
+				}
+
 				setCurrentBaseName(value.baseName);
 				setCurrentCount(value.currentCount);
 				setTotalCount(value.totalCount);
@@ -684,6 +705,7 @@ function Blocks({ filename, worker }) {
 		return function cleanup() {};
 	}, [hasBlockWeights, filename, worker]);
 
+
 	React.useEffect(() => {
 		trySyncMessage(
 			{
@@ -698,6 +720,10 @@ function Blocks({ filename, worker }) {
 				resp.networkType === "LoRAFA" ||
 				resp.networkType === "DyLoRA" ||
 				resp.networkType === "GLoRA" ||
+				resp.networkType === "LoHA" ||
+				resp.networkType === "LoKr" ||
+				resp.networkType === "DiagOFT" ||
+				resp.networkType === "BOFT" ||
 				// Assuming networkType of none could have block weights
 				resp.networkType === undefined
 			) {

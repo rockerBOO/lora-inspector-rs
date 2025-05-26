@@ -162,6 +162,10 @@ impl LoRAFile {
                 Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name)?),
                 Some(NetworkType::DyLoRA) => Ok(weights.scale_lora_weight(base_name)?),
                 Some(NetworkType::GLoRA) => Ok(weights.scale_glora_weights(base_name)?),
+                Some(NetworkType::LoKr) => Ok(weights.scale_lokr_weight(base_name)?),
+                Some(NetworkType::LoHA) => Ok(weights.scale_hada_weight(base_name)?),
+                Some(NetworkType::BOFT) => Ok(weights.scale_boft_weight(base_name)?),
+                Some(NetworkType::DiagOFT) => Ok(weights.scale_diag_oft_weight(base_name)?),
                 Some(_) => Err(InspectorError::UnsupportedNetworkType),
                 None => Ok(weights.scale_lora_weight(base_name)?),
             },
@@ -169,22 +173,6 @@ impl LoRAFile {
                 "Weight not loaded. Load the weight first.".to_string(),
             )),
         }
-
-        // let _ = scaled_weight.as_ref().is_ok_and(|scaled| {
-        //     self.scaled_weights
-        //         .insert(base_name.to_string(), scaled.clone())
-        //         .is_some()
-        // });
-
-        // scaled_weight
-
-        // match  {
-        //     Ok(scaled) => {
-        //         self.scaled_weights.insert(base_name.to_string(), scaled.clone());
-        //         scaled_weight
-        //     }
-        //     Err(e) => scaled_weight,
-        // };
     }
 }
 
