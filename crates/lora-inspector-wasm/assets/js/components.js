@@ -374,12 +374,11 @@ function Network({ metadata, filename, worker }) {
 function DiagOFTNetwork({ metadata, filename, worker }) {
 	const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
 	React.useEffect(() => {
-		trySyncMessage(
-			{ messageType: "dims", name: filename },
-			worker,
-		).then((resp) => {
-			setDims(resp.dims);
-		});
+		trySyncMessage({ messageType: "dims", name: filename }, worker).then(
+			(resp) => {
+				setDims(resp.dims);
+			},
+		);
 	}, [filename, worker]);
 	return [
 		h(MetaAttribute, {
@@ -393,12 +392,11 @@ function DiagOFTNetwork({ metadata, filename, worker }) {
 function BOFTNetwork({ metadata, filename, worker }) {
 	const [dims, setDims] = React.useState([metadata.get("ss_network_dim")]);
 	React.useEffect(() => {
-		trySyncMessage(
-			{ messageType: "dims", name: filename },
-			worker,
-		).then((resp) => {
-			setDims(resp.dims);
-		});
+		trySyncMessage({ messageType: "dims", name: filename }, worker).then(
+			(resp) => {
+				setDims(resp.dims);
+			},
+		);
 	}, [filename, worker]);
 	return h(MetaAttribute, {
 		name: "Network factor",
@@ -652,7 +650,7 @@ function Blocks({ filename, worker }) {
 		Array.from(Array(4).keys()).map(() => React.createRef()),
 	);
 
-	// Reset 
+	// Reset
 	React.useEffect(() => {
 		if (blockFilename !== filename) {
 			setHasBlockWeights(false);
@@ -704,7 +702,6 @@ function Blocks({ filename, worker }) {
 
 		return function cleanup() {};
 	}, [hasBlockWeights, filename, worker]);
-
 
 	React.useEffect(() => {
 		trySyncMessage(

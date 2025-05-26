@@ -7,7 +7,7 @@ export default defineConfig({
 	//   type: "classic",
 	// },
 	worker: {
-		format: "es"
+		format: "es",
 	},
 	plugins: [wasm()],
 	build: {
