@@ -41,32 +41,33 @@ function getWorker(workerName) {
 }
 
 async function init_wasm_in_worker() {
-	// if (await simd()) {
-	// 	const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
-	// 	worker = LoraWorker;
-	// 	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url")).default;
-	// 	await fetch(resolvedUrl)
-	// 		.then((response) => response.arrayBuffer())
-	// 		.then((bytes) => {
-	// 			return initSync(bytes);
-	// 		});
-	// } else {
-	const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
-	const worker = LoraWorker;
-	const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
-		.default;
-	await fetch(resolvedUrl)
-		.then((response) => response.arrayBuffer())
-		.then((bytes) => {
-			return initSync(bytes);
-		});
+	if (await simd()) {
+		const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
+		worker = LoraWorker;
+		const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
+			.default;
+		await fetch(resolvedUrl)
+			.then((response) => response.arrayBuffer())
+			.then((bytes) => {
+				return initSync(bytes);
+			});
+	} else {
+		const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
+		const worker = LoraWorker;
+		const resolvedUrl = (await import("/pkg/lora-inspector_bg.wasm?url"))
+			.default;
+		await fetch(resolvedUrl)
+			.then((response) => response.arrayBuffer())
+			.then((bytes) => {
+				return initSync(bytes);
+			});
+	}
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	self.onerror = (error) => {
 		console.log("There is an error inside your worker!", error);
 	};
 
 	self.onmessage = async (e) => {
-		console.log(e.data)
 		if (e.data.messageType === "file_upload") {
 			fileUploadHandler(e, worker);
 		} else if (e.data.messageType === "unload") {
@@ -527,4 +528,3 @@ async function getNetworkType(e) {
 
 	return loraWorker.network_type();
 }
-
