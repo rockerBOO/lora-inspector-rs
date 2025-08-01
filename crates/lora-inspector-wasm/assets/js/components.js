@@ -1669,8 +1669,6 @@ function Statistics({ baseNames, filename, worker }) {
 				).then((resp) => {
 					progress += 1;
 
-					console.log("norms", resp);
-
 					setCurrentBaseName(resp.baseName);
 					setCurrentCount(progress);
 					setTotalCount(baseNames.length);

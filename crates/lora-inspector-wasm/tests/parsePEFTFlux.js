@@ -1,7 +1,8 @@
 import test from "ava";
 import { parseSDKey } from "../assets/js/moduleBlocks.js";
 
-const rawKeys = `transformer.single_transformer_blocks.0.attn.to_k.lora_A.weight
+const rawKeys = `transformer.single_transformer_blocks.9.proj_out
+transformer.single_transformer_blocks.0.attn.to_k.lora_A.weight
 transformer.single_transformer_blocks.0.attn.to_k.lora_B.weight
 transformer.single_transformer_blocks.0.attn.to_q.lora_A.weight
 transformer.single_transformer_blocks.0.attn.to_q.lora_B.weight

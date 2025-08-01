@@ -1,8 +1,53 @@
+# Rust
 /target
+**/target/
+debug/
+release/
+*.pdb
+*.rs.bk
+Cargo.lock
 
+# WebAssembly
 pkg/
-pkg
+*.wasm
 
+# Project-specific data
 *.safetensors
+keys.json
 
+# Build and temporary files
 new.html
+tmp/
+temp/
+
+# Node.js and Yarn
+node_modules/
+dist/
+build/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and IDE
+.env
+.env.local
+.vscode/
+.idea/
+.DS_Store
+.claude
+.ignore
+
+# Testing and profiling
+*.log
+*.perf
+flamegraph.svg
+perf.data
+perf.data.old
+
+# Dependency management
+.pnp
+.pnp.js
+.yarn/
+.yarnrc.yml
+.yarn-integrity
