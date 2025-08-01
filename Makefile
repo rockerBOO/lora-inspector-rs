@@ -58,6 +58,9 @@ dev-wasm-cors:
 deploy:
 	fly deploy
 
+fmt: 
+	cargo fmt && yarn --cwd $(WASM_DIR) format
+
 run:
 	cargo run --manifest-path crates/lora-inspector/cargo.toml
 

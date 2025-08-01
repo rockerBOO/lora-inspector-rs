@@ -18,7 +18,7 @@ const FLUX_SINGLE =
 	/lora_unet_(?<block_type>single_blocks)_(?<block_id>\d+)_(?<subblock_type>linear1|linear2|modulation_lin)/;
 
 const FLUX_PEFT =
-	/transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)\.(?<type>\w+)\.(?<subtype>\w+)/;
+	/transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)(\.(?<type>\w+))?\.?(?<subtype>\w+)?/;
 
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
@@ -117,28 +117,8 @@ function parseSDKey(key) {
 		};
 	}
 
-	// Parse Flux PEFT single transformer blocks
-	if (key.includes("single_transformer_blocks")) {
-		const matches = key.match(FLUX_PEFT);
-		if (!matches) {
-			throw new Error(`Did not match on key: ${key} ${FLUX_PEFT}`);
-		}
-
-		const groups = matches.groups;
-		const blockId = Number.parseInt(groups.block_id);
-
-		return {
-			...result,
-			type: "transformer",
-			blockId: blockId,
-			blockType: groups.block_type,
-			name: `SB${padTwo(blockId)}`,
-			isAttention: true,
-		};
-	}
-
 	// Parse Flux PEFT transformer blocks
-	if (key.includes("transformer.transformer_blocks")) {
+	if (key.includes("transformer.")) {
 		const matches = key.match(FLUX_PEFT);
 		if (!matches) {
 			throw new Error(`Did not match on key: ${key} ${FLUX_PEFT}`);
@@ -146,14 +126,18 @@ function parseSDKey(key) {
 
 		const groups = matches.groups;
 		const blockId = Number.parseInt(groups.block_id);
+		const blockType = groups.block_type;
+
+		const namePrefix = blockType === "single_transformer_blocks" ? "SB" : "DB";
 
 		return {
 			...result,
 			type: "transformer",
 			blockId: blockId,
-			blockType: groups.block_type,
-			name: `DB${padTwo(blockId)}`,
+			blockType: blockType,
+			name: `${namePrefix}${padTwo(blockId)}`,
 			isAttention: true,
+			subtype: groups.subtype || "",
 		};
 	}
 
