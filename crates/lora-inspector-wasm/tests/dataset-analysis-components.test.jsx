@@ -139,7 +139,7 @@ describe("Analysis Components", () => {
 			const mockProps = {
 				name: "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_attn1_to_k.lora_down.weight",
 				value: "torch.Size([16, 320])",
-				worker: null
+				worker: createMockWorker()
 			};
 			
 			expect(() => render(<Weight {...mockProps} />)).not.toThrow();
@@ -220,7 +220,7 @@ describe("Interactive Analysis Components", () => {
 				baseNames: [],
 				showBaseNames: false,
 				setShowBlockNames: () => {},
-				worker: null
+				worker: createMockWorker()
 			};
 			
 			expect(() => render(<BaseNames {...mockProps} />)).not.toThrow();
@@ -235,7 +235,7 @@ describe("Interactive Analysis Components", () => {
 				unetKeys: ["down_blocks.0", "mid_block", "up_blocks.0"],
 				showUnetKeys: true,
 				setShowUnetKeys: () => {},
-				worker: null
+				worker: createMockWorker()
 			};
 			
 			render(<UnetKeys {...mockProps} />);
@@ -253,7 +253,7 @@ describe("Interactive Analysis Components", () => {
 				textEncoderKeys: ["text_model.encoder.layers.0", "text_model.encoder.layers.1"],
 				showTextEncoderKeys: true,
 				setShowTextEncoderKeys: () => {},
-				worker: null
+				worker: createMockWorker()
 			};
 			
 			render(<TextEncoderKeys {...mockProps} />);
