@@ -1,15 +1,15 @@
 import React, { useState, useEffect, createRef, useCallback } from "react";
 import { trySyncMessage } from "../../message.js";
-import { BaseNames } from "./BaseNames.jsx";
-import { UnetKeys } from "./UnetKeys.jsx";
-import { TextEncoderKeys } from "./TextEncoderKeys.jsx";
 import { AllKeys } from "./AllKeys.jsx";
+import { BaseNames } from "./BaseNames.jsx";
 import { Statistics } from "./Statistics.jsx";
+import { TextEncoderKeys } from "./TextEncoderKeys.jsx";
+import { UnetKeys } from "./UnetKeys.jsx";
 
 const DEBUG = new URLSearchParams(document.location.search).has("DEBUG");
 const VERBOSE = new URLSearchParams(document.location.search).has("VERBOSE");
 
-const addDebugMessage = setDebugMessages => (message) => {
+const addDebugMessage = (setDebugMessages) => (message) => {
 	if (DEBUG) {
 		setDebugMessages((prev) => [...prev, message]);
 	}

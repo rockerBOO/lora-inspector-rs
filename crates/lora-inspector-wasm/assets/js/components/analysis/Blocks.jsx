@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { listenProgress, trySyncMessage } from "../../message.js";
+import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function Blocks({ filename, worker }) {
 	const [hasBlockWeights, setHasBlockWeights] = useState(false);

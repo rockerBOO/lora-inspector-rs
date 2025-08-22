@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { trySyncMessage } from "../../message.js";
-import { supportsDoRA } from "./NetworkUtils.js";
-import { DiagOFTNetwork } from "./DiagOFTNetwork.jsx";
+import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { BOFTNetwork } from "./BOFTNetwork.jsx";
+import { DiagOFTNetwork } from "./DiagOFTNetwork.jsx";
 import { LoKrNetwork } from "./LoKrNetwork.jsx";
 import { LoRANetwork } from "./LoRANetwork.jsx";
+import { supportsDoRA } from "./NetworkUtils.js";
 
 export function Network({ metadata, filename, worker }) {
 	const [networkModule, setNetworkModule] = useState(

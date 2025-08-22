@@ -1,7 +1,7 @@
 import React from "react";
 const h = React.createElement;
-import { listenProgress, trySyncMessage } from "./message";
 import { Blocks } from "./components/analysis/Blocks.jsx";
+import { listenProgress, trySyncMessage } from "./message";
 
 function Header({ metadata }) {
 	return h("header", null, h(ModelSpec, { metadata }));

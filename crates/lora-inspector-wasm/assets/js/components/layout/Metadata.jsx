@@ -1,6 +1,6 @@
 import React from "react";
-import { Headline } from "./Headline.jsx";
 import { Header } from "./Header.jsx";
+import { Headline } from "./Headline.jsx";
 import { Main } from "./Main.jsx";
 
 export function Metadata({ metadata, filename, worker }) {

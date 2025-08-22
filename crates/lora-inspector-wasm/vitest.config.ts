@@ -8,7 +8,12 @@ export default mergeConfig(
 		test: {
 			environment: "jsdom",
 			include: ["tests/**/*.test.jsx"],
-			exclude: [...configDefaults.exclude, "e2e-test/**", "e2e-tests/**", "tests/**/*.test.js"],
+			exclude: [
+				...configDefaults.exclude,
+				"e2e-test/**",
+				"e2e-tests/**",
+				"tests/**/*.test.js",
+			],
 			root: fileURLToPath(new URL("./", import.meta.url)),
 			setupFiles: ["./assets/js/test-setup.ts"],
 		},

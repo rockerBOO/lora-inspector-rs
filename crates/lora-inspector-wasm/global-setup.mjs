@@ -1,5 +1,5 @@
-import { createWriteStream } from "fs";
-import { Readable } from "stream";
+import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
 
 async function globalSetup(_config) {
 	const url =
@@ -8,7 +8,7 @@ async function globalSetup(_config) {
 	const resp = await fetch(url);
 	if (resp.ok && resp.body) {
 		console.log("Writing to file:", fileName);
-		let writer = createWriteStream(fileName);
+		const writer = createWriteStream(fileName);
 		Readable.fromWeb(resp.body).pipe(writer);
 	} else {
 		console.error("could not download the file");

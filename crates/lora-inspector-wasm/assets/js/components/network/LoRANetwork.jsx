@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { trySyncMessage } from "../../message.js";
+import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function LoRANetwork({ metadata, filename, worker }) {
 	const [alphas, setAlphas] = useState([

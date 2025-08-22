@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { trySyncMessage } from "../../message.js";
+import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function BOFTNetwork({ metadata, filename, worker }) {
 	const [dims, setDims] = useState([metadata.get("ss_network_dim")]);

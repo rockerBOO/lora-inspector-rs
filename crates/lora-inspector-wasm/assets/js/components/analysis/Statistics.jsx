@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { trySyncMessage, listenProgress } from "../../message.js";
+import { listenProgress, trySyncMessage } from "../../message.js";
 import { Progress } from "./Progress.jsx";
 import { StatisticRow } from "./StatisticRow.jsx";
 

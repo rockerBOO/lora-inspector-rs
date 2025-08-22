@@ -1,6 +1,6 @@
 import React from "react";
-import { Headline } from "./Headline.jsx";
 import { Weight } from "../analysis/Weight.jsx";
+import { Headline } from "./Headline.jsx";
 
 export function NoMetadata({ metadata, filename, worker }) {
 	return (

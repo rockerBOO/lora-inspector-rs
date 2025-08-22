@@ -8,15 +8,18 @@ test("Network component - network type detection logic", (t) => {
 	const determineNetworkComponent = (networkType) => {
 		if (networkType === "DiagOFT") {
 			return "DiagOFTNetwork";
-		} else if (networkType === "BOFT") {
-			return "BOFTNetwork"; 
-		} else if (networkType === "LoKr") {
-			return "LoKrNetwork";
-		} else {
-			return "LoRANetwork";
 		}
+		if (networkType === "BOFT") {
+			return "BOFTNetwork";
+		}
+
+		if (networkType === "LoKr") {
+			return "LoKrNetwork";
+		}
+
+		return "LoRANetwork";
 	};
-	
+
 	t.is(determineNetworkComponent("DiagOFT"), "DiagOFTNetwork");
 	t.is(determineNetworkComponent("BOFT"), "BOFTNetwork");
 	t.is(determineNetworkComponent("LoKr"), "LoKrNetwork");
@@ -35,7 +38,7 @@ test("supportsDoRA utility function", (t) => {
 			networkType === "GLoRA"
 		);
 	};
-	
+
 	t.true(supportsDoRA("LoRA"));
 	t.true(supportsDoRA("LoHa"));
 	t.true(supportsDoRA("LoRAFA"));
@@ -54,15 +57,15 @@ test("WaveletLoss component - parsing logic", (t) => {
 		}
 		return JSON.parse(value);
 	};
-	
+
 	t.is(parse(null), null);
 	t.is(parse("None"), null);
 	t.is(parse(""), null);
-	
+
 	const validJson = '{"test": "value"}';
 	const parsed = parse(validJson);
 	t.deepEqual(parsed, { test: "value" });
-	
+
 	// Test error handling
 	t.throws(() => parse("invalid json"), { instanceOf: SyntaxError });
 });
@@ -94,16 +97,16 @@ test("Batch component - batch size detection logic", (t) => {
 		}
 		return batchSize;
 	};
-	
+
 	// Test direct batch size
 	const metadata1 = new Map([["ss_batch_size_per_device", "8"]]);
 	t.is(getBatchSize(metadata1), "8");
-	
+
 	// Test batch size from datasets
 	const datasetsJson = '[{"batch_size_per_device": 4}]';
 	const metadata2 = new Map([["ss_datasets", datasetsJson]]);
 	t.is(getBatchSize(metadata2), 4);
-	
+
 	// Test no batch size found
 	const metadata3 = new Map([]);
 	t.is(getBatchSize(metadata3), undefined);
@@ -126,12 +129,12 @@ test("Dataset component - JSON parsing with error handling", (t) => {
 		}
 		return datasets;
 	};
-	
+
 	// Test valid JSON
 	const validMetadata = new Map([["ss_datasets", '[{"test": "data"}]']]);
 	const validResult = parseDatasets(validMetadata);
 	t.deepEqual(validResult, [{ test: "data" }]);
-	
+
 	// Test invalid JSON - should return empty array
 	const invalidMetadata = new Map([["ss_datasets", "invalid json"]]);
 	// Suppress console output during this test
@@ -139,7 +142,7 @@ test("Dataset component - JSON parsing with error handling", (t) => {
 	const originalError = console.error;
 	console.log = () => {};
 	console.error = () => {};
-	
+
 	let invalidResult;
 	try {
 		invalidResult = parseDatasets(invalidMetadata);
@@ -147,13 +150,13 @@ test("Dataset component - JSON parsing with error handling", (t) => {
 		// If parsing still fails, default to empty array
 		invalidResult = [];
 	}
-	
+
 	// Restore console
 	console.log = originalLog;
 	console.error = originalError;
-	
+
 	t.deepEqual(invalidResult, []);
-	
+
 	// Test no datasets - should return empty array
 	const noMetadata = new Map([]);
 	const noResult = parseDatasets(noMetadata);
@@ -177,7 +180,7 @@ test("Alpha formatting logic for LoRANetwork", (t) => {
 			})
 			.join(", ");
 	};
-	
+
 	const alphas = [4, "8.5", "16", null, undefined, "32.123"];
 	const formatted = formatAlphas(alphas);
 	t.is(formatted, "4.0, 8.5, 16, 32");
@@ -188,13 +191,15 @@ test("MultiresNoise conditional rendering logic", (t) => {
 	const shouldRenderMultiresNoise = (metadata) => {
 		return metadata.get("ss_multires_noise_iterations") !== "None";
 	};
-	
+
 	const metadataWithNoise = new Map([["ss_multires_noise_iterations", "5"]]);
 	t.true(shouldRenderMultiresNoise(metadataWithNoise));
-	
-	const metadataWithoutNoise = new Map([["ss_multires_noise_iterations", "None"]]);
+
+	const metadataWithoutNoise = new Map([
+		["ss_multires_noise_iterations", "None"],
+	]);
 	t.false(shouldRenderMultiresNoise(metadataWithoutNoise));
-	
+
 	const metadataEmpty = new Map([]);
 	t.true(shouldRenderMultiresNoise(metadataEmpty)); // undefined !== "None"
 });
@@ -206,21 +211,21 @@ test("TagFrequency sorting and pagination logic", (t) => {
 		const sortedTags = showMore === false ? allTags.slice(0, 50) : allTags;
 		return { allTags, sortedTags, hasMore: allTags.length > 50 };
 	};
-	
+
 	// Create test data with 75 tags
 	const tagFrequency = {};
 	for (let i = 0; i < 75; i++) {
 		tagFrequency[`tag${i}`] = Math.floor(Math.random() * 100);
 	}
-	
+
 	const result = processTagFrequency(tagFrequency, false);
 	t.is(result.sortedTags.length, 50);
 	t.true(result.hasMore);
-	
+
 	const resultShowMore = processTagFrequency(tagFrequency, true);
 	t.is(resultShowMore.sortedTags.length, 75);
 	t.true(resultShowMore.hasMore);
-	
+
 	// Test sorting (higher frequencies first) - sort function sorts by b[1] < a[1], so descending
 	// The sort puts higher frequency tags first
 	t.true(result.allTags.length >= result.sortedTags.length);

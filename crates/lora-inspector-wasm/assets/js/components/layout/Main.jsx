@@ -1,19 +1,19 @@
-import { Headline } from "./Headline.jsx";
-import { PretrainedModel } from "../metadata/PretrainedModel.jsx";
-import { Network } from "../network/Network.jsx";
-import { LoRANetwork } from "../network/LoRANetwork.jsx";
-import { LRScheduler } from "../training/LRScheduler.jsx";
-import { Optimizer } from "../training/Optimizer.jsx";
-import { Weight } from "../analysis/Weight.jsx";
+import { Advanced } from "../analysis/Advanced.jsx";
 import { Precision } from "../analysis/Precision.jsx";
-import { EpochStep } from "../training/EpochStep.jsx";
-import { Batch } from "../training/Batch.jsx";
-import { Noise } from "../training/Noise.jsx";
-import { Loss } from "../training/Loss.jsx";
-import { WaveletLoss } from "../training/WaveletLoss.jsx";
+import { Weight } from "../analysis/Weight.jsx";
 import { CaptionDropout } from "../dataset/CaptionDropout.jsx";
 import { Dataset } from "../dataset/Dataset.jsx";
-import { Advanced } from "../analysis/Advanced.jsx";
+import { PretrainedModel } from "../metadata/PretrainedModel.jsx";
+import { LoRANetwork } from "../network/LoRANetwork.jsx";
+import { Network } from "../network/Network.jsx";
+import { Batch } from "../training/Batch.jsx";
+import { EpochStep } from "../training/EpochStep.jsx";
+import { LRScheduler } from "../training/LRScheduler.jsx";
+import { Loss } from "../training/Loss.jsx";
+import { Noise } from "../training/Noise.jsx";
+import { Optimizer } from "../training/Optimizer.jsx";
+import { WaveletLoss } from "../training/WaveletLoss.jsx";
+import { Headline } from "./Headline.jsx";
 
 export function Main({ metadata, filename, worker }) {
 	if (!metadata) {
