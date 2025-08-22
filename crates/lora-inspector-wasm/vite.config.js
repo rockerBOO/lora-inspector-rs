@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import wasm from "vite-plugin-wasm";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
 	// worker: {
@@ -9,7 +10,7 @@ export default defineConfig({
 	worker: {
 		format: "es",
 	},
-	plugins: [wasm()],
+	plugins: [react(), wasm()],
 	build: {
 		// main: {
 		//   entry: resolve(__dirname, "index.html"),

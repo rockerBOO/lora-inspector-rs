@@ -59,7 +59,7 @@ deploy:
 	fly deploy
 
 fmt: 
-	cargo fmt && yarn --cwd $(WASM_DIR) format
+	cargo fmt && (cd $(WASM_DIR) && yarn format)
 
 run:
 	cargo run --manifest-path crates/lora-inspector/cargo.toml
