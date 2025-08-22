@@ -254,6 +254,6 @@ function closeErrorMessage() {
 
 function cancelLoading(file, processingMetadata, uploadTimeoutHandler) {
 	clearTimeout(uploadTimeoutHandler);
-	processingMetadata = false;
+	// processingMetadata = false;
 	console.log("Cancel loading", file.name);
 }

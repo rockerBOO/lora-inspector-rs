@@ -9,6 +9,12 @@ import { Statistics } from "./Statistics.jsx";
 const DEBUG = new URLSearchParams(document.location.search).has("DEBUG");
 const VERBOSE = new URLSearchParams(document.location.search).has("VERBOSE");
 
+const addDebugMessage = setDebugMessages => (message) => {
+	if (DEBUG) {
+		setDebugMessages((prev) => [...prev, message]);
+	}
+};
+
 export function Advanced({ filename, worker }) {
 	const [baseNames, setBaseNames] = useState([]);
 	const [showBaseNames, setShowBlockNames] = useState(false);
@@ -28,19 +34,13 @@ export function Advanced({ filename, worker }) {
 	// Debugging state
 	const [debugMessages, setDebugMessages] = useState([]);
 
-	const addDebugMessage = (message) => {
-		if (DEBUG) {
-			setDebugMessages((prev) => [...prev, message]);
-		}
-	};
-
 	const advancedRef = createRef();
 
 	// Worker validation
 	const validateWorker = useCallback(() => {
 		if (!worker) {
 			const errorMsg = `Worker is undefined for file: ${filename}`;
-			addDebugMessage(errorMsg);
+			addDebugMessage(setDebugMessages)(errorMsg);
 			console.error(errorMsg);
 			return false;
 		}
@@ -161,7 +161,7 @@ export function Advanced({ filename, worker }) {
 					).then((precResp) => {
 						if (precResp.precision === "bf16") {
 							setCanHaveStatistics(false);
-							addDebugMessage(`Precision bf16 detected: disabling statistics`);
+							addDebugMessage("Precision bf16 detected: disabling statistics");
 						}
 					});
 				} else {
@@ -197,8 +197,8 @@ export function Advanced({ filename, worker }) {
 					}}
 				>
 					<h3>Debug Information</h3>
-					{debugMessages.map((msg, index) => (
-						<p key={index} style={{ margin: "5px 0", color: "darkred" }}>
+					{debugMessages.map((msg) => (
+						<p key={msg} style={{ margin: "5px 0", color: "darkred" }}>
 							{msg}
 						</p>
 					))}
