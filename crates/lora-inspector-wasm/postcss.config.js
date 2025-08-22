@@ -1,5 +1,5 @@
-import postcssPresetEnv from "postcss-preset-env";
 import cssnano from "cssnano";
+import postcssPresetEnv from "postcss-preset-env";
 
 export default {
 	plugins: [

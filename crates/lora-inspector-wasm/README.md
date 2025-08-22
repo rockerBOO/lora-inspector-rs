@@ -17,16 +17,19 @@ This web application provides a browser-based tool for analyzing LoRA training m
 ## Testing Strategy
 
 ### Test Frameworks
+
 - AVA (JavaScript unit tests)
 - Playwright (E2E testing)
 
 ### Test Coverage
+
 - Unit tests for key parsing
 - E2E browser testing
 - Metadata validation
 - Cross-browser compatibility
 
 ### Supported Browsers
+
 - Chromium
 - Firefox
 - WebKit (Safari)
@@ -102,11 +105,13 @@ The application can be deployed as a static website. Build the project and serve
 ## E2E Testing Details
 
 ### Playwright Configuration
+
 - Parallel test execution
 - Supports multiple browser targets
 - Configurable for CI/CD environments
 
 ### Test Scenarios
+
 - Page title verification
 - File upload interaction
 - Network metadata validation
@@ -115,11 +120,13 @@ The application can be deployed as a static website. Build the project and serve
 ## Contributing
 
 Contributions are welcome! Please ensure:
+
 - Code follows project formatting and linting rules
 - All tests pass
 - New features are accompanied by appropriate tests
 
 ## Roadmap
+
 - [ ] Increase test coverage
 - [ ] Expand E2E test scenarios
 - [ ] Improve browser compatibility

@@ -47,8 +47,8 @@ build:
 dev-wasm:
 	make build-wasm && \
 	make build-wasm-simd && \
-		cd $(WASM_DIR) && \
-		yarn vite
+		(cd $(WASM_DIR) && \
+		yarn vite)
 
 # Start a custom server (e.g., with CORS enabled) for development
 .PHONY: dev-wasm-cors
@@ -59,10 +59,13 @@ deploy:
 	fly deploy
 
 fmt: 
-	cargo fmt && yarn --cwd $(WASM_DIR) format
+	cargo fmt && (cd $(WASM_DIR) && yarn format)
 
 run:
 	cargo run --manifest-path crates/lora-inspector/cargo.toml
+
+lint: 
+	cargo clippy && (cd $(WASM_DIR) && yarn lint --fix)
 
 .PHONY: 
 wasm-bindgen-test: 

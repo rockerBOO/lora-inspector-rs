@@ -195,6 +195,38 @@ pub struct NetworkArgs {
     #[serde(deserialize_with = "de_optional_f64_from_str")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loraplus_unet_lr_ratio: Option<f64>,
+
+    pub train_double_block_indices: Option<String>,
+    pub train_single_block_indices: Option<String>,
+
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub img_attn_dim: Option<usize>,
+
+    #[serde(deserialize_with = "de_optional_usize_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub txt_attn_dim: Option<usize>,
+
+    // Should convert into a list of usize ([8,4,4,4,8])
+    pub in_dims: Option<String>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mgpo_rho: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mgpo_beta: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ggpo_beta: Option<f64>,
+
+    #[serde(deserialize_with = "de_optional_f64_from_str")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ggpo_sigma: Option<f64>,
+
+    pub initalize: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -530,7 +562,19 @@ mod tests {
     "conv_alpha": "4", 
     "use_cp": "true", 
     "algo": "loha",
-    "preset": "attn-only"
+    "preset": "attn-only",
+      "loraplus_unet_lr_ratio": "8", 
+      "loraplus_text_encoder_lr_ratio": "8", 
+      "img_attn_dim": "16", 
+      "txt_attn_dim": "16", 
+      "in_dims": "[8,4,4,4,8]", 
+      "train_double_block_indices": "0-1,16-18", 
+      "train_single_block_indices": "28-35", 
+      "mgpo_rho": "0.03", 
+      "mgpo_beta": "0.8", 
+      "ggpo_beta": "0.03", 
+      "ggpo_sigma": "0.01", 
+      "initialize": "pissa_niter_4"
 }"#;
 
         let network_args: Result<NetworkArgs, serde_json::Error> = serde_json::from_str(json);

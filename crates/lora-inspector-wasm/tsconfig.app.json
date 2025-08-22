@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
+	},
+	"exclude": ["./src/**/*.test.ts", "./src/**/*.test.tsx"],
+	"extends": "@tsconfig/recommended/tsconfig.json",
+	"include": ["env.d.ts", "src/**/*"]
+}

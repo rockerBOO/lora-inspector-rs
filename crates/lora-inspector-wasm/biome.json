@@ -7,7 +7,14 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["assets/js/test.js", "assets/js/worker-test.js"]
+		"ignore": [
+			"assets/js/test.js",
+			"assets/js/worker-test.js",
+			"coverage/**",
+			"dist/**",
+			"pkg/**",
+			"js-lib/**"
+		]
 	},
 	"formatter": {
 		"enabled": true,

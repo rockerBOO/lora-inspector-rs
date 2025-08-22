@@ -3,7 +3,7 @@
 ![LoRA Inspector Logo](logo.png)
 
 A comprehensive tool for inspecting LoRA (Low-Rank Adaptation) files for machine learning models, particularly Stable Diffusion.
-
+![c2182030-8b1f-4eff-8007-3feafa60b577](https://github.com/rockerBOO/lora-inspector-rs/assets/15027/cff02f1b-5f75-48ba-a126-3f781bcb1005)\
 ![block-weight-norms](https://github.com/user-attachments/assets/363239b3-3cba-4b97-83b8-d2fa0557f8c9)
 
 See the different blocks of the different networks. Ideally uses the more common format but↵
