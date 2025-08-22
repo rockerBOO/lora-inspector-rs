@@ -128,7 +128,7 @@ function parseSDKey(key) {
 		const blockId = Number.parseInt(groups.block_id);
 		const blockType = groups.block_type;
 
-		const namePrefix = blockType === "single_transformer_blocks" ? "SB" : "DB";
+		const namePrefix = blockType === 'single_transformer_blocks' ? 'SB' : 'DB';
 
 		return {
 			...result,
@@ -137,7 +137,7 @@ function parseSDKey(key) {
 			blockType: blockType,
 			name: `${namePrefix}${padTwo(blockId)}`,
 			isAttention: true,
-			subtype: groups.subtype || "",
+			subtype: groups.subtype || '',
 		};
 	}
 
