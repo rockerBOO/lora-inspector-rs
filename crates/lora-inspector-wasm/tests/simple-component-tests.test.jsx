@@ -7,6 +7,7 @@ beforeEach(() => {
 });
 
 describe("Simple Component Tests", () => {
+	
 	describe("SVG UI Components", () => {
 		it("should render Line component", async () => {
 			const { Line } = await import("../assets/js/components/ui/SVGComponents.jsx");
@@ -62,7 +63,11 @@ describe("Simple Component Tests", () => {
 		it("should render NoMetadata component", async () => {
 			const { NoMetadata } = await import("../assets/js/components/layout/NoMetadata.jsx");
 			
-			expect(() => render(<NoMetadata />)).not.toThrow();
+			const mockProps = {
+				worker: createMockWorker()
+			};
+
+			expect(() => render(<NoMetadata {...mockProps}/>)).not.toThrow();
 		});
 
 		it("should render Headline component", async () => {
