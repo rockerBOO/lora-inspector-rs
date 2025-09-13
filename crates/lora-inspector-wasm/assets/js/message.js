@@ -1,6 +1,10 @@
 import { getWorker } from "./workers";
 
 export async function trySyncMessage(message, worker, matches = []) {
+	if (!worker) {
+		throw new Error("Invalid worker");
+	}
+
 	return new Promise((resolve) => {
 		worker.postMessage({ ...message, reply: true });
 
