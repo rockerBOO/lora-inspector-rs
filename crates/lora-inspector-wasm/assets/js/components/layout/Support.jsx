@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: Having this overlay be clickable is temporary */
+import { useState } from "react";
 
 export function Support() {
 	const [modal, setModal] = useState(false);

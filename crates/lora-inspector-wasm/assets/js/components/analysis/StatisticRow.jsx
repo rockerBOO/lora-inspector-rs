@@ -1,5 +1,3 @@
-import React from "react";
-
 export function StatisticRow({
 	baseName,
 	l1Norm,

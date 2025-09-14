@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.1.3/schema.json",
 	"vcs": {
 		"enabled": false,
 		"clientKind": "git",
@@ -7,22 +7,23 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": [
-			"assets/js/test.js",
-			"assets/js/worker-test.js",
-			"coverage/**",
-			"dist/**",
-			"pkg/**",
-			"js-lib/**"
+		"includes": [
+			"**",
+			"!**/assets/js/test.js",
+			"!**/assets/js/worker-test.js",
+			"!**/coverage/**",
+			"!**/dist/**",
+			"!**/pkg/**",
+			"!**/js-lib/**",
+			"!tests/**",
+			"!assets/css/chartist.min.css"
 		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"organizeImports": {
-		"enabled": true
-	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
 		"enabled": true,
 		"rules": {

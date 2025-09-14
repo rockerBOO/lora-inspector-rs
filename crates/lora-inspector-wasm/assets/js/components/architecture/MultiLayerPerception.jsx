@@ -1,5 +1,3 @@
-import React from "react";
-
 export function MultiLayerPerception({ fc1, fc2 }) {
 	return (
 		<div>

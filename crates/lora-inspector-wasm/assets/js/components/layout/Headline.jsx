@@ -1,4 +1,3 @@
-import React from "react";
 import { Raw } from "./Raw.jsx";
 
 export function Headline({ metadata, filename }) {

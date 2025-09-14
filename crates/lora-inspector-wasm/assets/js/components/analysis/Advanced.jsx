@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createRef, useCallback } from "react";
+import { createRef, useEffect, useState } from "react";
 import { trySyncMessage } from "../../message.js";
 import { AllKeys } from "./AllKeys.jsx";
 import { BaseNames } from "./BaseNames.jsx";
@@ -17,35 +17,36 @@ const addDebugMessage = (setDebugMessages) => (message) => {
 
 export function Advanced({ filename, worker }) {
 	const [baseNames, setBaseNames] = useState([]);
-	const [showBaseNames, setShowBlockNames] = useState(false);
+	const [showBaseNames, _setShowBlockNames] = useState(false);
 
 	const [textEncoderKeys, setTextEncoderKeys] = useState([]);
-	const [showTextEncoderKeys, setShowTextEncoderKeys] = useState(false);
+	const [showTextEncoderKeys, _setShowTextEncoderKeys] = useState(false);
 
 	const [unetKeys, setUnetKeys] = useState([]);
-	const [showUnetKeys, setShowUnetKeys] = useState(false);
+	const [showUnetKeys, _setShowUnetKeys] = useState(false);
 
 	const [allKeys, setAllKeys] = useState([]);
-	const [showAllKeys, setShowAllKeys] = useState(false);
+	const [showAllKeys, _setShowAllKeys] = useState(false);
 
 	const [canHaveStatistics, setCanHaveStatistics] = useState(false);
-	const [networkType, setNetworkType] = useState(null);
+	// const [networkType, setNetworkType] = useState(null);
 
 	// Debugging state
-	const [debugMessages, setDebugMessages] = useState([]);
+	// const [debugMessages, setDebugMessages] = useState([]);
+	const debugMessages = [];
 
 	const advancedRef = createRef();
 
-	// Worker validation
-	const validateWorker = useCallback(() => {
-		if (!worker) {
-			const errorMsg = `Worker is undefined for file: ${filename}`;
-			addDebugMessage(setDebugMessages)(errorMsg);
-			console.error(errorMsg);
-			return false;
-		}
-		return true;
-	}, [filename, worker]);
+	// // Worker validation
+	// const validateWorker = useCallback(() => {
+	// 	if (!worker) {
+	// 		const errorMsg = `Worker is undefined for file: ${filename}`;
+	// 		addDebugMessage(setDebugMessages)(errorMsg);
+	// 		console.error(errorMsg);
+	// 		return false;
+	// 	}
+	// 	return true;
+	// }, [filename, worker]);
 
 	useEffect(() => {
 		trySyncMessage({ messageType: "base_names", name: filename }, worker)
@@ -145,7 +146,7 @@ export function Advanced({ filename, worker }) {
 					undefined,
 				];
 
-				setNetworkType(resp.networkType);
+				// setNetworkType(resp.networkType);
 
 				if (supportedTypes.includes(resp.networkType)) {
 					setCanHaveStatistics(true);

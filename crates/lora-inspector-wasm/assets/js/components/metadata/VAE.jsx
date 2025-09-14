@@ -1,4 +1,3 @@
-import React from "react";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function VAE({ metadata }) {

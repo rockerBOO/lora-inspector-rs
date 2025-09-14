@@ -151,7 +151,7 @@ async function init_wasm_in_worker() {
 				}
 			});
 		} else if (e.data.messageType === "scale_weights") {
-			scaleWeights(e).then((baseNames) => {
+			scaleWeights(e).then((_baseNames) => {
 				if (e.data.reply) {
 					self.postMessage({
 						messageType: "scale_weights",
@@ -159,7 +159,7 @@ async function init_wasm_in_worker() {
 				}
 			});
 		} else if (e.data.messageType === "scale_weights_with_progress") {
-			iterScaleWeights(e).then((baseNames) => {
+			iterScaleWeights(e).then((_baseNames) => {
 				if (e.data.reply) {
 					self.postMessage({
 						messageType: "scale_weights_with_progress",
@@ -167,7 +167,7 @@ async function init_wasm_in_worker() {
 				}
 			});
 		} else if (e.data.messageType === "scale_weight") {
-			scaleWeight(e).then((baseNames) => {
+			scaleWeight(e).then((_baseNames) => {
 				if (e.data.reply) {
 					self.postMessage({
 						messageType: "scale_weight",
@@ -273,6 +273,9 @@ async function readFile(file) {
 		reader.onload = (e) => {
 			const buffer = new Uint8Array(e.target.result);
 			resolve(buffer);
+		};
+		reader.onerror = (e) => {
+			reject(e.message);
 		};
 		reader.readAsArrayBuffer(file);
 	});

@@ -1,4 +1,3 @@
-import React from "react";
 import { ModelSpec } from "../metadata/ModelSpec.jsx";
 
 export function Header({ metadata }) {

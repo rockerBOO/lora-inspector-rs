@@ -1,4 +1,3 @@
-import React from "react";
 import { WeightIn } from "../ui/SVGComponents.jsx";
 
 export function Sampler({ conv }) {

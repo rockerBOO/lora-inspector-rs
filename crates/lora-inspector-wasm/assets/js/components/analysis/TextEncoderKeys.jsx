@@ -1,5 +1,3 @@
-import React from "react";
-
 export function TextEncoderKeys({ textEncoderKeys }) {
 	return [
 		<h3 key="text-encoder-keys-header">Text encoder keys</h3>,

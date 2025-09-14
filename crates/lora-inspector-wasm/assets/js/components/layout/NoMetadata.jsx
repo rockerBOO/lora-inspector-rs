@@ -1,4 +1,3 @@
-import React from "react";
 import { Weight } from "../analysis/Weight.jsx";
 import { Headline } from "./Headline.jsx";
 

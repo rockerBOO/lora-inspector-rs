@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { listenProgress, trySyncMessage } from "../../message.js";
 import { Progress } from "./Progress.jsx";
 import { StatisticRow } from "./StatisticRow.jsx";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { trySyncMessage } from "../../message.js";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { BOFTNetwork } from "./BOFTNetwork.jsx";

@@ -1,4 +1,4 @@
-import React, { StrictMode } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import init from "/pkg";
 import { Metadata, Support } from "./components/index.js";
@@ -252,7 +252,7 @@ function closeErrorMessage() {
 	}
 }
 
-function cancelLoading(file, processingMetadata, uploadTimeoutHandler) {
+function cancelLoading(file, _processingMetadata, uploadTimeoutHandler) {
 	clearTimeout(uploadTimeoutHandler);
 	// processingMetadata = false;
 	console.log("Cancel loading", file.name);

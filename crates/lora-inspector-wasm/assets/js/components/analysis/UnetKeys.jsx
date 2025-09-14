@@ -1,5 +1,3 @@
-import React from "react";
-
 export function UnetKeys({ unetKeys }) {
 	return [
 		<h3 key="unet-keys-header">UNet keys</h3>,

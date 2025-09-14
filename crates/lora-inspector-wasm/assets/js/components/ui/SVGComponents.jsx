@@ -1,5 +1,3 @@
-import React from "react";
-
 export function Group(props) {
 	return <g {...props} />;
 }

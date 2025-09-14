@@ -1,6 +1,6 @@
 import test from "ava";
 
-import { SDRE, parseSDKey } from "../assets/js/moduleBlocks.js";
+import { parseSDKey, SDRE } from "../assets/js/moduleBlocks.js";
 
 // Text Encoder Tests
 // ------------------

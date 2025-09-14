@@ -1,4 +1,3 @@
-import React from "react";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { BucketInfo } from "./BucketInfo.jsx";
 import { Subset } from "./Subset.jsx";

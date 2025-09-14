@@ -1,4 +1,3 @@
-import React from "react";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { Blocks } from "./Blocks.jsx";
 import { Precision } from "./Precision.jsx";

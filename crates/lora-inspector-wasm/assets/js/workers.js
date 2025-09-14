@@ -7,11 +7,11 @@ export async function addWorker(file) {
 
 	workers.set(file, worker);
 
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve, _reject) => {
 		const timeouts = [];
 		const worker = workers.get(file);
 
-		worker.onmessage = (event) => {
+		worker.onmessage = (_event) => {
 			timeouts.map((timeout) => clearTimeout(timeout));
 			worker.onmessage = undefined;
 			resolve(worker);

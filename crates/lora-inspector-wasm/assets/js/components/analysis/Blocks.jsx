@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { listenProgress, trySyncMessage } from "../../message.js";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 

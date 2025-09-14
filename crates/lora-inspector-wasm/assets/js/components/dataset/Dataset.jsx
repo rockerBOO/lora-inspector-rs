@@ -1,4 +1,3 @@
-import React from "react";
 import { Buckets } from "./Buckets.jsx";
 
 export function Dataset({ metadata }) {

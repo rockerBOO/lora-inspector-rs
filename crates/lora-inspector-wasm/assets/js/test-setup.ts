@@ -64,7 +64,7 @@ global.createMockWorker = () => {
 							// Add other mock responses as needed
 						};
 						handler({ data: mockResponse });
-					} catch (error) {
+					} catch (_error) {
 						// Silently ignore handler errors in tests
 					}
 				}

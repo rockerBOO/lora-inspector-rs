@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import process from "node:process";
 import { defineConfig, devices } from "@playwright/test";
 

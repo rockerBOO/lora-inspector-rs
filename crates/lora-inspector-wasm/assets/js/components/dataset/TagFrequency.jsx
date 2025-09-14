@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export function TagFrequency({ tagFrequency }) {
 	const [showMore, setShowMore] = useState(false);

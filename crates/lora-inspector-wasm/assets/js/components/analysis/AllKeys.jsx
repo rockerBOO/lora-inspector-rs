@@ -1,5 +1,3 @@
-import React from "react";
-
 export function AllKeys({ allKeys }) {
 	return [
 		<h3 key="all-keys-header">All keys</h3>,
