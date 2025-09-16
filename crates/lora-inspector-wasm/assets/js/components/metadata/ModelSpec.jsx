@@ -117,7 +117,7 @@ export function ModelSpec({ metadata }) {
 					<MetaAttribute
 						name="SHA256"
 						value={metadata.get("modelspec.hash_sha256")}
-						key={sha256}
+						key={"sha256"}
 					/>
 				)}
 				{metadata.has("ss_training_comment") && (
