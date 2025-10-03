@@ -5,10 +5,45 @@ on:
     tags:
       - 'v*'
 
+permissions: {}
+
 jobs:
+  determine-release-type:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      draft: ${{ steps.set-release-type.outputs.draft }}
+      prerelease: ${{ steps.set-release-type.outputs.prerelease }}
+      tag: ${{ steps.set-release-type.outputs.tag }}
+    steps:
+    - name: Determine Release Type
+      id: set-release-type
+      env:
+        TAG: ${{ github.ref_name }}
+      run: |
+        # Check if there's anything after the semantic version (x.y.z)
+        if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(.+)$ ]]; then
+          # Has suffix (e.g., v1.0.0-beta.1, v1.0.0-rc.1, v1.0.0-anything)
+          echo "draft=true" >> $GITHUB_OUTPUT
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+        elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          # No suffix (e.g., v1.0.0, v2.1.3)
+          echo "draft=true" >> $GITHUB_OUTPUT
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+        else
+          # Unknown format
+          echo "draft=true" >> $GITHUB_OUTPUT
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+        fi
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
   release:
     name: Release for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    needs: determine-release-type
     strategy:
       matrix:
         include:
@@ -30,46 +65,58 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
-        target: ${{ matrix.target }}
-        override: true
+        persist-credentials: false
+
+    - name: Setup Rust toolchain
+      run: |
+        rustup update stable
+        rustup default stable
+        rustup target add ${{ matrix.target }}
 
     - name: Build Release Binary
       run: |
         cargo build --release --manifest-path crates/lora-inspector/Cargo.toml --target ${{ matrix.target }}
 
     - name: Prepare Release Archive
+      env:
+        TAG: ${{ needs.determine-release-type.outputs.tag }}
+        TARGET: ${{ matrix.target }}
+        ARCHIVE_SUFFIX: ${{ matrix.archive_suffix }}
+        SUFFIX: ${{ matrix.suffix }}
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/lora-inspector${{ matrix.suffix }} lora-inspector${{ matrix.suffix }}
-        ${{ matrix.compress_cmd }} dist/lora-inspector-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive_suffix }} lora-inspector${{ matrix.suffix }}
+        cp target/$TARGET/release/lora-inspector$SUFFIX lora-inspector$SUFFIX
+        ${{ matrix.compress_cmd }} dist/lora-inspector-$TAG-$TARGET.$ARCHIVE_SUFFIX lora-inspector$SUFFIX
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: lora-inspector-${{ matrix.target }}
-        path: dist/lora-inspector-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive_suffix }}
+        path: dist/lora-inspector-${{ needs.determine-release-type.outputs.tag }}-${{ matrix.target }}.${{ matrix.archive_suffix }}
 
   create-release:
-    needs: release
+    needs: [determine-release-type, release]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Download Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: dist
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
       with:
         files: |
           dist/lora-inspector-*/lora-inspector-*
         generate_release_notes: true
+        draft: ${{ needs.determine-release-type.outputs.draft }}
+        prerelease: ${{ needs.determine-release-type.outputs.prerelease }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
