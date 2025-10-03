@@ -1,6 +1,9 @@
 name: Fly Deploy
 on:
-  push:
+  workflow_run:
+    workflows: [".github/workflows/test.yaml", "Wasm Bindgen Test", "Playwright Tests"]
+    types:
+      - completed
     branches:
       - main
 
@@ -10,6 +13,8 @@ jobs:
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
+    # Only deploy if all required workflows succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -31,16 +36,16 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build wasm
-        run: 
-          wasm-pack build --target web --out-name lora-inspector 
+        run:
+          wasm-pack build --target web --out-name lora-inspector
           --release --weak-refs crates/lora-inspector-wasm
 
       - name: Build wasm SIMD
-        run: 
-          RUSTFLAGS="-C target-feature=+simd128" wasm-pack build --target web 
+        run:
+          RUSTFLAGS="-C target-feature=+simd128" wasm-pack build --target web
           --out-name lora-inspector-simd --release --weak-refs crates/lora-inspector-wasm
 
-      - name: Corepack 
+      - name: Corepack
         run: corepack enable
 
       - name: Run install
@@ -53,4 +58,3 @@ jobs:
       - run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
