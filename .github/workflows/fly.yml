@@ -1,20 +1,14 @@
 name: Fly Deploy
 on:
-  workflow_run:
-    workflows: [".github/workflows/test.yaml", "Wasm Bindgen Test", "Playwright Tests"]
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
-    # Only deploy if all required workflows succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

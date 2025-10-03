@@ -6,7 +6,8 @@ on:
     paths:
       - 'crates/lora-inspector-wasm/**'
 
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   biome:
     defaults:

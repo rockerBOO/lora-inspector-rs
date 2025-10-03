@@ -9,7 +9,8 @@ on:
     paths:
       - 'crates/lora-inspector-wasm/assets/**'
 
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest

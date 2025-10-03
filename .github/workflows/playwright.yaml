@@ -10,7 +10,8 @@ on:
     paths:
       - 'crates/lora-inspector-wasm/**'
       - 'crates/inspector/**'
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   test:
     timeout-minutes: 60
@@ -57,3 +58,8 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ./.github/workflows/fly.yml
