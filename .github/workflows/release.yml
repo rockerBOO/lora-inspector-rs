@@ -78,7 +78,8 @@ jobs:
       run: |
         cargo build --release --manifest-path crates/lora-inspector/Cargo.toml --target ${{ matrix.target }}
 
-    - name: Prepare Release Archive
+    - name: Prepare Release Archive (Unix)
+      if: runner.os != 'Windows'
       shell: bash
       env:
         TAG: ${{ needs.determine-release-type.outputs.tag }}
@@ -89,6 +90,17 @@ jobs:
         mkdir -p dist
         cp target/$TARGET/release/lora-inspector$SUFFIX lora-inspector$SUFFIX
         ${{ matrix.compress_cmd }} dist/lora-inspector-$TAG-$TARGET.$ARCHIVE_SUFFIX lora-inspector$SUFFIX
+
+    - name: Prepare Release Archive (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        TAG: ${{ needs.determine-release-type.outputs.tag }}
+        TARGET: ${{ matrix.target }}
+      run: |
+        New-Item -ItemType Directory -Force -Path dist
+        Copy-Item "target\$env:TARGET\release\lora-inspector.exe" -Destination "lora-inspector.exe"
+        Compress-Archive -Path "lora-inspector.exe" -DestinationPath "dist\lora-inspector-$env:TAG-$env:TARGET.zip"
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
