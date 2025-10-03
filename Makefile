@@ -62,7 +62,7 @@ fmt:
 	cargo fmt && (cd $(WASM_DIR) && yarn format)
 
 run:
-	cargo run --manifest-path crates/lora-inspector/cargo.toml
+	cargo run --manifest-path crates/lora-inspector/Cargo.toml
 
 lint: 
 	cargo clippy && (cd $(WASM_DIR) && yarn lint --fix)
