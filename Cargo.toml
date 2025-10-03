@@ -9,7 +9,7 @@ description = "LoRA inspector for Stable Diffusion"
 [workspace]
 members = ['crates/*']
 resolver = "2"
-package = {version = "1.1.1-beta.5", authors = ['Dave Lage (rockerBOO)'], edition = "2021", license = "MIT", repository = "https://github.com/rockerBOO/lora-inspector-rs", description = "LoRA inspector for Stable Diffusion"}
+package = {version = "1.1.1-beta.6", authors = ['Dave Lage (rockerBOO)'], edition = "2021", license = "MIT", repository = "https://github.com/rockerBOO/lora-inspector-rs", description = "LoRA inspector for Stable Diffusion"}
 dependencies = {candle-core = {version = "0.3.2"}, getrandom = {version = "0.2", features = ['js']}, num = "0.4.1", pest = "2.6", pest_derive = "2.6", safetensors = "0.3.1", serde = {version = "1.0", features = ['derive']}, serde_json = "1.0.108", serde_with = "3.4.0"}
 
 [profile]
