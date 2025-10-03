@@ -57,6 +57,11 @@ jobs:
             archive_suffix: tar.gz
             compress_cmd: tar -czvf
             suffix: ''
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive_suffix: tar.gz
+            compress_cmd: tar -czvf
+            suffix: ''
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             archive_suffix: zip
