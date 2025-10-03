@@ -79,6 +79,7 @@ jobs:
         cargo build --release --manifest-path crates/lora-inspector/Cargo.toml --target ${{ matrix.target }}
 
     - name: Prepare Release Archive
+      shell: bash
       env:
         TAG: ${{ needs.determine-release-type.outputs.tag }}
         TARGET: ${{ matrix.target }}
