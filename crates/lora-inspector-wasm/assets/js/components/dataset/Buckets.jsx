@@ -51,7 +51,7 @@ export function Buckets({ dataset, metadata }) {
 		<h3 key="header-tag-frequencies">Tag frequencies</h3>,
 
 		<div key="tag-frequencies" className="tag-frequencies row space-apart">
-			{Object.entries(dataset.tag_frequency).map(([dir, frequency]) => (
+			{Object.entries(dataset?.tag_frequency ?? {}).map(([dir, frequency]) => (
 				<div key={dir}>
 					<h3>{dir}</h3>
 					<TagFrequency
