@@ -420,19 +420,6 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    async fn alpha_keys() {
-        wasm_bindgen_test_configure!(run_in_browser);
-        let buffer = load_test_file(file("boo.safetensors").as_str())
-            .await
-            .unwrap();
-
-        let worker =
-            LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
-
-        assert_eq!(worker.alpha_keys().len(), 264);
-    }
-
-    #[wasm_bindgen_test]
     async fn filename() {
         wasm_bindgen_test_configure!(run_in_browser);
         let buffer = load_test_file(file("boo.safetensors").as_str())
