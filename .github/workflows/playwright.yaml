@@ -5,11 +5,13 @@ on:
     paths:
       - 'crates/lora-inspector-wasm/**'
       - 'crates/inspector/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main, master ]
     paths:
       - 'crates/lora-inspector-wasm/**'
       - 'crates/inspector/**'
+      - '.github/workflows/**'
 permissions:
   contents: read
 jobs:

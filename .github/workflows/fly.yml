@@ -1,4 +1,4 @@
-name: Fly Deploy
+name: Deploy to Fly
 on:
   workflow_call:
 
