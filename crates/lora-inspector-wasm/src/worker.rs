@@ -429,7 +429,7 @@ mod tests {
         let worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
 
-        assert_eq!(worker.weight_keys().len(), 528);
+        assert_eq!(worker.alpha_keys().len(), 264);
     }
 
     #[wasm_bindgen_test]
