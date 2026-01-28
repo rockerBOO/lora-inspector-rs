@@ -243,16 +243,16 @@ impl LoraWorker {
         console_error_panic_hook::set_once();
 
         match self.file.scale_weight(base_name) {
-            Ok(scaled_weight) => {
-                self
-                    .file
-                    .l2_norm(&scaled_weight)
-                    .map_err(|e| {
-                        console::error_1(&format!("L2 norm calculation for {} Error: {:#?}", base_name, e).into());
-                        e
-                    })
-                    .ok()
-            }
+            Ok(scaled_weight) => self
+                .file
+                .l2_norm(&scaled_weight)
+                .map_err(|e| {
+                    console::error_1(
+                        &format!("L2 norm calculation for {} Error: {:#?}", base_name, e).into(),
+                    );
+                    e
+                })
+                .ok(),
             Err(e) => {
                 console::error_1(
                     &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),

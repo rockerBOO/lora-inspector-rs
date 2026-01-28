@@ -352,7 +352,10 @@ mod tests {
 
         // Create metadata with networks.lora_flux_2 module
         let mut meta_map = HashMap::new();
-        meta_map.insert("ss_network_module".to_string(), "networks.lora_flux_2".to_string());
+        meta_map.insert(
+            "ss_network_module".to_string(),
+            "networks.lora_flux_2".to_string(),
+        );
 
         let metadata = Metadata {
             metadata: Some(meta_map),

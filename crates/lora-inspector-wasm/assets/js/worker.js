@@ -383,14 +383,18 @@ async function getL2Norms(e) {
 	const baseNames = loraWorker.base_names();
 	const totalCount = baseNames.length;
 	const dims = loraWorker.dims();
-	const maxDim = dims.length > 0 ? Math.max(...dims.map(d => d)) : 8;
+	const maxDim = dims.length > 0 ? Math.max(...dims.map((d) => d)) : 8;
 	const BATCH_SIZE = maxDim >= 32 ? 1 : maxDim > 16 ? 1 : maxDim > 8 ? 2 : 5;
 	const BATCH_DELAY = maxDim >= 32 ? 500 : maxDim > 16 ? 200 : 10;
 
 	let currentCount = 0;
 	const allResults = [];
 
-	for (let batchStart = 0; batchStart < baseNames.length; batchStart += BATCH_SIZE) {
+	for (
+		let batchStart = 0;
+		batchStart < baseNames.length;
+		batchStart += BATCH_SIZE
+	) {
 		const batchEnd = Math.min(batchStart + BATCH_SIZE, baseNames.length);
 		const batch = baseNames.slice(batchStart, batchEnd);
 
@@ -408,50 +412,52 @@ async function getL2Norms(e) {
 				const norm = loraWorker.l2_norm(base_name);
 				allResults.push([base_name, norm]);
 			} catch (e) {
-				console.error(`[${currentCount}/${totalCount}] ✗ FAILED: ${base_name}: ${e.message}`);
+				console.error(
+					`[${currentCount}/${totalCount}] ✗ FAILED: ${base_name}: ${e.message}`,
+				);
 				allResults.push([base_name, undefined]);
 			}
 		}
 
-		await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+		await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
 	}
 
 	const l2Norms = allResults.reduce(
-			(acc, [base_name, norm]) => {
-				if (norm === undefined) {
-					return acc;
-				}
-
-				try {
-					const parts = parseSDKey(base_name);
-
-					const blockName = parts.name;
-
-					acc.block.set(blockName, (acc.block.get(blockName) ?? 0) + norm);
-					acc.block_count.set(
-						blockName,
-						(acc.block_count.get(blockName) ?? 0) + 1,
-					);
-					acc.block_mean.set(
-						blockName,
-						acc.block.get(blockName) / acc.block_count.get(blockName),
-					);
-
-					acc.metadata.set(blockName, parts);
-				} catch (e) {
-					console.error(`Error parsing key "${base_name}":`, e);
-					console.error("Skipping this block and continuing...");
-				}
-
+		(acc, [base_name, norm]) => {
+			if (norm === undefined) {
 				return acc;
-			},
-			{
-				block: new Map(),
-				block_count: new Map(),
-				block_mean: new Map(),
-				metadata: new Map(),
-			},
-		);
+			}
+
+			try {
+				const parts = parseSDKey(base_name);
+
+				const blockName = parts.name;
+
+				acc.block.set(blockName, (acc.block.get(blockName) ?? 0) + norm);
+				acc.block_count.set(
+					blockName,
+					(acc.block_count.get(blockName) ?? 0) + 1,
+				);
+				acc.block_mean.set(
+					blockName,
+					acc.block.get(blockName) / acc.block_count.get(blockName),
+				);
+
+				acc.metadata.set(blockName, parts);
+			} catch (e) {
+				console.error(`Error parsing key "${base_name}":`, e);
+				console.error("Skipping this block and continuing...");
+			}
+
+			return acc;
+		},
+		{
+			block: new Map(),
+			block_count: new Map(),
+			block_mean: new Map(),
+			metadata: new Map(),
+		},
+	);
 
 	self.postMessage({
 		messageType: "l2_norms_progress_finished",
