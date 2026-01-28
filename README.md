@@ -123,7 +123,3 @@ Contributions are welcome! Please check individual crate READMEs for specific gu
 
 MIT License - See [LICENSE](LICENSE) file
 
-## Acknowledgements
-
-- Inspired by the need for better LoRA model inspection tools
-- Built with passion for machine learning and open-source development
