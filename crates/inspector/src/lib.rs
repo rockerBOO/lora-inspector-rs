@@ -1,21 +1,14 @@
 use core::fmt;
 use std::fmt::Debug;
 use std::io;
-// use std::alloc::Global;
 use std::string::String;
 
-// use pest::Parser;
 use pest_derive::Parser;
 use wasm_bindgen::JsValue;
 
 #[derive(Parser)]
 #[grammar = "key.pest"]
 pub struct KeyParser;
-
-// use candle_core::safetensors;
-// use std::error::Error;
-// use std::marker::Send;
-// use std::marker::Sync;
 
 pub mod file;
 pub mod metadata;
@@ -28,8 +21,6 @@ mod weight;
 
 #[cfg(test)]
 mod tensor_test;
-
-// pub use wasm_bindgen_rayon::init_thread_pool;
 
 pub type Result<T> = std::result::Result<T, InspectorError>;
 

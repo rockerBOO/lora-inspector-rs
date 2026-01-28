@@ -380,15 +380,21 @@ async function getNorms(e) {
 async function getL2Norms(e) {
 	const loraWorker = getWorker(e.data.name);
 
-	console.time("Calculating norms");
-
 	const baseNames = loraWorker.base_names();
 	const totalCount = baseNames.length;
+	const dims = loraWorker.dims();
+	const maxDim = dims.length > 0 ? Math.max(...dims.map(d => d)) : 8;
+	const BATCH_SIZE = maxDim >= 32 ? 1 : maxDim > 16 ? 1 : maxDim > 8 ? 2 : 5;
+	const BATCH_DELAY = maxDim >= 32 ? 500 : maxDim > 16 ? 200 : 10;
 
 	let currentCount = 0;
+	const allResults = [];
 
-	const l2Norms = baseNames
-		.map((base_name) => {
+	for (let batchStart = 0; batchStart < baseNames.length; batchStart += BATCH_SIZE) {
+		const batchEnd = Math.min(batchStart + BATCH_SIZE, baseNames.length);
+		const batch = baseNames.slice(batchStart, batchEnd);
+
+		for (const base_name of batch) {
 			currentCount += 1;
 
 			self.postMessage({
@@ -400,33 +406,42 @@ async function getL2Norms(e) {
 
 			try {
 				const norm = loraWorker.l2_norm(base_name);
-				return [base_name, norm];
+				allResults.push([base_name, norm]);
 			} catch (e) {
-				console.error(base_name, e);
-				return [base_name, undefined];
+				console.error(`[${currentCount}/${totalCount}] ✗ FAILED: ${base_name}: ${e.message}`);
+				allResults.push([base_name, undefined]);
 			}
-		})
-		.reduce(
+		}
+
+		await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+	}
+
+	const l2Norms = allResults.reduce(
 			(acc, [base_name, norm]) => {
 				if (norm === undefined) {
 					return acc;
 				}
 
-				const parts = parseSDKey(base_name);
+				try {
+					const parts = parseSDKey(base_name);
 
-				const blockName = parts.name;
+					const blockName = parts.name;
 
-				acc.block.set(blockName, (acc.block.get(blockName) ?? 0) + norm);
-				acc.block_count.set(
-					blockName,
-					(acc.block_count.get(blockName) ?? 0) + 1,
-				);
-				acc.block_mean.set(
-					blockName,
-					acc.block.get(blockName) / acc.block_count.get(blockName),
-				);
+					acc.block.set(blockName, (acc.block.get(blockName) ?? 0) + norm);
+					acc.block_count.set(
+						blockName,
+						(acc.block_count.get(blockName) ?? 0) + 1,
+					);
+					acc.block_mean.set(
+						blockName,
+						acc.block.get(blockName) / acc.block_count.get(blockName),
+					);
 
-				acc.metadata.set(blockName, parts);
+					acc.metadata.set(blockName, parts);
+				} catch (e) {
+					console.error(`Error parsing key "${base_name}":`, e);
+					console.error("Skipping this block and continuing...");
+				}
 
 				return acc;
 			},
@@ -443,10 +458,8 @@ async function getL2Norms(e) {
 	});
 
 	const norms = Array.from(l2Norms.block_mean).sort(([k, _], [k2, _v]) => {
-		return k > k2;
+		return k.localeCompare(k2);
 	});
-
-	console.timeEnd("Calculating norms");
 
 	// Split between TE and UNet
 	const splitNorms = norms.reduce(
@@ -454,7 +467,6 @@ async function getL2Norms(e) {
 			const [k, v] = item;
 
 			if (k === undefined) {
-				console.log(item);
 				console.error("Undefined key for norm reduction");
 				return acc;
 			}
@@ -486,7 +498,7 @@ async function getAlphaKeys(e) {
 async function getAlphas(e) {
 	const loraWorker = getWorker(e.data.name);
 
-	return Array.from(loraWorker.alphas()).sort((a, b) => a > b);
+	return Array.from(loraWorker.alphas()).sort((a, b) => a - b);
 }
 
 async function getWeightDecomposition(e) {
