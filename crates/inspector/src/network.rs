@@ -10,10 +10,11 @@ use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum NetworkModule {
     KohyaSSLoRA,
     KohyaSSLoRAFlux,
+    MusubiTunerLoRAFlux2,
     KohyaSSLoRALumina,
     KohyaSSLoRASD3,
     KohyaSSLoRAFA,

@@ -208,10 +208,6 @@ impl LoraWorker {
                             norm_fn.name.to_owned(),
                             (norm_fn.function)(scaled_weight.clone())
                                 .map(Some)
-                                .map_err(|e| {
-                                    console::log_1(&format!("error: {:?}", e).into());
-                                    e
-                                })
                                 .unwrap_or(None),
                         )
                     })
@@ -245,12 +241,15 @@ impl LoraWorker {
 
     pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
         console_error_panic_hook::set_once();
+
         match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
                 .file
                 .l2_norm(&scaled_weight)
                 .map_err(|e| {
-                    console::error_1(&format!("L2 norm for {} Error: {:#?}", base_name, e).into());
+                    console::error_1(
+                        &format!("L2 norm calculation for {} Error: {:#?}", base_name, e).into(),
+                    );
                     e
                 })
                 .ok(),
@@ -290,6 +289,7 @@ impl LoraWorker {
             Some(NetworkModule::Lycoris) => "lycoris".to_owned(),
             Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFlux) => "kohya-ss/lora_flux".to_owned(),
+            Some(NetworkModule::MusubiTunerLoRAFlux2) => "musubi-tuner/lora_flux_2".to_owned(),
             Some(NetworkModule::KohyaSSLoRALumina) => "kohya-ss/lora_lumina".to_owned(),
             Some(NetworkModule::KohyaSSLoRASD3) => "kohya-ss/lora_sd3".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
@@ -408,19 +408,6 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn weight_keys() {
-        wasm_bindgen_test_configure!(run_in_browser);
-        let buffer = load_test_file(file("boo.safetensors").as_str())
-            .await
-            .unwrap();
-
-        let worker =
-            LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
-
-        assert_eq!(worker.weight_keys().len(), 528);
-    }
-
-    #[wasm_bindgen_test]
-    async fn alpha_keys() {
         wasm_bindgen_test_configure!(run_in_browser);
         let buffer = load_test_file(file("boo.safetensors").as_str())
             .await

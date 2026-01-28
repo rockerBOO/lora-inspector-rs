@@ -65,6 +65,7 @@ impl Metadata {
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
             Some(NetworkModule::KohyaSSLoRAFlux) => Some(NetworkType::LoRA),
+            Some(NetworkModule::MusubiTunerLoRAFlux2) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRALumina) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRASD3) => Some(NetworkType::LoRA),
             None => None,
@@ -92,6 +93,7 @@ impl Metadata {
             Some(Some(network_module)) => match network_module.as_str() {
                 "networks.lora" => Some(NetworkModule::KohyaSSLoRA),
                 "networks.lora_flux" => Some(NetworkModule::KohyaSSLoRAFlux),
+                "networks.lora_flux_2" => Some(NetworkModule::MusubiTunerLoRAFlux2),
                 "networks.lora_sd3" => Some(NetworkModule::KohyaSSLoRASD3),
                 "networks.lora_fa" => Some(NetworkModule::KohyaSSLoRAFA),
                 "networks.dylora" => Some(NetworkModule::KohyaSSDyLoRA),
@@ -340,6 +342,33 @@ mod tests {
         let metadata = Metadata::new_from_buffer(&buffer)?;
 
         assert!(metadata.weight_decomposition().is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn musubi_tuner_flux2_network_module() -> crate::Result<()> {
+        use std::collections::HashMap;
+
+        // Create metadata with networks.lora_flux_2 module
+        let mut meta_map = HashMap::new();
+        meta_map.insert(
+            "ss_network_module".to_string(),
+            "networks.lora_flux_2".to_string(),
+        );
+
+        let metadata = Metadata {
+            metadata: Some(meta_map),
+        };
+
+        // Verify it's recognized as MusubiTunerLoRAFlux2
+        assert_eq!(
+            metadata.network_module(),
+            Some(NetworkModule::MusubiTunerLoRAFlux2)
+        );
+
+        // Verify it maps to LoRA network type
+        assert_eq!(metadata.network_type(), Some(NetworkType::LoRA));
 
         Ok(())
     }

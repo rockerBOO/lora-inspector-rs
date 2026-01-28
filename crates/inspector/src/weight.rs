@@ -20,8 +20,8 @@ use crate::tensor::kron;
 
 fn is_peft(keys: Vec<String>) -> bool {
     keys.into_iter()
-        .take(10) // check first 10
-        .any(|k| k.contains("transformer."))
+        .take(10)
+        .any(|k| k.contains("transformer.") || k.contains("diffusion_model."))
 }
 
 /// Converts tensor into DType thats compatible with candle

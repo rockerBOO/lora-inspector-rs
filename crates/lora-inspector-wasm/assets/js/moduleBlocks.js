@@ -12,10 +12,10 @@ const TE_SDRE =
 const NUM_OF_BLOCKS = 12;
 
 const FLUX_DOUBLE =
-	/lora_unet_(?<block_type>double_blocks)_(?<block_id>\d+)_(?<modality>txt|img)_(?<subblock_type>attn_proj|attn_qkv|mlp_0|mlp_2|mod_lin)/;
+	/(lora_unet|diffusion_model)[._](?<block_type>double_blocks)[._](?<block_id>\d+)[._](?<modality>txt|img)[._](?<subblock_type>attn[._]proj|attn[._]qkv|mlp[._]0|mlp[._]2|mod[._]lin)/;
 
 const FLUX_SINGLE =
-	/lora_unet_(?<block_type>single_blocks)_(?<block_id>\d+)_(?<subblock_type>linear1|linear2|modulation_lin)/;
+	/(lora_unet|diffusion_model)[._](?<block_type>single_blocks)[._](?<block_id>\d+)[._](?<subblock_type>linear1|linear2|modulation[._]lin)/;
 
 const FLUX_PEFT =
 	/transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)(\.(?<type>\w+))?\.?(?<subtype>\w+)?/;

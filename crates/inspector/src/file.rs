@@ -433,4 +433,78 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    #[ignore] // Only run with: cargo test -- --ignored
+    fn load_women_flux2_file() -> crate::Result<()> {
+        // Regression test for Flux LoRA file parsing
+        // This test uses a file path specific to the development machine
+        // Run with: cargo test --package inspector load_women_flux2_file -- --ignored --nocapture
+        let file = "/mnt/900/training/sets/women-flux2-2026-01-25-013607-046099a7/women-flux2-2026-01-25-013607-046099a7.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, &filename, &Device::Cpu);
+
+        // Verify the file loaded successfully
+        assert!(lora_file.is_tensors_loaded());
+
+        // Try to get keys to see if parsing works
+        let keys = lora_file.keys();
+        println!("Found {} keys in file", keys.len());
+        println!("\nFirst 20 keys:");
+        for (i, key) in keys.iter().take(20).enumerate() {
+            println!("  {}: {}", i + 1, key);
+        }
+
+        // Try to get base names
+        let base_names = lora_file.base_names();
+        println!("\nFound {} base_names in file", base_names.len());
+        println!("\nFirst 20 base_names:");
+        for (i, name) in base_names.iter().take(20).enumerate() {
+            println!("  {}: {}", i + 1, name);
+        }
+
+        // Verify it has the expected Flux structure
+        assert!(keys.iter().any(|k| k.contains("double_blocks")));
+        assert!(keys.iter().any(|k| k.contains("single_blocks")));
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore] // Only run with: cargo test -- --ignored
+    fn reproduce_flux2_panic() -> crate::Result<()> {
+        // Test case to reproduce the panic with specific failing weights
+        let file = "/mnt/900/training/sets/women-flux2-2026-01-25-013607-046099a7/women-flux2-2026-01-25-013607-046099a7.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, &filename, &Device::Cpu);
+
+        // These are the weights that panic in the frontend
+        let failing_weights = vec![
+            "lora_unet_single_blocks_19_linear2",
+            "lora_unet_single_blocks_0_linear2",
+            "lora_unet_double_blocks_3_img_mlp_0",
+        ];
+
+        println!("\nTesting failing weights:");
+        for base_name in failing_weights {
+            println!("\nTesting: {}", base_name);
+            match lora_file.scale_weight(base_name) {
+                Ok(tensor) => {
+                    println!("  ✓ Scaled successfully. Shape: {:?}", tensor.dims());
+                    // Try to compute l2_norm
+                    match lora_file.l2_norm::<f64>(&tensor) {
+                        Ok(norm) => println!("  ✓ L2 norm: {}", norm),
+                        Err(e) => println!("  ✗ L2 norm failed: {:?}", e),
+                    }
+                }
+                Err(e) => {
+                    println!("  ✗ Scale weight failed: {:?}", e);
+                }
+            }
+        }
+
+        Ok(())
+    }
 }

@@ -32,7 +32,7 @@ pub fn l2<T>(t: &Tensor) -> Result<T>
 where
     T: candle_core::WithDType,
 {
-    Ok(t.abs()?.sqr()?.sum_all()?.sqrt()?.to_scalar()?)
+    Ok(t.sqr()?.sum_all()?.sqrt()?.to_scalar()?)
 }
 
 pub fn sparsity(t: &Tensor) -> Result<f64> {
