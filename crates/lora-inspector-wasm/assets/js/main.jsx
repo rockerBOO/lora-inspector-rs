@@ -12,7 +12,8 @@ function attachDragEvents() {
 	const dropbox = document.querySelector("#dropbox");
 
 	for (const eventName of ["dragover", "dragenter"]) {
-		dropbox.addEventListener(eventName, () => {
+		dropbox.addEventListener(eventName, (e) => {
+			e.preventDefault();
 			dropbox.classList.add("is-dragover");
 		});
 	}
