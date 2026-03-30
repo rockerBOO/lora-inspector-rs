@@ -10,6 +10,7 @@ pub mod jacobi {
     /// Returns `(eigenvalues, eigenvectors_col_major)` sorted descending
     /// by eigenvalue.
     pub fn jacobi_sym(m: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
+        debug_assert_eq!(m.len(), n * n, "jacobi_sym: input length {} != n*n={}", m.len(), n * n);
         let mut a = m.to_vec(); // working copy, column-major
         // eigenvector matrix starts as identity
         let mut v = vec![0.0f64; n * n];
@@ -142,5 +143,27 @@ mod tests {
         assert!(nearly_eq(vals[0], lam0), "got {}", vals[0]);
         assert!(nearly_eq(vals[1], lam1), "got {}", vals[1]);
         assert!(nearly_eq(vals[2], 2.0), "got {}", vals[2]);
+    }
+
+    #[test]
+    fn eigenvectors_orthonormal() {
+        let m = vec![4.0, 1.0, 0.0, 1.0, 3.0, 0.0, 0.0, 0.0, 2.0];
+        let (_vals, vecs) = jacobi_sym(&m, 3);
+        // V^T V should be identity: sum of col_i * col_j = delta_ij
+        for i in 0..3 {
+            for j in 0..3 {
+                let dot: f64 = (0..3).map(|k| vecs[k + i * 3] * vecs[k + j * 3]).sum();
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!((dot - expected).abs() < 1e-9, "V^T V [{i},{j}] = {dot}, expected {expected}");
+            }
+        }
+    }
+
+    #[test]
+    fn scalar_n1() {
+        let m = vec![7.0];
+        let (vals, vecs) = jacobi_sym(&m, 1);
+        assert!((vals[0] - 7.0).abs() < 1e-12);
+        assert!((vecs[0] - 1.0).abs() < 1e-12);
     }
 }
