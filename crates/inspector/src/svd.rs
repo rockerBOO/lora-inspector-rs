@@ -3,6 +3,103 @@
 /// All public functions take plain `Vec<f64>` / `&[f64]` so they have
 /// no dependency on candle and are easy to unit-test.
 
+/// Compute singular values of `up @ down` using the rank×rank core trick.
+///
+/// - `up_cm`:   column-major [out_features × rank]
+/// - `down_cm`: column-major [rank × in_features]
+/// - Returns singular values in descending order (length = rank).
+pub fn singular_values_from_vecs(
+    up_cm: &[f64],
+    down_cm: &[f64],
+    out: usize,
+    rank: usize,
+    in_features: usize,
+) -> Vec<f64> {
+    use jacobi::jacobi_sym;
+
+    // A = up^T @ up  (rank × rank, column-major)
+    let a = matmul_cm_ata(up_cm, out, rank);
+    // B = down @ down^T  (rank × rank, column-major)
+    let b = matmul_cm_abt(down_cm, rank, in_features);
+
+    // Eigendecomp: A = Q_a D_a Q_a^T,  eigenvalues = S_up^2
+    let (lam_a, q_a) = jacobi_sym(&a, rank);
+    // Eigendecomp: B = Q_b D_b Q_b^T,  eigenvalues = S_dn^2
+    let (lam_b, q_b) = jacobi_sym(&b, rank);
+
+    // S_up = sqrt(|lam_a|), S_dn = sqrt(|lam_b|)
+    let s_up: Vec<f64> = lam_a.iter().map(|v| v.abs().sqrt()).collect();
+    let s_dn: Vec<f64> = lam_b.iter().map(|v| v.abs().sqrt()).collect();
+
+    // C = diag(s_up) @ Q_a^T @ Q_b @ diag(s_dn)   (rank × rank)
+    // Step 1: T1 = Q_a^T @ Q_b
+    let t1 = matmul_cm_atb(&q_a, &q_b, rank, rank, rank);
+    // Step 2: scale rows by s_up and cols by s_dn
+    let mut c = vec![0.0f64; rank * rank];
+    for col in 0..rank {
+        for row in 0..rank {
+            c[row + col * rank] = s_up[row] * t1[row + col * rank] * s_dn[col];
+        }
+    }
+
+    // Singular values of C = singular values of up @ down
+    // Compute C^T C and eigendecomp
+    let ctc = matmul_cm_ata(&c, rank, rank);
+    let (lam_c, _) = jacobi_sym(&ctc, rank);
+
+    // Singular values = sqrt(eigenvalues of C^T C), descending
+    lam_c.iter().map(|v| v.abs().sqrt()).collect()
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/// A^T A for column-major A of shape (rows × cols). Returns (cols × cols) col-major.
+fn matmul_cm_ata(a: &[f64], rows: usize, cols: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; cols * cols];
+    for i in 0..cols {
+        for j in 0..cols {
+            let mut s = 0.0;
+            for k in 0..rows {
+                s += a[k + i * rows] * a[k + j * rows];
+            }
+            out[i + j * cols] = s;
+        }
+    }
+    out
+}
+
+/// A @ A^T for column-major A of shape (rows_a × cols_a). Returns (rows_a × rows_a) col-major.
+///
+/// B[i,j] = sum_k a[i + k*rows_a] * a[j + k*rows_a]
+fn matmul_cm_abt(a: &[f64], rows_a: usize, cols_a: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; rows_a * rows_a];
+    for i in 0..rows_a {
+        for j in 0..rows_a {
+            let mut s = 0.0;
+            for k in 0..cols_a {
+                s += a[i + k * rows_a] * a[j + k * rows_a];
+            }
+            out[i + j * rows_a] = s;
+        }
+    }
+    out
+}
+
+/// A^T @ B for col-major A (rows × cols_a) and B (rows × cols_b). Returns (cols_a × cols_b) col-major.
+fn matmul_cm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; cols_a * cols_b];
+    for j in 0..cols_b {
+        for i in 0..cols_a {
+            let mut s = 0.0;
+            for k in 0..rows {
+                s += a[k + i * rows] * b[k + j * rows];
+            }
+            out[i + j * cols_a] = s;
+        }
+    }
+    out
+}
+
 pub mod jacobi {
     /// Jacobi eigendecomposition of a symmetric n×n matrix stored
     /// column-major in `m` (length n*n).
@@ -165,5 +262,36 @@ mod tests {
         let (vals, vecs) = jacobi_sym(&m, 1);
         assert!((vals[0] - 7.0).abs() < 1e-12);
         assert!((vecs[0] - 1.0).abs() < 1e-12);
+    }
+
+    use super::singular_values_from_vecs;
+
+    /// Known 2×2 case: up=[1,0,0,1] (identity 2×2), down=[2,0,0,3] (diag).
+    /// up @ down = [[2,0],[0,3]] — singular values 3, 2.
+    #[test]
+    fn singular_values_2x2_identity_up() {
+        // up: 2×2 identity (out=2, rank=2), column-major
+        let up = vec![1.0, 0.0, 0.0, 1.0]; // [[1,0],[0,1]]
+        // down: 2×2 diagonal (rank=2, in=2), column-major
+        let down = vec![2.0, 0.0, 0.0, 3.0]; // [[2,0],[0,3]]
+        let svs = singular_values_from_vecs(&up, &down, 2, 2, 2);
+        assert!((svs[0] - 3.0).abs() < 1e-6, "sv[0]={}", svs[0]);
+        assert!((svs[1] - 2.0).abs() < 1e-6, "sv[1]={}", svs[1]);
+    }
+
+    /// 2×4 up × 4×3 down — singular values of the product.
+    #[test]
+    fn singular_values_rectangular() {
+        // up: out=2, rank=4  (column-major, 2×4)
+        // down: rank=4, in=3 (column-major, 4×3)
+        // We pick up = [[1,0,0,0],[0,1,0,0]] (first 2 rows of 4×4 identity)
+        // and down = [[5,0,0],[0,4,0],[0,0,3],[0,0,0]]
+        // up@down = [[5,0,0],[0,4,0]] — singular values 5,4
+        let up = vec![1.0,0.0, 0.0,1.0, 0.0,0.0, 0.0,0.0]; // col-major 2×4
+        let down = vec![5.0,0.0,0.0,0.0, 0.0,4.0,0.0,0.0, 0.0,0.0,3.0,0.0]; // col-major 4×3
+        let svs = singular_values_from_vecs(&up, &down, 2, 4, 3);
+        // rank=4 so 4 singular values; top 2 should be 5,4
+        assert!((svs[0] - 5.0).abs() < 1e-5, "sv[0]={}", svs[0]);
+        assert!((svs[1] - 4.0).abs() < 1e-5, "sv[1]={}", svs[1]);
     }
 }
