@@ -14,6 +14,7 @@ pub mod file;
 pub mod metadata;
 pub mod network;
 pub mod norms;
+pub mod svd;
 mod parser;
 pub mod statistic;
 mod tensor;
