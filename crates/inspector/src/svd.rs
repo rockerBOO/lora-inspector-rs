@@ -3,6 +3,162 @@
 /// All public functions take plain `Vec<f64>` / `&[f64]` so they have
 /// no dependency on candle and are easy to unit-test.
 
+// ── Row-major helpers ────────────────────────────────────────────────────────
+
+/// A^T A for row-major A of shape (rows × cols). Returns (cols × cols) row-major.
+/// A[k,i] = a[k*cols + i]
+fn matmul_rm_ata(a: &[f64], rows: usize, cols: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; cols * cols];
+    for i in 0..cols {
+        for j in 0..cols {
+            let mut s = 0.0;
+            for k in 0..rows {
+                s += a[k * cols + i] * a[k * cols + j];
+            }
+            out[i * cols + j] = s;
+        }
+    }
+    out
+}
+
+/// A @ A^T for row-major A of shape (rows_a × cols). Returns (rows_a × rows_a) row-major.
+/// B[i,j] = sum_k a[i*cols + k] * a[j*cols + k]
+fn matmul_rm_abt(a: &[f64], rows_a: usize, cols: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; rows_a * rows_a];
+    for i in 0..rows_a {
+        for j in 0..rows_a {
+            let mut s = 0.0;
+            for k in 0..cols {
+                s += a[i * cols + k] * a[j * cols + k];
+            }
+            out[i * rows_a + j] = s;
+        }
+    }
+    out
+}
+
+/// A^T @ B for row-major A (rows × cols_a) and B (rows × cols_b). Returns (cols_a × cols_b) row-major.
+/// Out[i,j] = sum_k a[k*cols_a + i] * b[k*cols_b + j]
+fn matmul_rm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; cols_a * cols_b];
+    for i in 0..cols_a {
+        for j in 0..cols_b {
+            let mut s = 0.0;
+            for k in 0..rows {
+                s += a[k * cols_a + i] * b[k * cols_b + j];
+            }
+            out[i * cols_b + j] = s;
+        }
+    }
+    out
+}
+
+/// Jacobi eigendecomp wrapper that accepts a row-major symmetric matrix
+/// and delegates to the column-major `jacobi_sym`.
+///
+/// Row-major and column-major are transposes of each other, but for a
+/// *symmetric* matrix the two layouts are identical element-wise, so we
+/// can pass the row-major buffer directly.
+fn jacobi_sym_rm(m_rm: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
+    // For a symmetric matrix A, A[i,j] == A[j,i], so the row-major and
+    // column-major representations contain the same bytes in the same order.
+    // We can therefore reuse jacobi_sym without any transposition.
+    jacobi::jacobi_sym(m_rm, n)
+}
+
+/// Compute singular values of `up @ down` from row-major buffers.
+///
+/// - `up_rm`:   row-major [out_features × rank]
+/// - `down_rm`: row-major [rank × in_features]
+/// - Returns singular values in descending order (length = rank).
+pub fn singular_values_rm(
+    up_rm: &[f64],
+    down_rm: &[f64],
+    out: usize,
+    rank: usize,
+    in_features: usize,
+) -> Vec<f64> {
+    debug_assert_eq!(up_rm.len(), out * rank, "up_rm length mismatch");
+    debug_assert_eq!(down_rm.len(), rank * in_features, "down_rm length mismatch");
+
+    // A = up^T @ up  (rank × rank, row-major)
+    let a = matmul_rm_ata(up_rm, out, rank);
+    // B = down @ down^T  (rank × rank, row-major)
+    let b = matmul_rm_abt(down_rm, rank, in_features);
+
+    // Eigendecomp: A = Q_a D_a Q_a^T,  eigenvalues = S_up^2
+    let (lam_a, q_a) = jacobi_sym_rm(&a, rank);
+    // Eigendecomp: B = Q_b D_b Q_b^T,  eigenvalues = S_dn^2
+    let (lam_b, q_b) = jacobi_sym_rm(&b, rank);
+
+    // S_up = sqrt(|lam_a|), S_dn = sqrt(|lam_b|)
+    let s_up: Vec<f64> = lam_a.iter().map(|v| v.abs().sqrt()).collect();
+    let s_dn: Vec<f64> = lam_b.iter().map(|v| v.abs().sqrt()).collect();
+
+    // C = diag(s_up) @ Q_a^T @ Q_b @ diag(s_dn)   (rank × rank)
+    // Step 1: T1 = Q_a^T @ Q_b  (row-major, cols_a=rank, cols_b=rank, rows=rank)
+    let t1 = matmul_rm_atb(&q_a, &q_b, rank, rank, rank);
+    // Step 2: scale rows by s_up and cols by s_dn
+    let mut c = vec![0.0f64; rank * rank];
+    for row in 0..rank {
+        for col in 0..rank {
+            c[row * rank + col] = s_up[row] * t1[row * rank + col] * s_dn[col];
+        }
+    }
+
+    // Singular values of C = singular values of up @ down
+    // Compute C^T C (row-major) and eigendecomp
+    let ctc = matmul_rm_ata(&c, rank, rank);
+    let (lam_c, _) = jacobi_sym_rm(&ctc, rank);
+
+    // Singular values = sqrt(eigenvalues of C^T C), descending
+    lam_c.iter().map(|v| v.abs().sqrt()).collect()
+}
+
+// ── Candle tensor interface ──────────────────────────────────────────────────
+
+/// Reshape a conv weight tensor from [out, rank, 1, 1] down to [out, rank].
+/// 2-D tensors are returned unchanged.
+pub fn flatten_to_2d(t: &candle_core::Tensor) -> candle_core::Result<candle_core::Tensor> {
+    let dims = t.dims();
+    match dims.len() {
+        2 => Ok(t.clone()),
+        4 if dims[2] == 1 && dims[3] == 1 => t.reshape(&[dims[0], dims[1]]),
+        _ => Err(candle_core::Error::Msg(format!(
+            "flatten_to_2d: unsupported shape {:?}",
+            dims
+        ))),
+    }
+}
+
+/// Compute singular values of `up @ down` from candle tensors.
+///
+/// Handles conv shapes [out, rank, 1, 1] transparently.
+/// Returns singular values in descending order (length = rank).
+pub fn singular_values(
+    up: &candle_core::Tensor,
+    down: &candle_core::Tensor,
+) -> candle_core::Result<Vec<f64>> {
+    let up2 = flatten_to_2d(up)?;
+    let down2 = flatten_to_2d(down)?;
+
+    let out = up2.dim(0)?;
+    let rank = up2.dim(1)?;
+    let in_features = down2.dim(1)?;
+
+    // to_vec2 produces row-major (standard Rust nested Vec layout)
+    let up_rm: Vec<f64> = up2
+        .to_dtype(candle_core::DType::F64)?
+        .flatten_all()?
+        .to_vec1::<f64>()?;
+    let down_rm: Vec<f64> = down2
+        .to_dtype(candle_core::DType::F64)?
+        .flatten_all()?
+        .to_vec1::<f64>()?;
+
+    Ok(singular_values_rm(&up_rm, &down_rm, out, rank, in_features))
+}
+
 /// Compute singular values of `up @ down` using the rank×rank core trick.
 ///
 /// - `up_cm`:   column-major [out_features × rank]
@@ -314,5 +470,87 @@ mod tests {
         // rank=4 so 4 singular values; top 2 should be 5,4
         assert!((svs[0] - 5.0).abs() < 1e-5, "sv[0]={}", svs[0]);
         assert!((svs[1] - 4.0).abs() < 1e-5, "sv[1]={}", svs[1]);
+    }
+
+    // ── Candle tensor tests ─────────────────────────────────────────────────
+
+    use super::singular_values;
+
+    /// Non-symmetric candle test: up 3×2, down 2×3.
+    ///
+    /// up = [[1,2],[3,4],[5,6]] (row-major: [1,2,3,4,5,6])
+    /// down = [[7,8,9],[10,11,12]] (row-major: [7,8,9,10,11,12])
+    /// up @ down = [[27,30,33],[61,68,75],[95,106,117]]
+    /// top singular value ≈ 225.029 (verified with numpy)
+    #[test]
+    fn singular_values_candle_nonsymmetric() {
+        let dev = &candle_core::Device::Cpu;
+        let up = candle_core::Tensor::from_vec(
+            vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0],
+            (3, 2),
+            dev,
+        )
+        .unwrap();
+        let down = candle_core::Tensor::from_vec(
+            vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0],
+            (2, 3),
+            dev,
+        )
+        .unwrap();
+        let svs = singular_values(&up, &down).unwrap();
+        println!("non-symmetric candle svs: {:?}", svs);
+        assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
+        // Second sv should be small but nonzero (rank-2 product)
+        assert!(svs[1] < 1.0 && svs[1] > 0.01, "sv[1]={:.4}", svs[1]);
+    }
+
+    /// Identity × diagonal: up 2×2 identity, down 2×2 diagonal [[3,0],[0,2]].
+    /// up @ down = [[3,0],[0,2]] — singular values 3, 2.
+    #[test]
+    fn singular_values_candle_identity_diag() {
+        let dev = &candle_core::Device::Cpu;
+        let up = candle_core::Tensor::from_vec(
+            vec![1.0f32, 0.0, 0.0, 1.0],
+            (2, 2),
+            dev,
+        )
+        .unwrap();
+        let down = candle_core::Tensor::from_vec(
+            vec![3.0f32, 0.0, 0.0, 2.0],
+            (2, 2),
+            dev,
+        )
+        .unwrap();
+        let svs = singular_values(&up, &down).unwrap();
+        println!("identity×diag candle svs: {:?}", svs);
+        assert!((svs[0] - 3.0).abs() < 1e-5, "sv[0]={:.6}", svs[0]);
+        assert!((svs[1] - 2.0).abs() < 1e-5, "sv[1]={:.6}", svs[1]);
+    }
+
+    /// Conv weight shape [out, rank, 1, 1] should be handled by flatten_to_2d.
+    #[test]
+    fn singular_values_candle_conv_shape() {
+        use super::super::svd::flatten_to_2d;
+        let dev = &candle_core::Device::Cpu;
+        // up: [3, 2, 1, 1] — same data as 3×2 non-symmetric test
+        let up4 = candle_core::Tensor::from_vec(
+            vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0],
+            (3, 2, 1, 1),
+            dev,
+        )
+        .unwrap();
+        let up2 = flatten_to_2d(&up4).unwrap();
+        assert_eq!(up2.dims(), &[3, 2], "flatten_to_2d shape mismatch");
+
+        // Verify singular_values works end-to-end with the flattened tensor
+        let down = candle_core::Tensor::from_vec(
+            vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0],
+            (2, 3),
+            dev,
+        )
+        .unwrap();
+        let svs = singular_values(&up4, &down).unwrap();
+        println!("conv-shape candle svs: {:?}", svs);
+        assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
     }
 }
