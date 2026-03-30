@@ -17,6 +17,9 @@ pub fn singular_values_from_vecs(
 ) -> Vec<f64> {
     use jacobi::jacobi_sym;
 
+    debug_assert_eq!(up_cm.len(), out * rank, "up_cm length mismatch");
+    debug_assert_eq!(down_cm.len(), rank * in_features, "down_cm length mismatch");
+
     // A = up^T @ up  (rank × rank, column-major)
     let a = matmul_cm_ata(up_cm, out, rank);
     // B = down @ down^T  (rank × rank, column-major)
@@ -277,6 +280,24 @@ mod tests {
         let svs = singular_values_from_vecs(&up, &down, 2, 2, 2);
         assert!((svs[0] - 3.0).abs() < 1e-6, "sv[0]={}", svs[0]);
         assert!((svs[1] - 2.0).abs() < 1e-6, "sv[1]={}", svs[1]);
+    }
+
+    #[test]
+    fn singular_values_nontrivial() {
+        // up: 3×2 col-major: [[1,2],[3,4],[5,6]]
+        // col-major storage: col0=[1,3,5], col1=[2,4,6] → [1,3,5,2,4,6]
+        // down: 2×3 col-major: [[7,8,9],[10,11,12]]
+        // col-major storage: col0=[7,10], col1=[8,11], col2=[9,12] → [7,10,8,11,9,12]
+        // up @ down = [[27,30,33],[61,68,75],[95,106,117]]
+        // numpy: np.linalg.svd([[27,30,33],[61,68,75],[95,106,117]], compute_uv=False)
+        // ≈ [225.029, 0.160, ~0.0]  (rank-2 product so third sv ≈ 0)
+        let up_cm = vec![1.0f64, 3.0, 5.0, 2.0, 4.0, 6.0]; // col-major 3×2
+        let down_cm = vec![7.0f64, 10.0, 8.0, 11.0, 9.0, 12.0]; // col-major 2×3
+        let svs = singular_values_from_vecs(&up_cm, &down_cm, 3, 2, 3);
+        // Top singular value should be ≈ 225.029 (verified with numpy)
+        assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
+        // Second sv ≈ 0.160 (rank-2 so this is small but nonzero)
+        assert!(svs[1] < 1.0 && svs[1] > 0.01, "sv[1]={:.4}", svs[1]);
     }
 
     /// 2×4 up × 4×3 down — singular values of the product.
