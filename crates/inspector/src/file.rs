@@ -1,5 +1,6 @@
 use candle_core::Device;
 use safetensors::SafeTensorError;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -10,6 +11,13 @@ use crate::{
     weight::{self, BufferedLoRAWeight, Weight, WeightKey},
     InspectorError, Result,
 };
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LayerScale {
+    pub base_name: String,
+    pub eff_scale: f64,
+    pub is_outlier: bool,
+}
 
 /// LoRA file buffer
 #[derive(Debug)]
@@ -240,6 +248,44 @@ impl LoRAFile {
                 Ok(Some(svd::rank_metrics(&up, &down)?))
             }
         }
+    }
+
+    pub fn effective_scales_all(&self) -> Vec<LayerScale> {
+        let scales: Vec<(String, f64)> = self
+            .base_names()
+            .into_iter()
+            .filter_map(|name| {
+                self.effective_scale(&name)
+                    .ok()
+                    .flatten()
+                    .map(|s| (name, s))
+            })
+            .collect();
+
+        if scales.is_empty() {
+            return vec![];
+        }
+
+        let mut sorted_vals: Vec<f64> = scales.iter().map(|(_, s)| *s).collect();
+        sorted_vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let median = {
+            let n = sorted_vals.len();
+            if n % 2 == 0 {
+                (sorted_vals[n / 2 - 1] + sorted_vals[n / 2]) / 2.0
+            } else {
+                sorted_vals[n / 2]
+            }
+        };
+        let threshold = 1.5 * median;
+
+        scales
+            .into_iter()
+            .map(|(base_name, eff_scale)| LayerScale {
+                is_outlier: eff_scale > threshold,
+                base_name,
+                eff_scale,
+            })
+            .collect()
     }
 }
 
@@ -536,6 +582,41 @@ mod tests {
         assert!(metrics.balance > 0.0 && metrics.balance <= 1.0);
         assert!(metrics.top1_energy > 0.0 && metrics.top1_energy <= 1.0);
         assert!(metrics.effective_rank >= 1.0, "effective_rank={}", metrics.effective_rank);
+        Ok(())
+    }
+
+    #[test]
+    fn effective_scales_all_returns_one_per_base_name() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+
+        let results = lora_file.effective_scales_all();
+        // Must have one entry per base_name
+        assert_eq!(results.len(), lora_file.base_names().len());
+        // All eff_scale values must be non-negative
+        assert!(results.iter().all(|r| r.eff_scale >= 0.0));
+        // is_outlier field must be consistent: outliers have higher eff_scale than non-outliers
+        // (at minimum the field is present and boolean)
+        let max_non_outlier = results
+            .iter()
+            .filter(|r| !r.is_outlier)
+            .map(|r| r.eff_scale)
+            .fold(0.0f64, f64::max);
+        let min_outlier = results
+            .iter()
+            .filter(|r| r.is_outlier)
+            .map(|r| r.eff_scale)
+            .fold(f64::MAX, f64::min);
+        // If there are outliers, all outliers must be above all non-outliers
+        if results.iter().any(|r| r.is_outlier) {
+            assert!(
+                min_outlier > max_non_outlier,
+                "outlier min={} should be > non-outlier max={}",
+                min_outlier,
+                max_non_outlier
+            );
+        }
         Ok(())
     }
 
