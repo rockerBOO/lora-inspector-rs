@@ -56,14 +56,19 @@ fn matmul_rm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize
 /// Jacobi eigendecomp wrapper that accepts a row-major symmetric matrix
 /// and delegates to the column-major `jacobi_sym`.
 ///
-/// Row-major and column-major are transposes of each other, but for a
-/// *symmetric* matrix the two layouts are identical element-wise, so we
-/// can pass the row-major buffer directly.
+/// Symmetric matrix: A[i,j]==A[j,i] so row-major and col-major byte layout is identical.
+/// We can pass m_rm directly to the col-major jacobi_sym.
+/// However jacobi_sym returns col-major eigenvectors; callers of jacobi_sym_rm
+/// expect row-major, so we must transpose.
 fn jacobi_sym_rm(m_rm: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
-    // For a symmetric matrix A, A[i,j] == A[j,i], so the row-major and
-    // column-major representations contain the same bytes in the same order.
-    // We can therefore reuse jacobi_sym without any transposition.
-    jacobi::jacobi_sym(m_rm, n)
+    let (vals, vecs_cm) = jacobi::jacobi_sym(m_rm, n);
+    // vecs_cm col-major: vecs_cm[row + col*n]
+    // convert to row-major: vecs_rm[row*n + col]
+    let vecs_rm: Vec<f64> = (0..n)
+        .flat_map(|row| (0..n).map(move |col| (row, col)))
+        .map(|(row, col)| vecs_cm[row + col * n])
+        .collect();
+    (vals, vecs_rm)
 }
 
 /// Compute singular values of `up @ down` from row-major buffers.
@@ -117,17 +122,16 @@ pub fn singular_values_rm(
 
 // ── Candle tensor interface ──────────────────────────────────────────────────
 
-/// Reshape a conv weight tensor from [out, rank, 1, 1] down to [out, rank].
-/// 2-D tensors are returned unchanged.
-pub fn flatten_to_2d(t: &candle_core::Tensor) -> candle_core::Result<candle_core::Tensor> {
-    let dims = t.dims();
-    match dims.len() {
-        2 => Ok(t.clone()),
-        4 if dims[2] == 1 && dims[3] == 1 => t.reshape(&[dims[0], dims[1]]),
-        _ => Err(candle_core::Error::Msg(format!(
-            "flatten_to_2d: unsupported shape {:?}",
-            dims
-        ))),
+/// Reshape a conv weight tensor to 2-D.
+/// [d0, d1, 1, 1] → [d0, d1], [d0, d1, d2, d3] → [d0, d1*d2*d3], 2-D unchanged.
+pub fn flatten_to_2d(t: &candle_core::Tensor) -> crate::Result<candle_core::Tensor> {
+    match t.dims() {
+        [d0, d1, 1, 1] => Ok(t.reshape(&[*d0, *d1])?),
+        [d0, d1, d2, d3] => Ok(t.reshape(&[*d0, *d1 * *d2 * *d3])?),
+        [_, _] => Ok(t.clone()),
+        dims => Err(crate::InspectorError::Msg(
+            format!("flatten_to_2d: unsupported tensor dims {:?}", dims)
+        )),
     }
 }
 
@@ -138,7 +142,7 @@ pub fn flatten_to_2d(t: &candle_core::Tensor) -> candle_core::Result<candle_core
 pub fn singular_values(
     up: &candle_core::Tensor,
     down: &candle_core::Tensor,
-) -> candle_core::Result<Vec<f64>> {
+) -> crate::Result<Vec<f64>> {
     let up2 = flatten_to_2d(up)?;
     let down2 = flatten_to_2d(down)?;
 
@@ -147,11 +151,20 @@ pub fn singular_values(
     let in_features = down2.dim(1)?;
 
     // to_vec2 produces row-major (standard Rust nested Vec layout)
-    let up_rm: Vec<f64> = up2
+    // BF16 is not directly castable to F64; promote to F32 first.
+    let up_f32 = match up2.dtype() {
+        candle_core::DType::BF16 => up2.to_dtype(candle_core::DType::F32)?,
+        _ => up2.clone(),
+    };
+    let up_rm: Vec<f64> = up_f32
         .to_dtype(candle_core::DType::F64)?
         .flatten_all()?
         .to_vec1::<f64>()?;
-    let down_rm: Vec<f64> = down2
+    let down_f32 = match down2.dtype() {
+        candle_core::DType::BF16 => down2.to_dtype(candle_core::DType::F32)?,
+        _ => down2.clone(),
+    };
+    let down_rm: Vec<f64> = down_f32
         .to_dtype(candle_core::DType::F64)?
         .flatten_all()?
         .to_vec1::<f64>()?;
@@ -525,6 +538,19 @@ mod tests {
         println!("identity×diag candle svs: {:?}", svs);
         assert!((svs[0] - 3.0).abs() < 1e-5, "sv[0]={:.6}", svs[0]);
         assert!((svs[1] - 2.0).abs() < 1e-5, "sv[1]={:.6}", svs[1]);
+    }
+
+    /// Rank-1 case: up [3,1] = [[2],[0],[0]], down [1,3] = [[1,0,0]].
+    /// product = [[2,0,0],[0,0,0],[0,0,0]] — single sv = 2.0
+    #[test]
+    fn singular_values_rank1_candle() {
+        use candle_core::{Device, Tensor};
+        use super::singular_values;
+        let dev = &Device::Cpu;
+        let up = Tensor::from_vec(vec![2.0f32, 0.0, 0.0], (3, 1), dev).unwrap();
+        let down = Tensor::from_vec(vec![1.0f32, 0.0, 0.0], (1, 3), dev).unwrap();
+        let svs = singular_values(&up, &down).unwrap();
+        assert!((svs[0] - 2.0).abs() < 1e-5, "sv[0]={}", svs[0]);
     }
 
     /// Conv weight shape [out, rank, 1, 1] should be handled by flatten_to_2d.
