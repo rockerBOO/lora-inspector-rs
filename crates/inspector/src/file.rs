@@ -1,4 +1,5 @@
 use candle_core::Device;
+use safetensors::SafeTensorError;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -179,13 +180,14 @@ impl LoRAFile {
     pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
         match self.weights.as_ref() {
             None => Ok(None),
-            Some(_) => {
-                let scaled = match self.scale_weight(base_name) {
-                    Ok(t) => t,
-                    Err(_) => return Ok(None),
-                };
-                Ok(Some(self.l2_norm::<f64>(&scaled)?))
-            }
+            Some(_) => match self.scale_weight(base_name) {
+                Ok(t) => Ok(Some(self.l2_norm::<f64>(&t)?)),
+                Err(InspectorError::UnsupportedNetworkType) => Ok(None),
+                Err(InspectorError::Candle(candle_core::Error::SafeTensor(
+                    SafeTensorError::TensorNotFound(_),
+                ))) => Ok(None),
+                Err(e) => Err(e),
+            },
         }
     }
 
@@ -195,15 +197,21 @@ impl LoRAFile {
             Some(weights) => {
                 let up = match weights.up(base_name) {
                     Ok(t) => t,
-                    Err(_) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(
+                        SafeTensorError::TensorNotFound(_),
+                    )) => return Ok(None),
+                    Err(e) => return Err(InspectorError::from(e)),
                 };
                 let down = match weights.down(base_name) {
                     Ok(t) => t,
-                    Err(_) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(
+                        SafeTensorError::TensorNotFound(_),
+                    )) => return Ok(None),
+                    Err(e) => return Err(InspectorError::from(e)),
                 };
                 let up_norm = self.matrix_norm::<f64>(&up)?;
                 let down_norm = self.matrix_norm::<f64>(&down)?;
-                if down_norm == 0.0 {
+                if down_norm < f64::EPSILON {
                     return Ok(None);
                 }
                 Ok(Some(up_norm / down_norm))
@@ -217,11 +225,17 @@ impl LoRAFile {
             Some(weights) => {
                 let up = match weights.up(base_name) {
                     Ok(t) => t,
-                    Err(_) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(
+                        SafeTensorError::TensorNotFound(_),
+                    )) => return Ok(None),
+                    Err(e) => return Err(InspectorError::from(e)),
                 };
                 let down = match weights.down(base_name) {
                     Ok(t) => t,
-                    Err(_) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(
+                        SafeTensorError::TensorNotFound(_),
+                    )) => return Ok(None),
+                    Err(e) => return Err(InspectorError::from(e)),
                 };
                 Ok(Some(svd::rank_metrics(&up, &down)?))
             }
@@ -508,7 +522,7 @@ mod tests {
         let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
         let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
         let bal = lora_file.factorization_balance(base_name)?.unwrap();
-        assert!(bal > 0.01 && bal < 100.0, "balance={}", bal);
+        assert!(bal > 0.1 && bal < 10.0, "balance={}", bal);
         Ok(())
     }
 
@@ -521,6 +535,7 @@ mod tests {
         let metrics = lora_file.rank_metrics(base_name)?.unwrap();
         assert!(metrics.balance > 0.0 && metrics.balance <= 1.0);
         assert!(metrics.top1_energy > 0.0 && metrics.top1_energy <= 1.0);
+        assert!(metrics.effective_rank >= 1.0, "effective_rank={}", metrics.effective_rank);
         Ok(())
     }
 
