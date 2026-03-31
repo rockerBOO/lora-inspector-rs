@@ -85,7 +85,10 @@ pub fn rank_metrics_from_svs(svs: &[f64], nominal_rank: usize) -> RankMetrics {
     };
 
     // Health classification — check COLLAPSED first
-    let health = if (effective_rank - 1.0).abs() < 0.5 || (top1_energy - 1.0).abs() < EPSILON {
+    let health = if nominal_rank == 1 && (effective_rank - 1.0).abs() < 1e-6 {
+        // rank-1 layer fully utilizing its single dimension — not collapsed
+        RankHealth::Good
+    } else if (effective_rank - 1.0).abs() < 1e-6 || top1_energy > 1.0 - 1e-6 {
         RankHealth::Collapsed
     } else if balance >= 0.75 {
         RankHealth::Good
@@ -716,5 +719,25 @@ mod tests {
         let svs = singular_values(&up4, &down).unwrap();
         println!("conv-shape candle svs: {:?}", svs);
         assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
+    }
+
+    #[test]
+    fn rank_metrics_rank1_is_good() {
+        // A single nonzero sv with nominal_rank=1 should be Good, not Collapsed
+        let svs = vec![3.0f64];
+        let m = rank_metrics_from_svs(&svs, 1);
+        assert!(matches!(m.health, RankHealth::Good), "expected Good, got {:?}", m.health);
+        assert!((m.balance - 1.0).abs() < 1e-6);
+        assert_eq!(m.dominance, None);
+    }
+
+    #[test]
+    fn rank_metrics_dominated_not_collapsed() {
+        // [10, 1, 0, 0, 0, 0, 0, 0] — heavy but has 2 nonzero svs, not collapsed
+        let svs = vec![10.0f64, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let m = rank_metrics_from_svs(&svs, 8);
+        // effective_rank ≈ 1.06 — dominated but not collapsed
+        assert!(!matches!(m.health, RankHealth::Collapsed), "should not be Collapsed, got {:?}", m.health);
+        assert!(m.top1_energy < 1.0 - 1e-6);
     }
 }
