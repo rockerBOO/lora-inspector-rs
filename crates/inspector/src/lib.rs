@@ -17,6 +17,8 @@ pub mod norms;
 pub mod svd;
 mod parser;
 pub mod statistic;
+
+pub use crate::svd::RankMetrics;
 mod tensor;
 mod weight;
 

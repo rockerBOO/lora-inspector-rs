@@ -5,6 +5,7 @@ use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
+    svd,
     weight::{self, BufferedLoRAWeight, Weight, WeightKey},
     InspectorError, Result,
 };
@@ -172,6 +173,58 @@ impl LoRAFile {
             None => Err(InspectorError::Msg(
                 "Weight not loaded. Load the weight first.".to_string(),
             )),
+        }
+    }
+
+    pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(_) => {
+                let scaled = match self.scale_weight(base_name) {
+                    Ok(t) => t,
+                    Err(_) => return Ok(None),
+                };
+                Ok(Some(self.l2_norm::<f64>(&scaled)?))
+            }
+        }
+    }
+
+    pub fn factorization_balance(&self, base_name: &str) -> Result<Option<f64>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(weights) => {
+                let up = match weights.up(base_name) {
+                    Ok(t) => t,
+                    Err(_) => return Ok(None),
+                };
+                let down = match weights.down(base_name) {
+                    Ok(t) => t,
+                    Err(_) => return Ok(None),
+                };
+                let up_norm = self.matrix_norm::<f64>(&up)?;
+                let down_norm = self.matrix_norm::<f64>(&down)?;
+                if down_norm == 0.0 {
+                    return Ok(None);
+                }
+                Ok(Some(up_norm / down_norm))
+            }
+        }
+    }
+
+    pub fn rank_metrics(&self, base_name: &str) -> Result<Option<svd::RankMetrics>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(weights) => {
+                let up = match weights.up(base_name) {
+                    Ok(t) => t,
+                    Err(_) => return Ok(None),
+                };
+                let down = match weights.down(base_name) {
+                    Ok(t) => t,
+                    Err(_) => return Ok(None),
+                };
+                Ok(Some(svd::rank_metrics(&up, &down)?))
+            }
         }
     }
 }
@@ -431,6 +484,43 @@ mod tests {
 
         assert!(lora_file.is_tensors_loaded());
 
+        Ok(())
+    }
+
+    #[test]
+    fn effective_scale_is_l2_of_scaled_weight() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+
+        let eff = lora_file.effective_scale(base_name)?.unwrap();
+        let scaled = lora_file.scale_weight(base_name)?;
+        let l2 = lora_file.l2_norm::<f64>(&scaled)?;
+        assert!((eff - l2).abs() < 1e-10);
+        Ok(())
+    }
+
+    #[test]
+    fn factorization_balance_reasonable() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+        let bal = lora_file.factorization_balance(base_name)?.unwrap();
+        assert!(bal > 0.01 && bal < 100.0, "balance={}", bal);
+        Ok(())
+    }
+
+    #[test]
+    fn rank_metrics_returns_valid_health() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+        let metrics = lora_file.rank_metrics(base_name)?.unwrap();
+        assert!(metrics.balance > 0.0 && metrics.balance <= 1.0);
+        assert!(metrics.top1_energy > 0.0 && metrics.top1_energy <= 1.0);
         Ok(())
     }
 
