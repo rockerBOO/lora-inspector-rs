@@ -3,6 +3,121 @@
 /// All public functions take plain `Vec<f64>` / `&[f64]` so they have
 /// no dependency on candle and are easy to unit-test.
 
+use serde::{Deserialize, Serialize};
+
+/// Health classification of a LoRA layer's rank usage.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum RankHealth {
+    /// Effective rank ≈ 1 or top-1 energy ≈ 1: layer is dominated by a single direction.
+    Collapsed,
+    /// Balance >= 0.75: rank is well-utilised.
+    Good,
+    /// Balance >= 0.50: moderate rank utilisation.
+    Ok,
+    /// Balance >= 0.25: poor but non-trivial rank utilisation.
+    Weak,
+    /// Balance < 0.25: very poor rank utilisation.
+    Poor,
+}
+
+/// Per-layer rank utilisation metrics derived from the singular values.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RankMetrics {
+    /// Shannon entropy-based effective rank: exp(H) where H = -Σ p·ln(p), p = s²/Σs².
+    pub effective_rank: f64,
+    /// Fraction of singular-value energy carried by the top singular value.
+    pub top1_energy: f64,
+    /// effective_rank / nominal_rank — 1.0 means perfectly balanced.
+    pub balance: f64,
+    /// Ratio s[0]/s[1] (None if rank < 2 or s[1] ≈ 0).
+    pub dominance: Option<f64>,
+    /// Qualitative health rating derived from balance and top1_energy.
+    pub health: RankHealth,
+}
+
+/// Compute `RankMetrics` from a slice of singular values and the nominal rank.
+///
+/// `svs` need not be sorted and may contain zeros.
+/// `nominal_rank` is the declared rank of the LoRA layer.
+pub fn rank_metrics_from_svs(svs: &[f64], nominal_rank: usize) -> RankMetrics {
+    const EPSILON: f64 = 1e-10;
+
+    // Compute energy (squared singular values) and total energy
+    let energies: Vec<f64> = svs.iter().map(|&s| s * s).collect();
+    let total_energy: f64 = energies.iter().sum();
+
+    // effective_rank via Shannon entropy over the energy distribution
+    let effective_rank = if total_energy < EPSILON {
+        1.0
+    } else {
+        let entropy: f64 = energies
+            .iter()
+            .filter(|&&e| e > EPSILON)
+            .map(|&e| {
+                let p = e / total_energy;
+                -p * p.ln()
+            })
+            .sum();
+        entropy.exp()
+    };
+
+    // top-1 energy fraction
+    let top1_energy = if total_energy < EPSILON {
+        1.0
+    } else {
+        energies.iter().cloned().fold(0.0_f64, f64::max) / total_energy
+    };
+
+    // balance = effective_rank / nominal_rank, clamped to [0,1]
+    let balance = if nominal_rank == 0 {
+        0.0
+    } else {
+        (effective_rank / nominal_rank as f64).min(1.0)
+    };
+
+    // dominance = s[0] / s[1] when meaningful
+    let mut sorted_svs = svs.to_vec();
+    sorted_svs.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+    let dominance = if sorted_svs.len() >= 2 && sorted_svs[1] > EPSILON {
+        Some(sorted_svs[0] / sorted_svs[1])
+    } else {
+        None
+    };
+
+    // Health classification — check COLLAPSED first
+    let health = if (effective_rank - 1.0).abs() < 0.5 || (top1_energy - 1.0).abs() < EPSILON {
+        RankHealth::Collapsed
+    } else if balance >= 0.75 {
+        RankHealth::Good
+    } else if balance >= 0.50 {
+        RankHealth::Ok
+    } else if balance >= 0.25 {
+        RankHealth::Weak
+    } else {
+        RankHealth::Poor
+    };
+
+    RankMetrics {
+        effective_rank,
+        top1_energy,
+        balance,
+        dominance,
+        health,
+    }
+}
+
+/// Compute `RankMetrics` from candle `up` and `down` tensors.
+///
+/// Calls `singular_values` then `rank_metrics_from_svs`.
+pub fn rank_metrics(
+    up: &candle_core::Tensor,
+    down: &candle_core::Tensor,
+) -> crate::Result<RankMetrics> {
+    let svs = singular_values(up, down)?;
+    let rank = svs.len();
+    Ok(rank_metrics_from_svs(&svs, rank))
+}
+
 // ── Row-major helpers ────────────────────────────────────────────────────────
 
 /// A^T A for row-major A of shape (rows × cols). Returns (cols × cols) row-major.
@@ -551,6 +666,29 @@ mod tests {
         let down = Tensor::from_vec(vec![1.0f32, 0.0, 0.0], (1, 3), dev).unwrap();
         let svs = singular_values(&up, &down).unwrap();
         assert!((svs[0] - 2.0).abs() < 1e-5, "sv[0]={}", svs[0]);
+    }
+
+    // ── RankMetrics tests ───────────────────────────────────────────────────
+
+    use super::{rank_metrics_from_svs, RankHealth};
+
+    #[test]
+    fn rank_metrics_balanced() {
+        // equal svs → effective_rank == nominal_rank, balance == 1.0
+        let svs = vec![1.0f64, 1.0, 1.0];
+        let m = rank_metrics_from_svs(&svs, 3);
+        assert!((m.effective_rank - 3.0).abs() < 1e-6, "effective_rank={}", m.effective_rank);
+        assert!((m.balance - 1.0).abs() < 1e-6, "balance={}", m.balance);
+        assert!((m.top1_energy - 1.0/3.0).abs() < 1e-6, "top1_energy={}", m.top1_energy);
+        assert!(matches!(m.health, RankHealth::Good), "health={:?}", m.health);
+    }
+
+    #[test]
+    fn rank_metrics_collapsed() {
+        let svs = vec![5.0f64, 0.0, 0.0, 0.0];
+        let m = rank_metrics_from_svs(&svs, 4);
+        assert!((m.top1_energy - 1.0).abs() < 1e-10, "top1_energy={}", m.top1_energy);
+        assert!(matches!(m.health, RankHealth::Collapsed), "health={:?}", m.health);
     }
 
     /// Conv weight shape [out, rank, 1, 1] should be handled by flatten_to_2d.
