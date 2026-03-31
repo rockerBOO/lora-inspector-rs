@@ -2,7 +2,6 @@
 ///
 /// All public functions take plain `Vec<f64>` / `&[f64]` so they have
 /// no dependency on candle and are easy to unit-test.
-
 use serde::{Deserialize, Serialize};
 
 /// Health classification of a LoRA layer's rank usage.
@@ -295,7 +294,8 @@ pub fn singular_values(
 /// - `up_cm`:   column-major [out_features × rank]
 /// - `down_cm`: column-major [rank × in_features]
 /// - Returns singular values in descending order (length = rank).
-pub fn singular_values_from_vecs(
+#[cfg(test)]
+pub(crate) fn singular_values_from_vecs(
     up_cm: &[f64],
     down_cm: &[f64],
     out: usize,
@@ -344,6 +344,7 @@ pub fn singular_values_from_vecs(
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 /// A^T A for column-major A of shape (rows × cols). Returns (cols × cols) col-major.
+#[cfg(test)]
 fn matmul_cm_ata(a: &[f64], rows: usize, cols: usize) -> Vec<f64> {
     let mut out = vec![0.0f64; cols * cols];
     for i in 0..cols {
@@ -361,6 +362,7 @@ fn matmul_cm_ata(a: &[f64], rows: usize, cols: usize) -> Vec<f64> {
 /// A @ A^T for column-major A of shape (rows_a × cols_a). Returns (rows_a × rows_a) col-major.
 ///
 /// B[i,j] = sum_k a[i + k*rows_a] * a[j + k*rows_a]
+#[cfg(test)]
 fn matmul_cm_abt(a: &[f64], rows_a: usize, cols_a: usize) -> Vec<f64> {
     let mut out = vec![0.0f64; rows_a * rows_a];
     for i in 0..rows_a {
@@ -376,6 +378,7 @@ fn matmul_cm_abt(a: &[f64], rows_a: usize, cols_a: usize) -> Vec<f64> {
 }
 
 /// A^T @ B for col-major A (rows × cols_a) and B (rows × cols_b). Returns (cols_a × cols_b) col-major.
+#[cfg(test)]
 fn matmul_cm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize) -> Vec<f64> {
     let mut out = vec![0.0f64; cols_a * cols_b];
     for j in 0..cols_b {
@@ -629,7 +632,6 @@ mod tests {
         )
         .unwrap();
         let svs = singular_values(&up, &down).unwrap();
-        println!("non-symmetric candle svs: {:?}", svs);
         assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
         // Second sv should be small but nonzero (rank-2 product)
         assert!(svs[1] < 1.0 && svs[1] > 0.01, "sv[1]={:.4}", svs[1]);
@@ -653,7 +655,6 @@ mod tests {
         )
         .unwrap();
         let svs = singular_values(&up, &down).unwrap();
-        println!("identity×diag candle svs: {:?}", svs);
         assert!((svs[0] - 3.0).abs() < 1e-5, "sv[0]={:.6}", svs[0]);
         assert!((svs[1] - 2.0).abs() < 1e-5, "sv[1]={:.6}", svs[1]);
     }
@@ -717,7 +718,6 @@ mod tests {
         )
         .unwrap();
         let svs = singular_values(&up4, &down).unwrap();
-        println!("conv-shape candle svs: {:?}", svs);
         assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
     }
 
