@@ -5,18 +5,17 @@ export function Progress({
 	startTime,
 	currentItemName,
 }) {
-	const elapsedTime = performance.now() - startTime;
-	const remaining =
-		(elapsedTime * totalCount) / statisticProgress - elapsedTime * totalCount ||
-		0;
-	const perSecond = currentCount / (elapsedTime / 1_000);
+	const elapsedMs = startTime != null ? performance.now() - startTime : 0;
+	const msPerItem = currentCount > 0 ? elapsedMs / currentCount : 0;
+	const remainingMs = msPerItem * (totalCount - currentCount);
+	const perSecond = elapsedMs > 0 ? currentCount / (elapsedMs / 1_000) : 0;
 
 	return (
 		<div className="block-weights-container">
 			<span>
-				Loading statistics... {(statisticProgress * 100).toFixed(2)}%{" "}
-				{currentCount}/{totalCount} {perSecond.toFixed(2)}it/s{" "}
-				{(remaining / 1_000_000).toFixed(2)}s remaining {currentItemName}{" "}
+				Loading... {(statisticProgress * 100).toFixed(1)}% {currentCount}/
+				{totalCount} {perSecond.toFixed(2)}it/s{" "}
+				{(remainingMs / 1_000).toFixed(1)}s remaining {currentItemName}
 			</span>
 		</div>
 	);

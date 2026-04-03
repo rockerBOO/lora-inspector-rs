@@ -22,6 +22,8 @@ pub enum RankHealth {
 /// Per-layer rank utilisation metrics derived from the singular values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RankMetrics {
+    /// Declared rank of the LoRA layer (size of the low-rank bottleneck).
+    pub nominal_rank: usize,
     /// Shannon entropy-based effective rank: exp(H) where H = -Σ p·ln(p), p = s²/Σs².
     pub effective_rank: f64,
     /// Fraction of singular-value energy carried by the top singular value.
@@ -100,6 +102,7 @@ pub fn rank_metrics_from_svs(svs: &[f64], nominal_rank: usize) -> RankMetrics {
     };
 
     RankMetrics {
+        nominal_rank,
         effective_rank,
         top1_energy,
         balance,
