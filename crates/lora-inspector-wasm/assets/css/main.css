@@ -101,26 +101,27 @@ a:focus {
 }
 
 table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1rem 0;
-  color: var(--color);
+	border-collapse: collapse;
+	width: 100%;
+	margin: 1rem 0;
+	color: var(--color);
 }
 
-th, td {
-  border: 1px solid var(--accent-color);
-  padding: 0.75rem;
-  text-align: left;
+th,
+td {
+	border: 1px solid var(--accent-color);
+	padding: 0.75rem;
+	text-align: left;
 }
 
 th {
-  background-color: var(--accent-bg-color);
-  font-weight: 600;
-  color: var(--accent-color-b);
+	background-color: var(--accent-bg-color);
+	font-weight: 600;
+	color: var(--accent-color-b);
 }
 
 tr:hover {
-  background-color: var(--accent-bg-color);
+	background-color: var(--accent-bg-color);
 }
 
 td.number {

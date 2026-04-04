@@ -205,16 +205,16 @@ impl LoRAFile {
             Some(weights) => {
                 let up = match weights.up(base_name) {
                     Ok(t) => t,
-                    Err(candle_core::Error::SafeTensor(
-                        SafeTensorError::TensorNotFound(_),
-                    )) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
                     Err(e) => return Err(InspectorError::from(e)),
                 };
                 let down = match weights.down(base_name) {
                     Ok(t) => t,
-                    Err(candle_core::Error::SafeTensor(
-                        SafeTensorError::TensorNotFound(_),
-                    )) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
                     Err(e) => return Err(InspectorError::from(e)),
                 };
                 let up_norm = self.matrix_norm::<f64>(&up)?;
@@ -233,16 +233,16 @@ impl LoRAFile {
             Some(weights) => {
                 let up = match weights.up(base_name) {
                     Ok(t) => t,
-                    Err(candle_core::Error::SafeTensor(
-                        SafeTensorError::TensorNotFound(_),
-                    )) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
                     Err(e) => return Err(InspectorError::from(e)),
                 };
                 let down = match weights.down(base_name) {
                     Ok(t) => t,
-                    Err(candle_core::Error::SafeTensor(
-                        SafeTensorError::TensorNotFound(_),
-                    )) => return Ok(None),
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
                     Err(e) => return Err(InspectorError::from(e)),
                 };
                 Ok(Some(svd::rank_metrics(&up, &down)?))
@@ -582,7 +582,11 @@ mod tests {
         let metrics = lora_file.rank_metrics(base_name)?.unwrap();
         assert!(metrics.balance > 0.0 && metrics.balance <= 1.0);
         assert!(metrics.top1_energy > 0.0 && metrics.top1_energy <= 1.0);
-        assert!(metrics.effective_rank >= 1.0, "effective_rank={}", metrics.effective_rank);
+        assert!(
+            metrics.effective_rank >= 1.0,
+            "effective_rank={}",
+            metrics.effective_rank
+        );
         Ok(())
     }
 

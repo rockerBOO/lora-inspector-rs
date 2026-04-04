@@ -249,9 +249,10 @@ pub fn flatten_to_2d(t: &candle_core::Tensor) -> crate::Result<candle_core::Tens
         [d0, d1, 1, 1] => Ok(t.reshape(&[*d0, *d1])?),
         [d0, d1, d2, d3] => Ok(t.reshape(&[*d0, *d1 * *d2 * *d3])?),
         [_, _] => Ok(t.clone()),
-        dims => Err(crate::InspectorError::Msg(
-            format!("flatten_to_2d: unsupported tensor dims {:?}", dims)
-        )),
+        dims => Err(crate::InspectorError::Msg(format!(
+            "flatten_to_2d: unsupported tensor dims {:?}",
+            dims
+        ))),
     }
 }
 
@@ -403,9 +404,15 @@ pub mod jacobi {
     /// Returns `(eigenvalues, eigenvectors_col_major)` sorted descending
     /// by eigenvalue.
     pub fn jacobi_sym(m: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
-        debug_assert_eq!(m.len(), n * n, "jacobi_sym: input length {} != n*n={}", m.len(), n * n);
+        debug_assert_eq!(
+            m.len(),
+            n * n,
+            "jacobi_sym: input length {} != n*n={}",
+            m.len(),
+            n * n
+        );
         let mut a = m.to_vec(); // working copy, column-major
-        // eigenvector matrix starts as identity
+                                // eigenvector matrix starts as identity
         let mut v = vec![0.0f64; n * n];
         for i in 0..n {
             v[i * n + i] = 1.0;
@@ -547,7 +554,10 @@ mod tests {
             for j in 0..3 {
                 let dot: f64 = (0..3).map(|k| vecs[k + i * 3] * vecs[k + j * 3]).sum();
                 let expected = if i == j { 1.0 } else { 0.0 };
-                assert!((dot - expected).abs() < 1e-9, "V^T V [{i},{j}] = {dot}, expected {expected}");
+                assert!(
+                    (dot - expected).abs() < 1e-9,
+                    "V^T V [{i},{j}] = {dot}, expected {expected}"
+                );
             }
         }
     }
@@ -568,7 +578,7 @@ mod tests {
     fn singular_values_2x2_identity_up() {
         // up: 2×2 identity (out=2, rank=2), column-major
         let up = vec![1.0, 0.0, 0.0, 1.0]; // [[1,0],[0,1]]
-        // down: 2×2 diagonal (rank=2, in=2), column-major
+                                           // down: 2×2 diagonal (rank=2, in=2), column-major
         let down = vec![2.0, 0.0, 0.0, 3.0]; // [[2,0],[0,3]]
         let svs = singular_values_from_vecs(&up, &down, 2, 2, 2);
         assert!((svs[0] - 3.0).abs() < 1e-6, "sv[0]={}", svs[0]);
@@ -601,8 +611,8 @@ mod tests {
         // We pick up = [[1,0,0,0],[0,1,0,0]] (first 2 rows of 4×4 identity)
         // and down = [[5,0,0],[0,4,0],[0,0,3],[0,0,0]]
         // up@down = [[5,0,0],[0,4,0]] — singular values 5,4
-        let up = vec![1.0,0.0, 0.0,1.0, 0.0,0.0, 0.0,0.0]; // col-major 2×4
-        let down = vec![5.0,0.0,0.0,0.0, 0.0,4.0,0.0,0.0, 0.0,0.0,3.0,0.0]; // col-major 4×3
+        let up = vec![1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]; // col-major 2×4
+        let down = vec![5.0, 0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0]; // col-major 4×3
         let svs = singular_values_from_vecs(&up, &down, 2, 4, 3);
         // rank=4 so 4 singular values; top 2 should be 5,4
         assert!((svs[0] - 5.0).abs() < 1e-5, "sv[0]={}", svs[0]);
@@ -622,18 +632,11 @@ mod tests {
     #[test]
     fn singular_values_candle_nonsymmetric() {
         let dev = &candle_core::Device::Cpu;
-        let up = candle_core::Tensor::from_vec(
-            vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0],
-            (3, 2),
-            dev,
-        )
-        .unwrap();
-        let down = candle_core::Tensor::from_vec(
-            vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0],
-            (2, 3),
-            dev,
-        )
-        .unwrap();
+        let up = candle_core::Tensor::from_vec(vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0], (3, 2), dev)
+            .unwrap();
+        let down =
+            candle_core::Tensor::from_vec(vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0], (2, 3), dev)
+                .unwrap();
         let svs = singular_values(&up, &down).unwrap();
         assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
         // Second sv should be small but nonzero (rank-2 product)
@@ -645,18 +648,8 @@ mod tests {
     #[test]
     fn singular_values_candle_identity_diag() {
         let dev = &candle_core::Device::Cpu;
-        let up = candle_core::Tensor::from_vec(
-            vec![1.0f32, 0.0, 0.0, 1.0],
-            (2, 2),
-            dev,
-        )
-        .unwrap();
-        let down = candle_core::Tensor::from_vec(
-            vec![3.0f32, 0.0, 0.0, 2.0],
-            (2, 2),
-            dev,
-        )
-        .unwrap();
+        let up = candle_core::Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 1.0], (2, 2), dev).unwrap();
+        let down = candle_core::Tensor::from_vec(vec![3.0f32, 0.0, 0.0, 2.0], (2, 2), dev).unwrap();
         let svs = singular_values(&up, &down).unwrap();
         assert!((svs[0] - 3.0).abs() < 1e-5, "sv[0]={:.6}", svs[0]);
         assert!((svs[1] - 2.0).abs() < 1e-5, "sv[1]={:.6}", svs[1]);
@@ -666,8 +659,8 @@ mod tests {
     /// product = [[2,0,0],[0,0,0],[0,0,0]] — single sv = 2.0
     #[test]
     fn singular_values_rank1_candle() {
-        use candle_core::{Device, Tensor};
         use super::singular_values;
+        use candle_core::{Device, Tensor};
         let dev = &Device::Cpu;
         let up = Tensor::from_vec(vec![2.0f32, 0.0, 0.0], (3, 1), dev).unwrap();
         let down = Tensor::from_vec(vec![1.0f32, 0.0, 0.0], (1, 3), dev).unwrap();
@@ -684,18 +677,38 @@ mod tests {
         // equal svs → effective_rank == nominal_rank, balance == 1.0
         let svs = vec![1.0f64, 1.0, 1.0];
         let m = rank_metrics_from_svs(&svs, 3);
-        assert!((m.effective_rank - 3.0).abs() < 1e-6, "effective_rank={}", m.effective_rank);
+        assert!(
+            (m.effective_rank - 3.0).abs() < 1e-6,
+            "effective_rank={}",
+            m.effective_rank
+        );
         assert!((m.balance - 1.0).abs() < 1e-6, "balance={}", m.balance);
-        assert!((m.top1_energy - 1.0/3.0).abs() < 1e-6, "top1_energy={}", m.top1_energy);
-        assert!(matches!(m.health, RankHealth::Good), "health={:?}", m.health);
+        assert!(
+            (m.top1_energy - 1.0 / 3.0).abs() < 1e-6,
+            "top1_energy={}",
+            m.top1_energy
+        );
+        assert!(
+            matches!(m.health, RankHealth::Good),
+            "health={:?}",
+            m.health
+        );
     }
 
     #[test]
     fn rank_metrics_collapsed() {
         let svs = vec![5.0f64, 0.0, 0.0, 0.0];
         let m = rank_metrics_from_svs(&svs, 4);
-        assert!((m.top1_energy - 1.0).abs() < 1e-10, "top1_energy={}", m.top1_energy);
-        assert!(matches!(m.health, RankHealth::Collapsed), "health={:?}", m.health);
+        assert!(
+            (m.top1_energy - 1.0).abs() < 1e-10,
+            "top1_energy={}",
+            m.top1_energy
+        );
+        assert!(
+            matches!(m.health, RankHealth::Collapsed),
+            "health={:?}",
+            m.health
+        );
     }
 
     /// Conv weight shape [out, rank, 1, 1] should be handled by flatten_to_2d.
@@ -704,22 +717,16 @@ mod tests {
         use super::super::svd::flatten_to_2d;
         let dev = &candle_core::Device::Cpu;
         // up: [3, 2, 1, 1] — same data as 3×2 non-symmetric test
-        let up4 = candle_core::Tensor::from_vec(
-            vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0],
-            (3, 2, 1, 1),
-            dev,
-        )
-        .unwrap();
+        let up4 =
+            candle_core::Tensor::from_vec(vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0], (3, 2, 1, 1), dev)
+                .unwrap();
         let up2 = flatten_to_2d(&up4).unwrap();
         assert_eq!(up2.dims(), &[3, 2], "flatten_to_2d shape mismatch");
 
         // Verify singular_values works end-to-end with the flattened tensor
-        let down = candle_core::Tensor::from_vec(
-            vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0],
-            (2, 3),
-            dev,
-        )
-        .unwrap();
+        let down =
+            candle_core::Tensor::from_vec(vec![7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0], (2, 3), dev)
+                .unwrap();
         let svs = singular_values(&up4, &down).unwrap();
         assert!((svs[0] - 225.029).abs() < 0.01, "sv[0]={:.4}", svs[0]);
     }
@@ -729,7 +736,11 @@ mod tests {
         // A single nonzero sv with nominal_rank=1 should be Good, not Collapsed
         let svs = vec![3.0f64];
         let m = rank_metrics_from_svs(&svs, 1);
-        assert!(matches!(m.health, RankHealth::Good), "expected Good, got {:?}", m.health);
+        assert!(
+            matches!(m.health, RankHealth::Good),
+            "expected Good, got {:?}",
+            m.health
+        );
         assert!((m.balance - 1.0).abs() < 1e-6);
         assert_eq!(m.dominance, None);
     }
@@ -740,7 +751,11 @@ mod tests {
         let svs = vec![10.0f64, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let m = rank_metrics_from_svs(&svs, 8);
         // effective_rank ≈ 1.06 — dominated but not collapsed
-        assert!(!matches!(m.health, RankHealth::Collapsed), "should not be Collapsed, got {:?}", m.health);
+        assert!(
+            !matches!(m.health, RankHealth::Collapsed),
+            "should not be Collapsed, got {:?}",
+            m.health
+        );
         assert!(m.top1_energy < 1.0 - 1e-6);
     }
 }
