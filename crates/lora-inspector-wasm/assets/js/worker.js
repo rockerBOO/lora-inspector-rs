@@ -47,7 +47,8 @@ async function ensureLoaded(name) {
 		await reloadWorker(file);
 	} else if (!loraWorker.is_tensors_loaded()) {
 		// Worker alive but weights unloaded (idle timeout) — reload weights only, metadata stays
-		if (!file) throw new Error(`Cannot reload weights for ${name}: file not found`);
+		if (!file)
+			throw new Error(`Cannot reload weights for ${name}: file not found`);
 		const buffer = await readFile(file);
 		loraWorker.reload_from_buffer(buffer);
 	}
