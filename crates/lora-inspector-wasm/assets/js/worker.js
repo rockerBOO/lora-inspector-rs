@@ -6,6 +6,60 @@ const files = new Map();
 // loraWorkers are specific objects that manage the LoRA file, buffer, and inspection.
 const loraWorkers = new Map();
 
+let LoraWorkerClass = null;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const idleTimers = new Map();
+
+function setIdleTimer(name) {
+	if (idleTimers.has(name)) clearTimeout(idleTimers.get(name));
+	idleTimers.set(
+		name,
+		setTimeout(() => {
+			const loraWorker = loraWorkers.get(name);
+			if (loraWorker) {
+				console.log(`Unloading idle lora worker weights: ${name}`);
+				loraWorker.unload(); // drop weights, keep metadata
+			}
+			idleTimers.delete(name);
+		}, IDLE_TIMEOUT_MS),
+	);
+}
+
+function clearIdleTimer(name) {
+	if (idleTimers.has(name)) {
+		clearTimeout(idleTimers.get(name));
+		idleTimers.delete(name);
+	}
+}
+
+async function reloadWorker(file) {
+	const buffer = await readFile(file);
+	addWorker(file.name, new LoraWorkerClass(buffer, file.name));
+}
+
+async function ensureLoaded(name) {
+	const loraWorker = loraWorkers.get(name);
+	const file = files.get(name);
+
+	if (!loraWorker) {
+		// Worker was fully freed — reconstruct from scratch
+		if (!file) throw new Error(`Cannot reload worker ${name}: file not found`);
+		await reloadWorker(file);
+	} else if (!loraWorker.is_tensors_loaded()) {
+		// Worker alive but weights unloaded (idle timeout) — reload weights only, metadata stays
+		if (!file) throw new Error(`Cannot reload weights for ${name}: file not found`);
+		const buffer = await readFile(file);
+		loraWorker.reload_from_buffer(buffer);
+	}
+
+	setIdleTimer(name);
+}
+
+async function withWorker(name, fn) {
+	await ensureLoaded(name);
+	return fn(getWorker(name));
+}
+
 const loraWorkersRegistry = new FinalizationRegistry((key) => {
 	if (!loraWorkers.get(key)?.deref()) {
 		loraWorkers.delete(key);
@@ -28,6 +82,7 @@ function removeWorker(workerName) {
 
 	loraWorkers.set(workerName, undefined);
 	loraWorkers.delete(workerName);
+	clearIdleTimer(workerName);
 }
 
 function getWorker(workerName) {
@@ -45,6 +100,7 @@ async function init_wasm_in_worker() {
 	if (await simd()) {
 		const { initSync, LoraWorker } = await import("/pkg/lora-inspector-simd");
 		worker = LoraWorker;
+		LoraWorkerClass = worker;
 		const resolvedUrl = (await import("/pkg/lora-inspector-simd_bg.wasm?url"))
 			.default;
 		await fetch(resolvedUrl)
@@ -55,6 +111,7 @@ async function init_wasm_in_worker() {
 	} else {
 		const { initSync, LoraWorker } = await import("/pkg/lora-inspector");
 		worker = LoraWorker;
+		LoraWorkerClass = worker;
 		const resolvedUrl = (await import("/pkg/lora-inspector_bg.wasm?url"))
 			.default;
 		await fetch(resolvedUrl)
@@ -286,6 +343,7 @@ async function loadWorker(file, worker) {
 
 	try {
 		const loraWorker = addWorker(file.name, new worker(buffer, file.name));
+		setIdleTimer(file.name);
 
 		console.timeEnd("file_upload");
 		self.postMessage({
@@ -316,69 +374,55 @@ async function unloadWorker(e) {
 }
 
 async function getNetworkModule(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.network_module();
+	return withWorker(e.data.name, (w) => w.network_module());
 }
 
 async function getWeightKeys(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.weight_keys();
+	return withWorker(e.data.name, (w) => w.weight_keys());
 }
 
 async function getKeys(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.keys();
+	return withWorker(e.data.name, (w) => w.keys());
 }
 
 async function getTextEncoderKeys(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.text_encoder_keys();
+	return withWorker(e.data.name, (w) => w.text_encoder_keys());
 }
 
 async function getUnetKeys(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.unet_keys();
+	return withWorker(e.data.name, (w) => w.unet_keys());
 }
 
 async function getBaseNames(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	const baseNames = loraWorker.base_names();
-	// baseNames.forEach(baseName => loraWorker.parse_key(baseName));
-
-	return baseNames;
+	return withWorker(e.data.name, (w) => w.base_names());
 }
 
 async function getNorms(e) {
-	const name = e.data.name;
-	const loraWorker = getWorker(name);
 	const baseName = e.data.baseName;
-
-	try {
-		const scaled = loraWorker.norms(baseName, [
-			"l1_norm",
-			"l2_norm",
-			"matrix_norm",
-			"max",
-			"min",
-			"std_dev",
-			"median",
-		]);
-
-		return [scaled, undefined];
-	} catch (e) {
-		console.error(e);
-		return [undefined, e];
-	}
+	return withWorker(e.data.name, (w) => {
+		try {
+			return [
+				w.norms(baseName, [
+					"l1_norm",
+					"l2_norm",
+					"matrix_norm",
+					"max",
+					"min",
+					"std_dev",
+					"median",
+				]),
+				undefined,
+			];
+		} catch (err) {
+			console.error(err);
+			return [undefined, err];
+		}
+	});
 }
 
 async function getL2Norms(e) {
-	const loraWorker = getWorker(e.data.name);
+	await ensureLoaded(e.data.name);
+	const loraWorker = getWorker(e.data.name); // held across loop — ensureLoaded already called
 
 	const baseNames = loraWorker.base_names();
 	const totalCount = baseNames.length;
@@ -495,58 +539,43 @@ async function getL2Norms(e) {
 }
 
 async function getAlphaKeys(e) {
-	const name = e.data.name;
-	const loraWorker = getWorker(name);
-
-	return loraWorker.alpha_keys();
+	return withWorker(e.data.name, (w) => w.alpha_keys());
 }
 
 async function getAlphas(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return Array.from(loraWorker.alphas()).sort((a, b) => a - b);
+	return withWorker(e.data.name, (w) =>
+		Array.from(w.alphas()).sort((a, b) => a - b),
+	);
 }
 
 async function getWeightDecomposition(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.weight_decomposition();
+	return withWorker(e.data.name, (w) => w.weight_decomposition());
 }
 
 async function getRankStabilized(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.rank_stabilized();
+	return withWorker(e.data.name, (w) => w.rank_stabilized());
 }
 
 async function getDoraScales(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	const doraScales = Array.from(loraWorker.doraScales()).sort((a, b) => a > b);
-
-	return doraScales;
+	return withWorker(e.data.name, (w) =>
+		Array.from(w.doraScales()).sort((a, b) => a > b),
+	);
 }
 
 async function getDims(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return Array.from(loraWorker.dims()).sort((a, b) => a > b);
+	return withWorker(e.data.name, (w) =>
+		Array.from(w.dims()).sort((a, b) => a > b),
+	);
 }
 
 async function getPrecision(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.precision();
+	return withWorker(e.data.name, (w) => w.precision());
 }
 
 async function getNetworkArgs(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.network_args();
+	return withWorker(e.data.name, (w) => w.network_args());
 }
 
 async function getNetworkType(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.network_type();
+	return withWorker(e.data.name, (w) => w.network_type());
 }
