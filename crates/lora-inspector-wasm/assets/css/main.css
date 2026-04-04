@@ -51,6 +51,16 @@ body > header.home {
 	grid-template-columns: 12fr;
 }
 
+body > header:has(#compare-dropbox) {
+	grid-template-columns: 4fr 1fr auto;
+}
+
+@media (max-width: 900px) {
+	body > header:has(#compare-dropbox) {
+		grid-template-columns: 1fr 1fr auto;
+	}
+}
+
 main {
 	display: grid;
 	grid-gap: 1em;
@@ -639,6 +649,28 @@ text {
 
 .wrap {
 	white-space: pre-wrap;
+}
+
+nav ul {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	padding: 0;
+	margin: 0;
+}
+
+nav li button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.compare-metadata table {
+	width: 100%;
+	table-layout: fixed;
+	overflow-wrap: break-word;
 }
 
 @keyframes fade-in {
