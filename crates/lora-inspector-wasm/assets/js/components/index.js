@@ -20,6 +20,7 @@ export { CaptionDropout } from "./dataset/CaptionDropout.jsx";
 export { Dataset } from "./dataset/Dataset.jsx";
 export { Subset } from "./dataset/Subset.jsx";
 export { TagFrequency } from "./dataset/TagFrequency.jsx";
+export { CompareMetadata } from "./layout/CompareMetadata.jsx";
 export { Header } from "./layout/Header.jsx";
 export { Headline } from "./layout/Headline.jsx";
 export { Main } from "./layout/Main.jsx";

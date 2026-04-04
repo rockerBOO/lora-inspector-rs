@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import init from "/pkg";
-import { Metadata, Support } from "./components/index.js";
+import { CompareMetadata, Metadata, Support } from "./components/index.js";
 import {
 	addWorker,
 	clearWorkers,
@@ -42,6 +42,8 @@ attachDragEvents();
 
 const files = new Map();
 let mainFilename;
+let fileA = { metadata: null, filename: null, worker: null };
+let fileB = { metadata: null, filename: null, worker: null };
 
 init().then(() => {
 	const dropbox = document.querySelector("#dropbox");
@@ -92,6 +94,85 @@ init().then(() => {
 const domNode = document.getElementById("results");
 const root = createRoot(domNode);
 
+function renderView(view) {
+	if (view === "compare") {
+		root.render(
+			<StrictMode>
+				<CompareMetadata
+					metadataA={fileA.metadata}
+					filenameA={fileA.filename}
+					metadataB={fileB.metadata}
+					filenameB={fileB.filename}
+					onViewA={() => renderView("a")}
+					onViewB={() => renderView("b")}
+				/>
+			</StrictMode>,
+		);
+	} else if (view === "a") {
+		root.render(
+			<StrictMode>
+				<Metadata
+					metadata={fileA.metadata}
+					filename={fileA.filename}
+					worker={fileA.worker}
+					nav={
+						<nav>
+							<ul>
+								<li>
+									<button type="button" onClick={() => renderView("compare")}>
+										Back to comparison
+									</button>
+								</li>
+								<li>
+									<button type="button" onClick={() => renderView("b")}>
+										View {fileB.filename}
+									</button>
+								</li>
+							</ul>
+						</nav>
+					}
+				/>
+			</StrictMode>,
+		);
+	} else if (view === "b") {
+		root.render(
+			<StrictMode>
+				<Metadata
+					metadata={fileB.metadata}
+					filename={fileB.filename}
+					worker={fileB.worker}
+					nav={
+						<nav>
+							<ul>
+								<li>
+									<button type="button" onClick={() => renderView("compare")}>
+										Back to comparison
+									</button>
+								</li>
+								<li>
+									<button type="button" onClick={() => renderView("a")}>
+										View {fileA.filename}
+									</button>
+								</li>
+							</ul>
+						</nav>
+					}
+				/>
+			</StrictMode>,
+		);
+	} else {
+		root.render(
+			<StrictMode>
+				<Metadata
+					metadata={fileA.metadata}
+					filename={fileA.filename}
+					worker={fileA.worker}
+				/>
+			</StrictMode>,
+		);
+	}
+}
+
 async function handleMetadata(metadata, filename, worker) {
 	dropbox.classList.remove("box__open");
 	dropbox.classList.add("box__closed");
@@ -100,11 +181,68 @@ async function handleMetadata(metadata, filename, worker) {
 	document.querySelector(".box").classList.remove("box__open");
 	document.querySelector(".box__intro").classList.add("hidden");
 	document.querySelector(".note").classList.add("hidden");
-	root.render(
-		<StrictMode>
-			<Metadata metadata={metadata} filename={filename} worker={worker} />
-		</StrictMode>,
-	);
+
+	if (fileA.metadata !== null && filename !== fileA.filename) {
+		fileB = { metadata, filename, worker };
+		renderView("compare");
+	} else {
+		fileA = { metadata, filename, worker };
+		fileB = { metadata: null, filename: null, worker: null };
+		renderView("single");
+		showCompareButton();
+	}
+}
+
+function showCompareButton() {
+	const existing = document.querySelector("#compare-dropbox");
+	if (existing) return;
+
+	const input = document.createElement("input");
+	input.type = "file";
+	input.accept = ".safetensors";
+	input.id = "compare-file";
+	input.className = "box__file";
+	input.addEventListener("change", async (e) => {
+		const file = e.target.files[0];
+		if (file) processFile(file, true);
+	});
+
+	const label = document.createElement("label");
+	label.htmlFor = "compare-file";
+	label.innerHTML =
+		'<strong>Compare LoRA</strong><span class="box__dragndrop"> or drag it here</span>.';
+
+	const boxInput = document.createElement("div");
+	boxInput.className = "box__input";
+	boxInput.appendChild(input);
+	boxInput.appendChild(label);
+
+	const form = document.createElement("form");
+	form.id = "compare-dropbox";
+	form.className = "box has-advanced-upload";
+	form.enctype = "multipart/form-data";
+	form.appendChild(boxInput);
+
+	for (const eventName of ["dragover", "dragenter"]) {
+		form.addEventListener(eventName, (e) => {
+			e.preventDefault();
+			form.classList.add("is-dragover");
+		});
+	}
+	for (const eventName of ["dragleave", "dragend", "drop"]) {
+		form.addEventListener(eventName, () => {
+			form.classList.remove("is-dragover");
+		});
+	}
+	form.addEventListener("drop", (e) => {
+		e.preventDefault();
+		const file = e.dataTransfer.items
+			? [...e.dataTransfer.items].find((i) => i.kind === "file")?.getAsFile()
+			: e.dataTransfer.files[0];
+		if (file) processFile(file, true);
+	});
+
+	document.querySelector(".support").insertAdjacentElement("beforebegin", form);
 }
 
 // Test the new JSX Support component
@@ -120,7 +258,14 @@ async function handleMetadata(metadata, filename, worker) {
 let uploadTimeoutHandler;
 let processingMetadata = false;
 
-async function processFile(file) {
+async function processFile(file, isComparison = false) {
+	if (!isComparison) {
+		fileA = { metadata: null, filename: null, worker: null };
+		fileB = { metadata: null, filename: null, worker: null };
+		const existing = document.querySelector("#compare-dropbox");
+		if (existing) existing.remove();
+	}
+
 	clearWorkers();
 	const worker = await addWorker(file.name);
 
