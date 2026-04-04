@@ -3,6 +3,7 @@
 export { Advanced } from "./analysis/Advanced.jsx";
 export { AllKeys } from "./analysis/AllKeys.jsx";
 export { BaseNames } from "./analysis/BaseNames.jsx";
+export { EffectiveRank } from "./analysis/EffectiveRank.jsx";
 export { Precision } from "./analysis/Precision.jsx";
 // Analysis components
 export { StatisticRow } from "./analysis/StatisticRow.jsx";

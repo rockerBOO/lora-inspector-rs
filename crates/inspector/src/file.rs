@@ -1,13 +1,23 @@
 use candle_core::Device;
+use safetensors::SafeTensorError;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
+    svd,
     weight::{self, BufferedLoRAWeight, Weight, WeightKey},
     InspectorError, Result,
 };
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LayerScale {
+    pub base_name: String,
+    pub eff_scale: f64,
+    pub is_outlier: bool,
+}
 
 /// LoRA file buffer
 #[derive(Debug)]
@@ -179,6 +189,110 @@ impl LoRAFile {
                 "Weight not loaded. Load the weight first.".to_string(),
             )),
         }
+    }
+
+    pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(_) => match self.scale_weight(base_name) {
+                Ok(t) => Ok(Some(self.l2_norm::<f64>(&t)?)),
+                Err(InspectorError::UnsupportedNetworkType) => Ok(None),
+                Err(InspectorError::Candle(candle_core::Error::SafeTensor(
+                    SafeTensorError::TensorNotFound(_),
+                ))) => Ok(None),
+                Err(e) => Err(e),
+            },
+        }
+    }
+
+    pub fn factorization_balance(&self, base_name: &str) -> Result<Option<f64>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(weights) => {
+                let up = match weights.up(base_name) {
+                    Ok(t) => t,
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
+                    Err(e) => return Err(InspectorError::from(e)),
+                };
+                let down = match weights.down(base_name) {
+                    Ok(t) => t,
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
+                    Err(e) => return Err(InspectorError::from(e)),
+                };
+                let up_norm = self.matrix_norm::<f64>(&up)?;
+                let down_norm = self.matrix_norm::<f64>(&down)?;
+                if down_norm < f64::EPSILON {
+                    return Ok(None);
+                }
+                Ok(Some(up_norm / down_norm))
+            }
+        }
+    }
+
+    pub fn rank_metrics(&self, base_name: &str) -> Result<Option<svd::RankMetrics>> {
+        match self.weights.as_ref() {
+            None => Ok(None),
+            Some(weights) => {
+                let up = match weights.up(base_name) {
+                    Ok(t) => t,
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
+                    Err(e) => return Err(InspectorError::from(e)),
+                };
+                let down = match weights.down(base_name) {
+                    Ok(t) => t,
+                    Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                        return Ok(None)
+                    }
+                    Err(e) => return Err(InspectorError::from(e)),
+                };
+                Ok(Some(svd::rank_metrics(&up, &down)?))
+            }
+        }
+    }
+
+    pub fn effective_scales_all(&self) -> Vec<LayerScale> {
+        let scales: Vec<(String, f64)> = self
+            .base_names()
+            .into_iter()
+            .filter_map(|name| {
+                self.effective_scale(&name)
+                    .ok()
+                    .flatten()
+                    .map(|s| (name, s))
+            })
+            .collect();
+
+        if scales.is_empty() {
+            return vec![];
+        }
+
+        let mut sorted_vals: Vec<f64> = scales.iter().map(|(_, s)| *s).collect();
+        sorted_vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let median = {
+            let n = sorted_vals.len();
+            if n % 2 == 0 {
+                (sorted_vals[n / 2 - 1] + sorted_vals[n / 2]) / 2.0
+            } else {
+                sorted_vals[n / 2]
+            }
+        };
+        // If median is near zero, use a small absolute floor to avoid flagging everything
+        let threshold = if median < 1e-10 { 1e-10 } else { 1.5 * median };
+
+        scales
+            .into_iter()
+            .map(|(base_name, eff_scale)| LayerScale {
+                is_outlier: eff_scale > threshold,
+                base_name,
+                eff_scale,
+            })
+            .collect()
     }
 }
 
@@ -438,6 +552,106 @@ mod tests {
         assert!(lora_file.is_tensors_loaded());
 
         Ok(())
+    }
+
+    #[test]
+    fn effective_scale_is_l2_of_scaled_weight() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+
+        let eff = lora_file.effective_scale(base_name)?.unwrap();
+        let scaled = lora_file.scale_weight(base_name)?;
+        let l2 = lora_file.l2_norm::<f64>(&scaled)?;
+        assert!((eff - l2).abs() < 1e-10);
+        Ok(())
+    }
+
+    #[test]
+    fn factorization_balance_reasonable() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+        let bal = lora_file.factorization_balance(base_name)?.unwrap();
+        assert!(bal > 0.1 && bal < 10.0, "balance={}", bal);
+        Ok(())
+    }
+
+    #[test]
+    fn rank_metrics_returns_valid_health() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_transformer_blocks_0_ff_net_0_proj";
+        let metrics = lora_file.rank_metrics(base_name)?.unwrap();
+        assert!(metrics.balance > 0.0 && metrics.balance <= 1.0);
+        assert!(metrics.top1_energy > 0.0 && metrics.top1_energy <= 1.0);
+        assert!(
+            metrics.effective_rank >= 1.0,
+            "effective_rank={}",
+            metrics.effective_rank
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn effective_scales_all_returns_one_per_base_name() -> crate::Result<()> {
+        let file = "edgWar40KAdeptaSororitas.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+
+        let results = lora_file.effective_scales_all();
+        // Must have at most one entry per base_name (some may not resolve)
+        assert!(results.len() <= lora_file.base_names().len());
+        // For a uniform LoRA file, all layers should resolve
+        assert!(!results.is_empty(), "expected at least some layers");
+        // All eff_scale values must be non-negative
+        assert!(results.iter().all(|r| r.eff_scale >= 0.0));
+        // is_outlier field must be consistent: outliers have higher eff_scale than non-outliers
+        // (at minimum the field is present and boolean)
+        let max_non_outlier = results
+            .iter()
+            .filter(|r| !r.is_outlier)
+            .map(|r| r.eff_scale)
+            .fold(0.0f64, f64::max);
+        let min_outlier = results
+            .iter()
+            .filter(|r| r.is_outlier)
+            .map(|r| r.eff_scale)
+            .fold(f64::MAX, f64::min);
+        // If there are outliers, all outliers must be above all non-outliers
+        if results.iter().any(|r| r.is_outlier) {
+            assert!(
+                min_outlier > max_non_outlier,
+                "outlier min={} should be > non-outlier max={}",
+                min_outlier,
+                max_non_outlier
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn outlier_threshold_logic() {
+        // Synthetic: scales [1.0, 1.0, 1.0, 1.0, 5.0]
+        // Median = 1.0, threshold = 1.5 * 1.0 = 1.5
+        // Only 5.0 > 1.5 → 1 outlier
+        let scales = vec![1.0f64, 1.0, 1.0, 1.0, 5.0];
+        let mut sorted = scales.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let n = sorted.len();
+        let median = if n % 2 == 0 {
+            (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+        } else {
+            sorted[n / 2]
+        };
+        let threshold = if median < 1e-10 { 1e-10 } else { 1.5 * median };
+        let outliers: Vec<bool> = scales.iter().map(|&s| s > threshold).collect();
+        assert_eq!(outliers, vec![false, false, false, false, true]);
+        assert!((median - 1.0).abs() < 1e-10);
+        assert!((threshold - 1.5).abs() < 1e-10);
     }
 
     #[test]

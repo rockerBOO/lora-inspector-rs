@@ -314,6 +314,51 @@ impl LoraWorker {
     pub fn format(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
         serde_wasm_bindgen::to_value(&self.file.format())
     }
+
+    pub fn effective_scale(&self, base_name: &str) -> Option<f64> {
+        self.file
+            .effective_scale(base_name)
+            .map_err(|e| {
+                console::error_1(&format!("effective_scale for {base_name}: {e:#?}").into())
+            })
+            .ok()
+            .flatten()
+    }
+
+    pub fn factorization_balance(&self, base_name: &str) -> Option<f64> {
+        self.file
+            .factorization_balance(base_name)
+            .map_err(|e| {
+                console::error_1(&format!("factorization_balance for {base_name}: {e:#?}").into())
+            })
+            .ok()
+            .flatten()
+    }
+
+    pub fn rank_metrics(&self, base_name: &str) -> Result<JsValue, JsValue> {
+        console_error_panic_hook::set_once();
+        self.file
+            .rank_metrics(base_name)
+            .map_err(|e| {
+                let msg = e.to_string();
+                console::error_1(&format!("rank_metrics for {base_name}: {msg}").into());
+                JsValue::from_str(&msg)
+            })?
+            .map(|m| {
+                serde_wasm_bindgen::to_value(&m).map_err(|e| JsValue::from_str(&e.to_string()))
+            })
+            .unwrap_or(Ok(JsValue::NULL))
+    }
+
+    pub fn effective_scales_all(&self) -> Result<JsValue, JsValue> {
+        console_error_panic_hook::set_once();
+        let scales = self.file.effective_scales_all();
+        serde_wasm_bindgen::to_value(&scales).map_err(|e| {
+            let msg = e.to_string();
+            console::error_1(&format!("effective_scales_all serialization error: {msg}").into());
+            JsValue::from_str(&msg)
+        })
+    }
 }
 
 #[cfg(test)]

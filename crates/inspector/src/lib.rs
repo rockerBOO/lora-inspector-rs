@@ -16,6 +16,10 @@ pub mod network;
 pub mod norms;
 mod parser;
 pub mod statistic;
+pub mod svd;
+
+pub use crate::file::LayerScale;
+pub use crate::svd::RankMetrics;
 mod tensor;
 mod weight;
 

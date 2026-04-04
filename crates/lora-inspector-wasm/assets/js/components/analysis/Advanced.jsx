@@ -2,6 +2,7 @@ import { createRef, useEffect, useState } from "react";
 import { trySyncMessage } from "../../message.js";
 import { AllKeys } from "./AllKeys.jsx";
 import { BaseNames } from "./BaseNames.jsx";
+import { EffectiveRank } from "./EffectiveRank.jsx";
 import { Statistics } from "./Statistics.jsx";
 import { TextEncoderKeys } from "./TextEncoderKeys.jsx";
 import { UnetKeys } from "./UnetKeys.jsx";
@@ -240,6 +241,8 @@ export function Advanced({ filename, worker }) {
 			) : (
 				<Statistics baseNames={baseNames} filename={filename} worker={worker} />
 			)}
+			<h3>Effective Rank</h3>
+			<EffectiveRank filename={filename} worker={worker} />
 		</>
 	);
 }

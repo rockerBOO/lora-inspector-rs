@@ -316,6 +316,36 @@ async function init_wasm_in_worker() {
 					});
 				}
 			});
+		} else if (e.data.messageType === "effective_scale") {
+			getEffectiveScale(e).then((effScale) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "effective_scale",
+						baseName: e.data.baseName,
+						effScale,
+					});
+				}
+			});
+		} else if (e.data.messageType === "effective_scales_all") {
+			getEffectiveScalesAll(e).then((scales) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "effective_scales_all",
+						scales,
+					});
+				}
+			});
+		} else if (e.data.messageType === "rank_metrics") {
+			getRankMetrics(e).then(([metrics, error]) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "rank_metrics",
+						baseName: e.data.baseName,
+						metrics,
+						error,
+					});
+				}
+			});
 		}
 	};
 }
@@ -579,4 +609,29 @@ async function getNetworkArgs(e) {
 
 async function getNetworkType(e) {
 	return withWorker(e.data.name, (w) => w.network_type());
+}
+
+async function getEffectiveScale(e) {
+	const loraWorker = getWorker(e.data.name);
+
+	return loraWorker.effective_scale(e.data.baseName);
+}
+
+async function getEffectiveScalesAll(e) {
+	const loraWorker = getWorker(e.data.name);
+
+	return loraWorker.effective_scales_all();
+}
+
+async function getRankMetrics(e) {
+	const loraWorker = getWorker(e.data.name);
+	const baseName = e.data.baseName;
+
+	try {
+		const metrics = loraWorker.rank_metrics(baseName);
+		return [metrics, undefined];
+	} catch (err) {
+		console.error(`rank_metrics error for ${baseName}:`, err);
+		return [undefined, err];
+	}
 }
