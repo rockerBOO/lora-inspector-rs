@@ -20,7 +20,7 @@ all: test build-wasm build-frontend
 test:
 	cargo test --workspace && \
 		make wasm-bindgen-test && \
-		yarn --cwd $(WASM_DIR) test
+		(cd $(WASM_DIR) && yarn test)
 
 # Build WASM for production (optimized)
 .PHONY: build-wasm
@@ -33,11 +33,11 @@ build-wasm-simd:
 
 .PHONY: build-frontend
 build-frontend:
-	yarn --cwd $(WASM_DIR) build
+	(cd $(WASM_DIR) && yarn build)
 
 .PHONY: build-frontend
 preview:
-	yarn --cwd $(WASM_DIR) preview
+	(cd $(WASM_DIR) && yarn preview)
 
 build:
 	 make build-wasm && make build-wasm-simd && make build-frontend

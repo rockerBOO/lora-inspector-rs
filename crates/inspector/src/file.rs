@@ -39,6 +39,12 @@ impl LoRAFile {
         self.scaled_weights = HashMap::new();
     }
 
+    pub fn reload_weights(&mut self, buffer: &[u8], device: &Device) {
+        self.weights = BufferedLoRAWeight::new(buffer.to_vec(), device)
+            .map(Some)
+            .unwrap_or_else(|_| None);
+    }
+
     pub fn is_tensors_loaded(&self) -> bool {
         self.weights.is_some()
     }

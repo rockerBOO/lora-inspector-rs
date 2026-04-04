@@ -39,6 +39,10 @@ impl LoraWorker {
         self.file.unload()
     }
 
+    pub fn reload_from_buffer(&mut self, buffer: &[u8]) {
+        self.file.reload_weights(buffer, &candle_core::Device::Cpu);
+    }
+
     pub fn metadata(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
         serde_wasm_bindgen::to_value(&self.metadata.metadata)
     }
