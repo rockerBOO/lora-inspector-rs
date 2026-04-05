@@ -42,7 +42,9 @@ describe("SectionNav", () => {
 
 	it("has navigation landmark with label", () => {
 		render(<SectionNav filename="boo.safetensors" />);
-		expect(screen.getByRole("navigation", { name: "Page sections" })).toBeDefined();
+		expect(
+			screen.getByRole("navigation", { name: "Page sections" }),
+		).toBeDefined();
 	});
 
 	it("shows filename in file bar", () => {

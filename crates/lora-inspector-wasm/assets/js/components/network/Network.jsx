@@ -123,19 +123,11 @@ export function Network({ metadata, filename, worker }) {
 				valueClassName="number"
 				value={rankStabilized ? "True" : "False"}
 			/>
-			<MetaAttribute
-				name="Gradient Checkpointing"
-				valueClassName="number"
-				value={metadata.get("ss_gradient_checkpointing")}
-			/>
 		</div>,
 		<div key="network-args" className="row space-apart">
 			<MetaAttribute
 				name="Network args"
-				containerProps={{
-					id: "network-args",
-					style: { gridColumn: "1 / span 6" },
-				}}
+				containerProps={{ id: "network-args", className: "span-6" }}
 				valueClassName="args"
 				value={networkArgs ? JSON.stringify(networkArgs) : "None"}
 			/>

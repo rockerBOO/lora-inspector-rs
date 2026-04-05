@@ -13,15 +13,11 @@ describe("Training Components", () => {
 				"../assets/js/components/training/Optimizer.jsx"
 			);
 
-			const optimizerMetadata = new Map([
-				["ss_optimizer", "AdamW8bit"],
-				["ss_seed", "12345"],
-			]);
+			const optimizerMetadata = new Map([["ss_optimizer", "AdamW8bit"]]);
 
 			render(<Optimizer metadata={optimizerMetadata} />);
 
 			expect(screen.getByText("AdamW8bit")).toBeDefined();
-			expect(screen.getByText("12345")).toBeDefined();
 		});
 
 		it("should handle missing optimizer data", async () => {
@@ -55,19 +51,70 @@ describe("Training Components", () => {
 			expect(screen.getByText("100")).toBeDefined();
 		});
 
-		it("should handle different scheduler types", async () => {
+		it("shows global learning rate when both specific LRs absent", async () => {
 			const { LRScheduler } = await import(
 				"../assets/js/components/training/LRScheduler.jsx"
 			);
 
-			const constantMetadata = new Map([
+			const metadata = new Map([
 				["ss_lr_scheduler", "constant"],
 				["ss_learning_rate", "0.0001"],
 			]);
 
-			expect(() =>
-				render(<LRScheduler metadata={constantMetadata} />),
-			).not.toThrow();
+			render(<LRScheduler metadata={metadata} />);
+
+			expect(screen.getByText("0.0001")).toBeDefined();
+		});
+
+		it("hides global learning rate when unet_lr is set", async () => {
+			const { LRScheduler } = await import(
+				"../assets/js/components/training/LRScheduler.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_lr_scheduler", "constant"],
+				["ss_learning_rate", "0.0001"],
+				["ss_unet_lr", "1e-4"],
+				["ss_text_encoder_lr", "5e-5"],
+			]);
+
+			render(<LRScheduler metadata={metadata} />);
+
+			expect(screen.queryByText("0.0001")).toBeNull();
+		});
+
+		it("shows global learning rate when both specific LRs are None", async () => {
+			const { LRScheduler } = await import(
+				"../assets/js/components/training/LRScheduler.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_lr_scheduler", "constant"],
+				["ss_learning_rate", "1.0"],
+				["ss_unet_lr", "None"],
+				["ss_text_encoder_lr", "None"],
+			]);
+
+			render(<LRScheduler metadata={metadata} />);
+
+			expect(screen.getByText("1.0")).toBeDefined();
+		});
+
+		it("hides global learning rate when only one specific LR is set", async () => {
+			const { LRScheduler } = await import(
+				"../assets/js/components/training/LRScheduler.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_lr_scheduler", "constant"],
+				["ss_learning_rate", "0.0001"],
+				["ss_unet_lr", "1e-4"],
+				["ss_text_encoder_lr", "None"],
+			]);
+
+			render(<LRScheduler metadata={metadata} />);
+
+			expect(screen.queryByText("0.0001")).toBeNull();
 		});
 	});
 
@@ -121,6 +168,48 @@ describe("Training Components", () => {
 
 			expect(screen.getByText("10")).toBeDefined();
 			expect(screen.getByText("1000")).toBeDefined();
+		});
+
+		it("should display seed", async () => {
+			const { EpochStep } = await import(
+				"../assets/js/components/training/EpochStep.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_epoch", "1"],
+				["ss_seed", "42"],
+			]);
+
+			render(<EpochStep metadata={metadata} />);
+
+			expect(screen.getByText("42")).toBeDefined();
+		});
+
+		it("should display gradient checkpointing when present", async () => {
+			const { EpochStep } = await import(
+				"../assets/js/components/training/EpochStep.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_epoch", "1"],
+				["ss_gradient_checkpointing", "True"],
+			]);
+
+			render(<EpochStep metadata={metadata} />);
+
+			expect(screen.getByText("True")).toBeDefined();
+		});
+
+		it("should not show gradient checkpointing when absent", async () => {
+			const { EpochStep } = await import(
+				"../assets/js/components/training/EpochStep.jsx"
+			);
+
+			const metadata = new Map([["ss_epoch", "1"]]);
+
+			render(<EpochStep metadata={metadata} />);
+
+			expect(screen.queryByText("Gradient Checkpointing")).toBeNull();
 		});
 	});
 
@@ -182,6 +271,55 @@ describe("Training Components", () => {
 			expect(screen.getByText("huber")).toBeDefined();
 			expect(screen.getByText("snr")).toBeDefined();
 			expect(screen.getByText("0.1")).toBeDefined();
+		});
+	});
+
+	describe("Experimental Component", () => {
+		it("returns null when no experimental keys present", async () => {
+			const { Experimental } = await import(
+				"../assets/js/components/training/Experimental.jsx"
+			);
+
+			const metadata = new Map([["ss_loss_type", "l2"]]);
+			const { container } = render(<Experimental metadata={metadata} />);
+
+			expect(container.firstChild).toBeNull();
+		});
+
+		it("shows noise offset group when ss_noise_offset present", async () => {
+			const { Experimental } = await import(
+				"../assets/js/components/training/Experimental.jsx"
+			);
+
+			const metadata = new Map([["ss_noise_offset", "0.1"]]);
+			render(<Experimental metadata={metadata} />);
+
+			expect(screen.getByText("Noise offset")).toBeDefined();
+			expect(screen.getByText("0.1")).toBeDefined();
+		});
+
+		it("shows multires noise group when ss_multires_noise_iterations present", async () => {
+			const { Experimental } = await import(
+				"../assets/js/components/training/Experimental.jsx"
+			);
+
+			const metadata = new Map([["ss_multires_noise_iterations", "6"]]);
+			render(<Experimental metadata={metadata} />);
+
+			expect(screen.getByText("MultiRes noise")).toBeDefined();
+			expect(screen.getByText("6")).toBeDefined();
+		});
+
+		it("shows SNR group when ss_min_snr_gamma present", async () => {
+			const { Experimental } = await import(
+				"../assets/js/components/training/Experimental.jsx"
+			);
+
+			const metadata = new Map([["ss_min_snr_gamma", "5"]]);
+			render(<Experimental metadata={metadata} />);
+
+			expect(screen.getByText("SNR")).toBeDefined();
+			expect(screen.getByText("5")).toBeDefined();
 		});
 	});
 

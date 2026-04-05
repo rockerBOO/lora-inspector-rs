@@ -29,21 +29,6 @@ export function Loss({ metadata }) {
 					value={metadata.get("ss_huber_scale") ?? 1.0}
 				/>
 			)}
-			<MetaAttribute
-				name="Debiased Estimation"
-				valueClassName="boolean"
-				value={metadata.get("ss_debiased_estimation") ?? "False"}
-			/>
-			<MetaAttribute
-				name="Min SNR Gamma"
-				valueClassName="number"
-				value={metadata.get("ss_min_snr_gamma")}
-			/>
-			<MetaAttribute
-				name="Zero Terminal SNR"
-				valueClassName="boolean"
-				value={metadata.get("ss_zero_terminal_snr")}
-			/>
 			{metadata.has("ss_masked_loss") && (
 				<MetaAttribute
 					name="Masked Loss"

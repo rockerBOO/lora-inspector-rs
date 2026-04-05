@@ -49,10 +49,7 @@ describe("CompareMetadata", () => {
 		});
 
 		it("does not show keys with identical values", async () => {
-			await renderCompare(
-				{ ss_network_dim: "32" },
-				{ ss_network_dim: "32" },
-			);
+			await renderCompare({ ss_network_dim: "32" }, { ss_network_dim: "32" });
 			expect(screen.queryByText("ss_network_dim")).toBeNull();
 		});
 

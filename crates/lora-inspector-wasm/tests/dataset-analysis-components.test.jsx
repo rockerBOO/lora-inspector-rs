@@ -18,6 +18,65 @@ describe("Dataset Components", () => {
 			expect(() => render(<Dataset metadata={emptyMetadata} />)).not.toThrow();
 		});
 
+		it("shows joined Directories when all datasets share settings", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "photos",
+					enable_bucket: true,
+					resolution: [1024, 1024],
+					num_repeats: 1,
+				},
+				{
+					image_directory: "sketches",
+					enable_bucket: true,
+					resolution: [1024, 1024],
+					num_repeats: 1,
+				},
+			];
+			const metadata = new Map([["ss_datasets", JSON.stringify(datasets)]]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("Directories")).toBeDefined();
+			expect(screen.getByText("photos, sketches")).toBeDefined();
+			// Shared settings shown once
+			expect(screen.getAllByText("True").length).toBe(1);
+		});
+
+		it("renders each dataset separately when settings differ", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "hires",
+					enable_bucket: true,
+					resolution: [1024, 1024],
+					num_repeats: 2,
+				},
+				{
+					image_directory: "lores",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+				},
+			];
+			const metadata = new Map([["ss_datasets", JSON.stringify(datasets)]]);
+
+			render(<Dataset metadata={metadata} />);
+
+			// Falls back to per-dataset rendering — both directories shown as Image directory
+			expect(screen.getByText("hires")).toBeDefined();
+			expect(screen.getByText("lores")).toBeDefined();
+			// Should NOT show the single "Directories" label
+			expect(screen.queryByText("Directories")).toBeNull();
+		});
+
 		it("should handle invalid JSON in datasets gracefully", async () => {
 			const { Dataset } = await import(
 				"../assets/js/components/dataset/Dataset.jsx"
@@ -91,6 +150,182 @@ describe("Dataset Components", () => {
 				render(<TagFrequency tagFrequency={emptyTagFrequency} />),
 			).not.toThrow();
 		});
+	});
+});
+
+describe("Buckets Component", () => {
+	const emptyMetadata = new Map();
+
+	it("renders video directory when video_directory present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = { video_directory: "/data/videos", enable_bucket: true };
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Video directory")).toBeDefined();
+		expect(screen.getByText("/data/videos")).toBeDefined();
+	});
+
+	it("renders video fields when target_frames present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			video_directory: "/data/videos",
+			target_frames: [1, 25, 45],
+			frame_extraction: "chunk",
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Target frames")).toBeDefined();
+		expect(screen.getByText("1, 25, 45")).toBeDefined();
+		expect(screen.getByText("Frame extraction")).toBeDefined();
+		expect(screen.getByText("chunk")).toBeDefined();
+	});
+
+	it("formats target_frames array as comma-separated string", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = { target_frames: [1, 25, 45], enable_bucket: false };
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("1, 25, 45")).toBeDefined();
+	});
+
+	it("shows image_jsonl_file source label", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_jsonl_file: "/data/images.jsonl",
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Image JSONL")).toBeDefined();
+		expect(screen.getByText("/data/images.jsonl")).toBeDefined();
+	});
+
+	it("shows video_jsonl_file source label", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			video_jsonl_file: "/data/videos.jsonl",
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Video JSONL")).toBeDefined();
+		expect(screen.getByText("/data/videos.jsonl")).toBeDefined();
+	});
+
+	it("renders control fields when control_directory present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			control_directory: "/data/control",
+			control_resolution: [1024, 1024],
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Control directory")).toBeDefined();
+		expect(screen.getByText("/data/control")).toBeDefined();
+		expect(screen.getByText("Control resolution")).toBeDefined();
+		expect(screen.getByText("1024, 1024")).toBeDefined();
+	});
+
+	it("shows has_control when true and no control directory present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			has_control: true,
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Has control")).toBeDefined();
+	});
+
+	it("hides control row when has_control is false and no control fields", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			has_control: false,
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.queryByText("Has control")).toBeNull();
+	});
+
+	it("renders FramePack group when fp_latent_window_size present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			fp_latent_window_size: 9,
+			fp_1f_clean_indices: [0, 1],
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Latent window size")).toBeDefined();
+		expect(screen.getByText("9")).toBeDefined();
+		expect(screen.getByText("1F clean indices")).toBeDefined();
+		expect(screen.getByText("0, 1")).toBeDefined();
+	});
+
+	it("does not render video fields for image-only dataset", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			enable_bucket: true,
+			resolution: [512, 512],
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.queryByText("Target frames")).toBeNull();
+		expect(screen.queryByText("Frame extraction")).toBeNull();
+	});
+
+	it("shows cache_directory when present", async () => {
+		const { Buckets } = await import(
+			"../assets/js/components/dataset/Buckets.jsx"
+		);
+
+		const dataset = {
+			image_directory: "/data/images",
+			cache_directory: "/cache/latents",
+			enable_bucket: true,
+		};
+		render(<Buckets dataset={dataset} metadata={emptyMetadata} />);
+
+		expect(screen.getByText("Cache directory")).toBeDefined();
+		expect(screen.getByText("/cache/latents")).toBeDefined();
 	});
 });
 

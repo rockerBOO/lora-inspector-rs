@@ -9,7 +9,7 @@ export function LRScheduler({ metadata }) {
 		<div className="row space-apart">
 			<MetaAttribute
 				name="LR Scheduler"
-				containerProps={{ style: { gridColumn: "1 / span 3" } }}
+				containerProps={{ className: "span-3" }}
 				value={lrScheduler}
 			/>
 
@@ -20,10 +20,9 @@ export function LRScheduler({ metadata }) {
 					value={metadata.get("ss_lr_warmup_steps")}
 				/>
 			)}
-			{(!metadata.has("ss_unet_lr") ||
-				metadata.get("ss_unet_lr") === "None" ||
-				!metadata.has("ss_text_encoder_lr") ||
-				metadata.get("ss_text_encoder_lr") === "None") &&
+			{(!metadata.has("ss_unet_lr") || metadata.get("ss_unet_lr") === "None") &&
+				(!metadata.has("ss_text_encoder_lr") ||
+					metadata.get("ss_text_encoder_lr") === "None") &&
 				metadata.has("ss_learning_rate") && (
 					<MetaAttribute
 						name="Learning rate"

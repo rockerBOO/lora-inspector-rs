@@ -395,8 +395,22 @@ main > section {
 	justify-content: space-between;
 }
 
+.row-compact {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em;
+}
+
+.span-2 {
+	grid-column: 1 / span 2;
+}
+
 .span-3 {
-	grid-column: 3 / 1;
+	grid-column: 1 / span 3;
+}
+
+.span-6 {
+	grid-column: 1 / span 6;
 }
 
 .rank,
@@ -410,8 +424,7 @@ main > section {
 }
 
 .hash {
-	max-width: 10em;
-	overflow: hidden;
+	word-break: break-all;
 }
 
 .lr {

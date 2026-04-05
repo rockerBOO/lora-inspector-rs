@@ -33,11 +33,6 @@ export function Optimizer({ metadata }) {
 					containerProps={{ className: "span-3" }}
 					value={parsed ? parsed.className : optimizerRaw}
 				/>
-				<MetaAttribute
-					name="Seed"
-					valueClassName="number"
-					value={metadata.get("ss_seed")}
-				/>
 			</div>
 			{parsed && (
 				<>

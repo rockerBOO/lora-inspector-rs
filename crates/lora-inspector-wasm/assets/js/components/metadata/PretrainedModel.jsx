@@ -26,7 +26,7 @@ export function PretrainedModel({ metadata }) {
 					value={metadata.get("ss_output_name")}
 				/>
 			)}
-			<div>
+			<div className="span-2">
 				<MetaAttribute
 					name="Model hash"
 					value={metadata.get("sshs_model_hash")}
@@ -44,11 +44,13 @@ export function PretrainedModel({ metadata }) {
 					name="Session ID"
 					value={metadata.get("ss_session_id")}
 				/>
-				<MetaAttribute
-					name="sd-scripts commit hash"
-					value={metadata.get("ss_sd_scripts_commit_hash")}
-					valueClassName="hash"
-				/>
+				{metadata.has("ss_sd_scripts_commit_hash") && (
+					<MetaAttribute
+						name="sd-scripts commit hash"
+						value={metadata.get("ss_sd_scripts_commit_hash")}
+						valueClassName="hash"
+					/>
+				)}
 			</div>
 			<div>
 				<VAE metadata={metadata} />

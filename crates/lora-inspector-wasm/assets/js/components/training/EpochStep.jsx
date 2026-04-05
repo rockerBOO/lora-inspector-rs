@@ -31,6 +31,18 @@ export function EpochStep({ metadata }) {
 				valueClassName="number"
 				value={metadata.get("ss_max_train_steps")}
 			/>
+			<MetaAttribute
+				name="Seed"
+				valueClassName="number"
+				value={metadata.get("ss_seed")}
+			/>
+			{metadata.has("ss_gradient_checkpointing") && (
+				<MetaAttribute
+					name="Gradient Checkpointing"
+					valueClassName="boolean"
+					value={metadata.get("ss_gradient_checkpointing")}
+				/>
+			)}
 		</div>
 	);
 }

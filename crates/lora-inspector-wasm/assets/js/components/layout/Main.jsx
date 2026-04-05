@@ -1,19 +1,17 @@
-import { Blocks } from "../analysis/Blocks.jsx";
 import { Advanced } from "../analysis/Advanced.jsx";
+import { Blocks } from "../analysis/Blocks.jsx";
 import { Precision } from "../analysis/Precision.jsx";
 import { Dataset } from "../dataset/Dataset.jsx";
-import { CaptionDropout } from "../dataset/CaptionDropout.jsx";
-import { PretrainedModel } from "../metadata/PretrainedModel.jsx";
 import { ModelSpec } from "../metadata/ModelSpec.jsx";
-import { Network } from "../network/Network.jsx";
+import { PretrainedModel } from "../metadata/PretrainedModel.jsx";
 import { LoRANetwork } from "../network/LoRANetwork.jsx";
+import { Network } from "../network/Network.jsx";
 import { Batch } from "../training/Batch.jsx";
 import { EpochStep } from "../training/EpochStep.jsx";
 import { Experimental } from "../training/Experimental.jsx";
 import { FluxTraining } from "../training/FluxTraining.jsx";
 import { Loss } from "../training/Loss.jsx";
 import { LRScheduler } from "../training/LRScheduler.jsx";
-import { Noise } from "../training/Noise.jsx";
 import { Optimizer } from "../training/Optimizer.jsx";
 import { WaveletLoss } from "../training/WaveletLoss.jsx";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
@@ -64,27 +62,8 @@ export function Main({ metadata, filename, worker }) {
 				<EpochStep metadata={metadata} />
 				<Batch metadata={metadata} />
 				<FluxTraining metadata={metadata} />
-				<Noise metadata={metadata} />
 				<Loss metadata={metadata} />
 				<WaveletLoss metadata={metadata} />
-				<CaptionDropout metadata={metadata} />
-				<Experimental metadata={metadata} />
-			</Section>
-
-			<Section id="optimizer" label="Optimizer">
-				<Optimizer metadata={metadata} />
-				<div className="row space-apart">
-					<MetaAttribute
-						name="Max Grad Norm"
-						valueClassName="number"
-						value={metadata.get("ss_max_grad_norm")}
-					/>
-					<MetaAttribute
-						name="CLIP Skip"
-						valueClassName="number"
-						value={metadata.get("ss_clip_skip")}
-					/>
-				</div>
 				<div className="row space-apart">
 					<Precision filename={filename} worker={worker} />
 					<MetaAttribute
@@ -118,6 +97,23 @@ export function Main({ metadata, filename, worker }) {
 							value={metadata.get("ss_gradient_checkpointing_cpu_offload")}
 						/>
 					)}
+				</div>
+				<Experimental metadata={metadata} />
+			</Section>
+
+			<Section id="optimizer" label="Optimizer">
+				<Optimizer metadata={metadata} />
+				<div className="row space-apart">
+					<MetaAttribute
+						name="Max Grad Norm"
+						valueClassName="number"
+						value={metadata.get("ss_max_grad_norm")}
+					/>
+					<MetaAttribute
+						name="CLIP Skip"
+						valueClassName="number"
+						value={metadata.get("ss_clip_skip")}
+					/>
 				</div>
 			</Section>
 

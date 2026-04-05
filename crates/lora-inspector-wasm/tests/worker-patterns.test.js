@@ -134,11 +134,28 @@ function makeWorkerMemory() {
 
 		if (!loraWorker) {
 			// Worker was fully freed — reconstruct from scratch
-			if (!file) throw new Error(`Cannot reload worker ${name}: file not found`);
-			addWorker(name, { name, tensorsLoaded: true, metadata: file.metadata, data: file.data, unload() { this.tensorsLoaded = false; }, reload_from_buffer(buf) { this.tensorsLoaded = true; this.data = buf; }, is_tensors_loaded() { return this.tensorsLoaded; } });
+			if (!file)
+				throw new Error(`Cannot reload worker ${name}: file not found`);
+			addWorker(name, {
+				name,
+				tensorsLoaded: true,
+				metadata: file.metadata,
+				data: file.data,
+				unload() {
+					this.tensorsLoaded = false;
+				},
+				reload_from_buffer(buf) {
+					this.tensorsLoaded = true;
+					this.data = buf;
+				},
+				is_tensors_loaded() {
+					return this.tensorsLoaded;
+				},
+			});
 		} else if (!loraWorker.is_tensors_loaded()) {
 			// Weights were idle-unloaded — reload weights only, metadata stays
-			if (!file) throw new Error(`Cannot reload weights for ${name}: file not found`);
+			if (!file)
+				throw new Error(`Cannot reload weights for ${name}: file not found`);
 			loraWorker.reload_from_buffer(file.data);
 		}
 
@@ -150,17 +167,35 @@ function makeWorkerMemory() {
 		return fn(loraWorkers.get(name));
 	}
 
-	return { files, loraWorkers, idleTimers, addWorker, removeWorker, ensureLoaded, withWorker };
+	return {
+		files,
+		loraWorkers,
+		idleTimers,
+		addWorker,
+		removeWorker,
+		ensureLoaded,
+		withWorker,
+	};
 }
 
 test("idle timer unloads weights but keeps worker in map", async (t) => {
 	const mem = makeWorkerMemory();
-	mem.files.set("model.safetensors", { data: "buffer", metadata: { name: "test" } });
+	mem.files.set("model.safetensors", {
+		data: "buffer",
+		metadata: { name: "test" },
+	});
 	mem.addWorker("model.safetensors", {
 		tensorsLoaded: true,
-		unload() { this.tensorsLoaded = false; },
-		is_tensors_loaded() { return this.tensorsLoaded; },
-		reload_from_buffer(buf) { this.tensorsLoaded = true; this.data = buf; },
+		unload() {
+			this.tensorsLoaded = false;
+		},
+		is_tensors_loaded() {
+			return this.tensorsLoaded;
+		},
+		reload_from_buffer(buf) {
+			this.tensorsLoaded = true;
+			this.data = buf;
+		},
 	});
 
 	await new Promise((resolve) => {
@@ -177,13 +212,22 @@ test("idle timer resets on activity", async (t) => {
 	mem.files.set("model.safetensors", { data: "buffer", metadata: {} });
 	mem.addWorker("model.safetensors", {
 		tensorsLoaded: true,
-		unload() { this.tensorsLoaded = false; },
-		is_tensors_loaded() { return this.tensorsLoaded; },
-		reload_from_buffer(buf) { this.tensorsLoaded = true; this.data = buf; },
+		unload() {
+			this.tensorsLoaded = false;
+		},
+		is_tensors_loaded() {
+			return this.tensorsLoaded;
+		},
+		reload_from_buffer(buf) {
+			this.tensorsLoaded = true;
+			this.data = buf;
+		},
 	});
 
 	let expiredCount = 0;
-	const onExpire = () => { expiredCount++; };
+	const onExpire = () => {
+		expiredCount++;
+	};
 
 	// Call ensureLoaded twice quickly — timer should reset, fire only once
 	await mem.ensureLoaded("model.safetensors", onExpire);
@@ -195,13 +239,23 @@ test("idle timer resets on activity", async (t) => {
 
 test("ensureLoaded reloads weights after idle unload, metadata unchanged", async (t) => {
 	const mem = makeWorkerMemory();
-	mem.files.set("model.safetensors", { data: "reloaded-buffer", metadata: { name: "kept" } });
+	mem.files.set("model.safetensors", {
+		data: "reloaded-buffer",
+		metadata: { name: "kept" },
+	});
 	const worker = {
 		tensorsLoaded: false,
 		metadata: { name: "kept" },
-		unload() { this.tensorsLoaded = false; },
-		is_tensors_loaded() { return this.tensorsLoaded; },
-		reload_from_buffer(buf) { this.tensorsLoaded = true; this.data = buf; },
+		unload() {
+			this.tensorsLoaded = false;
+		},
+		is_tensors_loaded() {
+			return this.tensorsLoaded;
+		},
+		reload_from_buffer(buf) {
+			this.tensorsLoaded = true;
+			this.data = buf;
+		},
 	};
 	mem.addWorker("model.safetensors", worker);
 

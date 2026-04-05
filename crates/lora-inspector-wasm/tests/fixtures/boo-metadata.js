@@ -18,10 +18,7 @@ export const booMetadata = new Map([
 	],
 	["ss_sd_model_hash", "9e689848"],
 	["ss_session_id", "682850588"],
-	[
-		"ss_sd_scripts_commit_hash",
-		"b612d0b091213f39f4864b4cfe63a44f1e1974d7",
-	],
+	["ss_sd_scripts_commit_hash", "b612d0b091213f39f4864b4cfe63a44f1e1974d7"],
 	["ss_network_module", "kohya-ss/lora"],
 	["ss_network_dim", "4"],
 	["ss_network_alpha", "4.0"],

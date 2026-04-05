@@ -15,7 +15,6 @@
 			"!**/dist/**",
 			"!**/pkg/**",
 			"!**/js-lib/**",
-			"!tests/**",
 			"!assets/css/chartist.min.css"
 		]
 	},

@@ -25,11 +25,22 @@ export function ModelSpec({ metadata }) {
 				<MetaAttribute
 					key="elapsed_at"
 					name="Elapsed"
-					value={`${(
-						(metadata.get("ss_training_finished_at") -
-							metadata.get("ss_training_started_at")) /
-							60
-					).toPrecision(4)} minutes`}
+					value={(() => {
+						const secs = Math.round(
+							metadata.get("ss_training_finished_at") -
+								metadata.get("ss_training_started_at"),
+						);
+						const h = Math.floor(secs / 3600);
+						const m = Math.floor((secs % 3600) / 60);
+						const s = secs % 60;
+						return [
+							h > 0 ? `${h}h` : null,
+							m > 0 || h > 0 ? `${m}m` : null,
+							`${s}s`,
+						]
+							.filter(Boolean)
+							.join(" ");
+					})()}
 				/>
 			)}
 		</div>

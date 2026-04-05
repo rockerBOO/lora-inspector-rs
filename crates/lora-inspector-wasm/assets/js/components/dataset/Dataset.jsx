@@ -1,5 +1,32 @@
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { Buckets } from "./Buckets.jsx";
+import { CaptionDropout } from "./CaptionDropout.jsx";
+
+const SOURCE_KEYS = [
+	"image_directory",
+	"video_directory",
+	"image_jsonl_file",
+	"video_jsonl_file",
+];
+
+function getSource(dataset) {
+	for (const k of SOURCE_KEYS) {
+		if (k in dataset) return dataset[k];
+	}
+	return null;
+}
+
+function withoutSource(dataset) {
+	const result = { ...dataset };
+	for (const k of SOURCE_KEYS) delete result[k];
+	return result;
+}
+
+function datasetsShareSettings(datasets) {
+	if (datasets.length <= 1) return true;
+	const first = JSON.stringify(withoutSource(datasets[0]));
+	return datasets.every((d) => JSON.stringify(withoutSource(d)) === first);
+}
 
 function DatasetDir({ dir, info, label }) {
 	return (
@@ -99,21 +126,40 @@ export function Dataset({ metadata }) {
 			console.error(e);
 			datasets = [];
 		}
+
+		if (datasetsShareSettings(datasets)) {
+			const shared = withoutSource(datasets[0]);
+			const sources = datasets.map(getSource).filter(Boolean);
+			return (
+				<div>
+					<MetaAttribute name="Directories" value={sources.join(", ")} />
+					<Buckets dataset={shared} metadata={metadata} />
+					<CaptionDropout metadata={metadata} />
+				</div>
+			);
+		}
+
 		return (
 			<div>
 				{datasets.map((dataset, i) => (
 					<Buckets
-						key={`dataset-${dataset.name ?? dataset.image_directory ?? i}`}
+						key={`dataset-${dataset.image_directory ?? i}`}
 						dataset={dataset}
 						metadata={metadata}
 					/>
 				))}
+				<CaptionDropout metadata={metadata} />
 			</div>
 		);
 	}
 
 	if (metadata.has("ss_dataset_dirs") || metadata.has("ss_resolution")) {
-		return <KohyaDataset metadata={metadata} />;
+		return (
+			<div>
+				<KohyaDataset metadata={metadata} />
+				<CaptionDropout metadata={metadata} />
+			</div>
+		);
 	}
 
 	return null;
