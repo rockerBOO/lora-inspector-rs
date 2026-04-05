@@ -1,7 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
-import { afterEach, expect } from "vitest";
+import { afterEach, expect, vi } from "vitest";
+
+// jsdom does not implement IntersectionObserver
+const mockIntersectionObserver = vi.fn(() => ({
+	observe: vi.fn(),
+	unobserve: vi.fn(),
+	disconnect: vi.fn(),
+}));
+vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
 
 expect.extend(matchers);
 

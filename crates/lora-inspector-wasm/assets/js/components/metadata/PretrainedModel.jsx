@@ -8,6 +8,24 @@ export function PretrainedModel({ metadata }) {
 				name="SD model name"
 				value={metadata.get("ss_sd_model_name")}
 			/>
+			{metadata.has("ss_model_type") && (
+				<MetaAttribute
+					name="Model type"
+					value={metadata.get("ss_model_type")}
+				/>
+			)}
+			{metadata.has("ss_base_model_version") && (
+				<MetaAttribute
+					name="Base model version"
+					value={metadata.get("ss_base_model_version")}
+				/>
+			)}
+			{metadata.has("ss_output_name") && (
+				<MetaAttribute
+					name="Output name"
+					value={metadata.get("ss_output_name")}
+				/>
+			)}
 			<div>
 				<MetaAttribute
 					name="Model hash"

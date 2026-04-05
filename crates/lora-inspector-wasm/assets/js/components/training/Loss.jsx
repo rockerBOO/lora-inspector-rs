@@ -44,7 +44,7 @@ export function Loss({ metadata }) {
 				valueClassName="boolean"
 				value={metadata.get("ss_zero_terminal_snr")}
 			/>
-			{metadata.has("ss_masked_loss") !== undefined && (
+			{metadata.has("ss_masked_loss") && (
 				<MetaAttribute
 					name="Masked Loss"
 					value={metadata.get("ss_masked_loss")}

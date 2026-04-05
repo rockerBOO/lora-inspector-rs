@@ -314,6 +314,20 @@ async function processFile(file, isComparison = false) {
 				worker.postMessage({ messageType: "weight_norms", name: mainFilename });
 			});
 			finishLoading();
+		} else if (
+			e.data.messageType === "metadata_error" ||
+			e.data.messageType === "worker_error"
+		) {
+			processingMetadata = false;
+			finishLoading();
+			// Terminate the broken worker so future uploads start fresh
+			clearWorkers();
+			const msg = e.data.message || "Unknown error";
+			if (e.data.isPanic) {
+				addPanicMessage(msg);
+			} else {
+				addErrorMessage(`Could not load LoRA: ${msg}`);
+			}
 		} else {
 			// console.log("UNHANDLED MESSAGE", e.data);
 		}
@@ -398,8 +412,181 @@ function closeErrorMessage() {
 	}
 }
 
+// Frames that are pure panic/hook infrastructure — not useful for finding
+// the source of a bug. Everything else (user code, stdlib ops) is kept.
+const PANIC_NOISE = [
+	"__rust_abort",
+	"__rust_start_panic",
+	"::rust_panic",
+	"rust_panic_with_hook",
+	"begin_panic_handler",
+	"__rust_end_short_backtrace",
+	"rust_begin_unwind",
+	"core::panicking::panic_fmt",
+	"core::panicking::panic::",
+	"console_panic_hook::",
+	"core::ops::function::Fn::call",
+	"__wbg_",
+	"logError@",
+	"LoraWorker@",
+	"loadWorker@",
+	"fileUploadHandler@",
+	"init_wasm_in_worker",
+	"EventHandlerNonNull",
+	"wasm-bindgen-test",
+];
+
+function parsePanic(raw) {
+	// Split hook output from call stack
+	const callStackSep = "\nCall stack:\n\n";
+	const callStackIdx = raw.indexOf(callStackSep);
+	const hookSection = callStackIdx >= 0 ? raw.slice(0, callStackIdx) : raw;
+	const callStackSection =
+		callStackIdx >= 0 ? raw.slice(callStackIdx + callStackSep.length) : "";
+
+	// Extract panic location + message from hook output.
+	// New format: "panicked at FILE:LINE:COL:\nMESSAGE"
+	// Old format: "panicked at 'MESSAGE', FILE:LINE:COL"
+	let location = "";
+	let message = "";
+	const newFmt = hookSection.match(
+		/^panicked at ([^\n]+):\n([\s\S]+?)(?:\n\nStack:|$)/,
+	);
+	const oldFmt = hookSection.match(/^panicked at '([^']+)',\s*(.+)/m);
+	if (newFmt) {
+		location = newFmt[1].trim();
+		message = newFmt[2].trim();
+	} else if (oldFmt) {
+		message = oldFmt[1].trim();
+		location = oldFmt[2].trim();
+	} else {
+		message = hookSection.trim();
+	}
+
+	// Clean a raw stack frame line down to just the function name.
+	function cleanFrame(line) {
+		// Strip leading "at " (Chrome/Node format)
+		let t = line.trim().replace(/^at\s+/, "");
+		// Cut everything from "@" onward (URL + wasm address)
+		const atIdx = t.indexOf("@");
+		if (atIdx >= 0) t = t.slice(0, atIdx);
+		return (
+			t
+				.replace(/^lora_inspector_wasm\.wasm\./, "")
+				// Strip __rustc[HASH]:: prefixes
+				.replace(/__rustc\[[0-9a-f]+\]::/g, "")
+				// Strip trailing ::h<hex> hash suffixes
+				.replace(/::h[0-9a-f]{15,}$/g, "")
+				.trim()
+		);
+	}
+
+	// Filter and clean call stack frames.
+	const relevantFrames = callStackSection
+		.split("\n")
+		.filter((line) => {
+			const t = line.trim();
+			if (!t || t === "Error" || t === "RuntimeError: unreachable")
+				return false;
+			return !PANIC_NOISE.some((noise) => t.includes(noise));
+		})
+		.map(cleanFrame)
+		.filter(Boolean)
+		.join("\n");
+
+	return { location, message, relevantFrames };
+}
+
+function addPanicMessage(errorMessage) {
+	const { location, message, relevantFrames } = parsePanic(errorMessage);
+
+	const errorOverlayEle = document.createElement("div");
+	const errorBlockEle = document.createElement("div");
+	errorOverlayEle.classList.add("error-overlay");
+	errorOverlayEle.id = "error-overlay";
+	errorBlockEle.classList.add("error-block", "panic-block");
+
+	// Close button — top right corner
+	const closeBtn = document.createElement("button");
+	closeBtn.classList.add("panic-close");
+	closeBtn.setAttribute("aria-label", "Close");
+	closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+	closeBtn.addEventListener("click", closeErrorMessage);
+
+	const header = document.createElement("div");
+	header.classList.add("panic-header");
+
+	const title = document.createElement("div");
+	title.classList.add("error");
+	title.textContent = "LoRA Inspector crashed";
+
+	header.append(title, closeBtn);
+
+	const msgEl = document.createElement("div");
+	msgEl.classList.add("panic-message");
+	msgEl.textContent = message || errorMessage;
+
+	const locEl = document.createElement("pre");
+	locEl.classList.add("panic-location");
+	locEl.textContent = location;
+
+	const stackLabel = document.createElement("p");
+	stackLabel.classList.add("panic-stack-label");
+	stackLabel.textContent = "Call stack:";
+
+	const stackEl = document.createElement("pre");
+	stackEl.classList.add("panic-stack");
+	stackEl.textContent =
+		relevantFrames ||
+		"(no demangled frames — use a debug build for full trace)";
+
+	// Footer: copy icon + report link
+	const footer = document.createElement("div");
+	footer.classList.add("panic-footer");
+
+	const copyBtn = document.createElement("button");
+	copyBtn.classList.add("panic-copy");
+	copyBtn.setAttribute("aria-label", "Copy full report");
+	copyBtn.title = "Copy full report";
+	copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+	copyBtn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		navigator.clipboard.writeText(errorMessage).then(() => {
+			copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+			setTimeout(() => {
+				copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+			}, 2000);
+		});
+	});
+
+	const reportLink = document.createElement("a");
+	reportLink.classList.add("panic-report-link");
+	reportLink.href = "https://github.com/rockerBOO/lora-inspector-rs/issues/new";
+	reportLink.target = "_blank";
+	reportLink.rel = "noopener noreferrer";
+	reportLink.textContent = "Report on GitHub →";
+	reportLink.addEventListener("click", (e) => e.stopPropagation());
+
+	footer.append(copyBtn, reportLink);
+
+	const children = [header, msgEl];
+	if (location) children.push(locEl);
+	if (relevantFrames) children.push(stackLabel, stackEl);
+	children.push(footer);
+
+	errorBlockEle.append(...children);
+
+	// Only stop propagation (not default) so links inside still work
+	errorBlockEle.addEventListener("click", (e) => e.stopPropagation());
+	errorOverlayEle.appendChild(errorBlockEle);
+	errorOverlayEle.addEventListener("click", closeErrorMessage);
+	document.body.appendChild(errorOverlayEle);
+}
+
 function cancelLoading(file, _processingMetadata, uploadTimeoutHandler) {
 	clearTimeout(uploadTimeoutHandler);
-	// processingMetadata = false;
-	console.log("Cancel loading", file.name);
+	processingMetadata = false;
+	finishLoading();
+	clearWorkers();
+	console.log("Cancel loading", file?.name ?? file);
 }

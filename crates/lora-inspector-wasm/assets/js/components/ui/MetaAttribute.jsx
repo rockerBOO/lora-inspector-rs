@@ -7,6 +7,8 @@ export function MetaAttribute({
 	secondaryClassName,
 	containerProps,
 }) {
+	const displayValue = value == null ? "\u2014" : value;
+
 	return (
 		<div {...(containerProps ?? {})}>
 			<div title={name} className="caption">
@@ -14,7 +16,7 @@ export function MetaAttribute({
 			</div>
 			<div className="meta-attribute-value">
 				<div title={name} className={valueClassName ?? ""}>
-					{value}
+					{displayValue}
 				</div>
 
 				{secondary && (

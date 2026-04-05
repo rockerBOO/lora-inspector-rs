@@ -256,6 +256,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console-panic-hook"
+version = "1.1.1-beta.10"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+]
+
+[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -775,7 +785,7 @@ name = "lora-inspector-wasm"
 version = "1.1.1-beta.10"
 dependencies = [
  "candle-core",
- "console_error_panic_hook",
+ "console-panic-hook",
  "inspector",
  "insta",
  "memmap2 0.9.4",

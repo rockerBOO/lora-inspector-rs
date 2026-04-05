@@ -184,10 +184,7 @@ export function Advanced({ filename, worker }) {
 	}, [advancedRef.current]);
 
 	return (
-		<>
-			<h2 id="advanced" ref={advancedRef}>
-				Advanced
-			</h2>
+		<div ref={advancedRef}>
 			{DEBUG && debugMessages.length > 0 && (
 				<div
 					className="debug-info"
@@ -243,6 +240,6 @@ export function Advanced({ filename, worker }) {
 			)}
 			<h3>Effective Rank</h3>
 			<EffectiveRank filename={filename} worker={worker} />
-		</>
+		</div>
 	);
 }

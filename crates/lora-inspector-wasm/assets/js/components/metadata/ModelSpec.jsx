@@ -1,7 +1,7 @@
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function ModelSpec({ metadata }) {
-	const training = [
+	const trainingTimings = (
 		<div className="row space-apart" key="training_timings">
 			{metadata.has("ss_training_started_at") && (
 				<MetaAttribute
@@ -32,36 +32,22 @@ export function ModelSpec({ metadata }) {
 					).toPrecision(4)} minutes`}
 				/>
 			)}
-		</div>,
-
-		<div className="row space-apart" key="training_comments">
-			{metadata.has("ss_training_comment") && (
-				<div key="training_comment" className="row space-apart">
-					<MetaAttribute
-						name="Training comment"
-						value={metadata.get("ss_training_comment")}
-					/>
-				</div>
-			)}
-		</div>,
-	];
-
-	// if (!metadata.has("modelspec.title")) {
-	// 	return training;
-	// }
+		</div>
+	);
 
 	const img = metadata.get("modelspec.thumbnail");
 
 	return (
 		<>
-			{training}
 			<div className="model-spec">
 				<div className="row space-apart">
-					<MetaAttribute
-						name="Date"
-						value={new Date(metadata.get("modelspec.date")).toLocaleString()}
-						key="date"
-					/>
+					{metadata.has("modelspec.date") && (
+						<MetaAttribute
+							name="Date"
+							value={new Date(metadata.get("modelspec.date")).toLocaleString()}
+							key="date"
+						/>
+					)}
 					<MetaAttribute
 						name="Title"
 						value={metadata.get("modelspec.title")}
@@ -70,7 +56,7 @@ export function ModelSpec({ metadata }) {
 					<MetaAttribute
 						name="Author"
 						value={metadata.get("modelspec.author")}
-						key="description"
+						key="author"
 					/>
 					<MetaAttribute
 						name="Prediction type"
@@ -99,7 +85,6 @@ export function ModelSpec({ metadata }) {
 						value={metadata.get("modelspec.implementation")}
 						key="implementation"
 					/>
-
 					<MetaAttribute
 						name="Trigger Phrase"
 						value={metadata.get("modelspec.trigger_phrase")}
@@ -117,18 +102,19 @@ export function ModelSpec({ metadata }) {
 					<MetaAttribute
 						name="SHA256"
 						value={metadata.get("modelspec.hash_sha256")}
-						key={"sha256"}
+						key="sha256"
 					/>
 				)}
-				{metadata.has("ss_training_comment") && (
-					<div className="row space-apart">
-						<MetaAttribute
-							name="Training comment"
-							value={metadata.get("ss_training_comment")}
-						/>
-					</div>
-				)}
 			</div>
+			{metadata.has("ss_training_comment") && (
+				<div className="row space-apart">
+					<MetaAttribute
+						name="Training comment"
+						value={metadata.get("ss_training_comment")}
+					/>
+				</div>
+			)}
+			{trainingTimings}
 		</>
 	);
 }

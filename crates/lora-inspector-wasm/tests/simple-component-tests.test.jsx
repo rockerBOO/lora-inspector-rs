@@ -120,7 +120,9 @@ describe("Simple Component Tests", () => {
 
 			render(<Headline {...mockProps} />);
 
-			expect(screen.getByText("test-model.safetensors")).toBeDefined();
+			expect(
+				screen.getByRole("heading", { name: "test-model.safetensors" }),
+			).toBeDefined();
 		});
 	});
 
