@@ -42,25 +42,13 @@ preview:
 build:
 	 make build-wasm && make build-wasm-simd && make build-frontend
 
-# Start a local dev server with debug WASM builds.
-# --dev skips wasm-opt entirely so DWARF debug info from rustc is preserved,
-# giving demangled Rust function names in browser DevTools and Node.js stack traces.
+# Start a local HTTP server for serving the WASM package (simple)
 .PHONY: dev-wasm
 dev-wasm:
-	wasm-pack build $(TARGET) --dev --out-name lora-inspector --out-dir $(OUT_DIR) $(WASM_DIR) && \
-	$(SIMD) wasm-pack build $(TARGET) --dev --out-name lora-inspector-simd --out-dir $(OUT_DIR) $(WASM_DIR) && \
+	make build-wasm && \
+	make build-wasm-simd && \
 		(cd $(WASM_DIR) && \
 		yarn vite)
-
-# Release build with debug info preserved — optimized but stack traces still show
-# demangled Rust names. Useful for debugging panics on staging/production.
-# wasm-opt requires at least one pass (-O) for --debuginfo (-g) to take effect.
-.PHONY: build-wasm-debuginfo
-build-wasm-debuginfo:
-	wasm-pack build $(TARGET) --out-name lora-inspector --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS) --no-opt && \
-	wasm-opt -O -g $(OUT_DIR)/lora-inspector_bg.wasm -o $(OUT_DIR)/lora-inspector_bg.wasm && \
-	$(SIMD) wasm-pack build $(TARGET) --out-name lora-inspector-simd --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS) --no-opt && \
-	wasm-opt -O -g $(OUT_DIR)/lora-inspector-simd_bg.wasm -o $(OUT_DIR)/lora-inspector-simd_bg.wasm
 
 # Start a custom server (e.g., with CORS enabled) for development
 .PHONY: dev-wasm-cors
@@ -79,25 +67,9 @@ run:
 lint: 
 	cargo clippy && (cd $(WASM_DIR) && yarn lint --fix)
 
-.PHONY: wasm-bindgen-test
-wasm-bindgen-test:
+.PHONY: 
+wasm-bindgen-test: 
 	wasm-pack test --headless --firefox crates/lora-inspector-wasm
-
-# Run wasm tests in Node.js — gives demangled Rust function names in stack
-# traces, making panics like index-out-of-bounds much easier to locate.
-# Debug build (no --release) keeps full DWARF symbols.
-.PHONY: wasm-bindgen-test-node
-wasm-bindgen-test-node:
-	wasm-pack test --node crates/lora-inspector-wasm
-
-.PHONY: test-panic-hook
-test-panic-hook:
-	wasm-pack test --headless --firefox crates/console-panic-hook
-
-# Same but in Node.js for better stack traces when debugging panics.
-.PHONY: test-panic-hook-node
-test-panic-hook-node:
-	wasm-pack test --node crates/console-panic-hook --features test-node
 
 # Clean build artifacts (optional)
 .PHONY: clean
