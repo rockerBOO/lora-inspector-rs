@@ -28,7 +28,7 @@ impl LoraWorker {
     #[wasm_bindgen(constructor)]
     pub fn new_from_buffer(buffer: &[u8], filename: &str) -> Result<LoraWorker, String> {
         // panic::set_hook(Box::new(console_panic_hook::hook));
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
         let file = LoRAFile::new_from_buffer(buffer, filename, &candle_core::Device::Cpu);
 
@@ -123,7 +123,7 @@ impl LoraWorker {
     }
 
     pub fn scale_weights(&mut self) -> Vec<String> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
 
         self.file
             .scale_weights()
@@ -143,7 +143,7 @@ impl LoraWorker {
     }
 
     pub fn scale_weight(&mut self, base_name: &str) -> Result<bool, JsValue> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         self.file
             .scale_weight(base_name)
             .map(|_t| true)
@@ -152,7 +152,7 @@ impl LoraWorker {
 
     // TODO: Rename this function please
     pub fn norms(&self, base_name: &str, scaled_funcs: Vec<String>) -> Result<JsValue, JsValue> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         let normative_funcs = scaled_funcs
             .iter()
             .map(|v| match v.as_str() {
@@ -244,7 +244,7 @@ impl LoraWorker {
     }
 
     pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
 
         match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
@@ -267,7 +267,7 @@ impl LoraWorker {
     }
 
     pub fn matrix_norm(&self, base_name: &str) -> Option<f64> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         match self.file.scale_weight(base_name) {
             Ok(scaled_weight) => self
                 .file
@@ -336,7 +336,7 @@ impl LoraWorker {
     }
 
     pub fn rank_metrics(&self, base_name: &str) -> Result<JsValue, JsValue> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         self.file
             .rank_metrics(base_name)
             .map_err(|e| {
@@ -351,7 +351,7 @@ impl LoraWorker {
     }
 
     pub fn effective_scales_all(&self) -> Result<JsValue, JsValue> {
-        console_panic_hook::set_once();
+        console_error_panic_hook::set_once();
         let scales = self.file.effective_scales_all();
         serde_wasm_bindgen::to_value(&scales).map_err(|e| {
             let msg = e.to_string();
