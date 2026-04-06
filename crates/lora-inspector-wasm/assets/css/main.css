@@ -305,11 +305,14 @@ td.number {
 		flex-shrink: 0;
 		font-size: 0.85em;
 		color: var(--color-fade);
-		text-decoration: none;
+		background: none;
+		cursor: pointer;
 		padding: 0.2em 0.5em;
-		border: 1px solid var(--accent-bg-color);
+		border: 1px solid var(--color-fade);
 		border-radius: 0.2em;
 		line-height: 1;
+		min-height: unset;
+		box-shadow: none;
 
 		&:hover,
 		&:focus {

@@ -117,10 +117,7 @@ export function Buckets({ dataset, metadata }) {
 				/>
 			)}
 			{"cache_directory" in dataset && (
-				<MetaAttribute
-					name="Cache directory"
-					value={dataset.cache_directory}
-				/>
+				<MetaAttribute name="Cache directory" value={dataset.cache_directory} />
 			)}
 		</div>,
 

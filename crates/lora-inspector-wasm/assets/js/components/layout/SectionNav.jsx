@@ -53,7 +53,14 @@ export function SectionNav({ filename }) {
 					))}
 				</ul>
 			</nav>
-			<a href="#" aria-label="Back to top" className="to-top">↑</a>
+			<button
+				type="button"
+				aria-label="Back to top"
+				className="to-top"
+				onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+			>
+				↑
+			</button>
 		</div>
 	);
 }
