@@ -38,6 +38,9 @@ jobs:
 
       - name: Biome check
         run: yarn biome ci assets/js
+
+      - name: Stylelint
+        run: yarn stylelint "assets/css/**/*.css"
   test:
     strategy:
       # Don't cancel test runs if one fails
