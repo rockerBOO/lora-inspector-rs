@@ -453,6 +453,7 @@ async function getNorms(e) {
 
 async function getL2Norms(e) {
 	await ensureLoaded(e.data.name);
+	clearIdleTimer(e.data.name); // prevent idle timeout from firing during long batch loop
 	const loraWorker = getWorker(e.data.name); // held across loop — ensureLoaded already called
 
 	const baseNames = loraWorker.base_names();
@@ -534,6 +535,8 @@ async function getL2Norms(e) {
 		},
 	);
 
+	setIdleTimer(e.data.name); // restart idle timer now that batch loop is done
+
 	self.postMessage({
 		messageType: "l2_norms_progress_finished",
 	});
@@ -612,26 +615,23 @@ async function getNetworkType(e) {
 }
 
 async function getEffectiveScale(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.effective_scale(e.data.baseName);
+	const baseName = e.data.baseName;
+	return withWorker(e.data.name, (w) => w.effective_scale(baseName));
 }
 
 async function getEffectiveScalesAll(e) {
-	const loraWorker = getWorker(e.data.name);
-
-	return loraWorker.effective_scales_all();
+	return withWorker(e.data.name, (w) => w.effective_scales_all());
 }
 
 async function getRankMetrics(e) {
-	const loraWorker = getWorker(e.data.name);
 	const baseName = e.data.baseName;
-
-	try {
-		const metrics = loraWorker.rank_metrics(baseName);
-		return [metrics, undefined];
-	} catch (err) {
-		console.error(`rank_metrics error for ${baseName}:`, err);
-		return [undefined, err];
-	}
+	return withWorker(e.data.name, (w) => {
+		try {
+			const metrics = w.rank_metrics(baseName);
+			return [metrics, undefined];
+		} catch (err) {
+			console.error(`rank_metrics error for ${baseName}:`, err);
+			return [undefined, err];
+		}
+	});
 }
