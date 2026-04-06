@@ -17,7 +17,7 @@ export function Support() {
 					onKeyDown={(e) => e.stopPropagation()}
 				>
 					<div className="modal-header">
-						<h2>Support LoRA Inspector</h2>
+						<h2>LoRA Inspector Support</h2>
 						<button
 							type="button"
 							className="modal-close"
@@ -28,39 +28,47 @@ export function Support() {
 						</button>
 					</div>
 					<div className="modal-content">
-						<p>
+						<p className="modal-description">
 							LoRA Inspector is a free, open-source tool for analyzing LoRA
-							files. If you find it useful, consider supporting its development:
+							files.
 						</p>
-						<ul>
-							<li>
-								<a
-									href="https://github.com/rockerBOO/lora-inspector-rs"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									⭐ Star the project on GitHub
-								</a>
-							</li>
-							<li>
-								<a
-									href="https://github.com/rockerBOO/lora-inspector-rs/issues"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									🐛 Report bugs or suggest features
-								</a>
-							</li>
-							<li>
-								<a
-									href="https://ko-fi.com/rockerboo"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									☕ Buy me a coffee
-								</a>
-							</li>
-						</ul>
+						<section className="modal-section">
+							<h3>Contribute</h3>
+							<ul>
+								<li>
+									<a
+										href="https://github.com/rockerBOO/lora-inspector-rs/issues"
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Report bugs or suggest features
+									</a>
+								</li>
+							</ul>
+						</section>
+						<section className="modal-section">
+							<h3>Support the project</h3>
+							<ul>
+								<li>
+									<a
+										href="https://github.com/rockerBOO/lora-inspector-rs"
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Star on GitHub
+									</a>
+								</li>
+								<li>
+									<a
+										href="https://ko-fi.com/rockerboo"
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Buy me a coffee
+									</a>
+								</li>
+							</ul>
+						</section>
 					</div>
 				</div>
 			</div>

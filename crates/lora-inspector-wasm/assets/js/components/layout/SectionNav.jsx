@@ -38,9 +38,7 @@ export function SectionNav({ filename }) {
 
 	return (
 		<div className="section-nav-wrapper" ref={navRef}>
-			<div className="file-bar">
-				<span className="file-bar-name">{filename}</span>
-			</div>
+			<span className="file-bar-name">{filename}</span>
 			<nav aria-label="Page sections">
 				<ul>
 					{SECTIONS.map(({ id, label }) => (
@@ -55,6 +53,7 @@ export function SectionNav({ filename }) {
 					))}
 				</ul>
 			</nav>
+			<a href="#" aria-label="Back to top" className="to-top">↑</a>
 		</div>
 	);
 }
