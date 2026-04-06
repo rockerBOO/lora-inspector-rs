@@ -24,12 +24,15 @@ export function Batch({ metadata }) {
 		}
 	}
 
+	const numTrainImages =
+		metadata.get("ss_num_train_images") ?? metadata.get("ss_num_train_items");
+
 	return (
 		<div className="row space-apart">
 			<MetaAttribute
 				name="Num train images"
 				valueClassName="number"
-				value={metadata.get("ss_num_train_images")}
+				value={numTrainImages}
 			/>
 			<MetaAttribute
 				name="Num batches per epoch"

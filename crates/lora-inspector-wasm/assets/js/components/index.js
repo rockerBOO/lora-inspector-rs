@@ -28,6 +28,8 @@ export { Main } from "./layout/Main.jsx";
 export { Metadata } from "./layout/Metadata.jsx";
 export { NoMetadata } from "./layout/NoMetadata.jsx";
 export { Raw } from "./layout/Raw.jsx";
+export { Section } from "./layout/Section.jsx";
+export { SectionNav } from "./layout/SectionNav.jsx";
 export { Support } from "./layout/Support.jsx";
 // Metadata components
 export { ModelSpec } from "./metadata/ModelSpec.jsx";

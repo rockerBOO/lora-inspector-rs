@@ -113,9 +113,7 @@ describe("Progress component", () => {
 				currentItemName: "lora_unet_double_blocks_5",
 			});
 
-			expect(
-				screen.getByText(/lora_unet_double_blocks_5/),
-			).toBeDefined();
+			expect(screen.getByText(/lora_unet_double_blocks_5/)).toBeDefined();
 		});
 
 		it("renders without crashing with minimal props", async () => {

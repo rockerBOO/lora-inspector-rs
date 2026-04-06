@@ -7,45 +7,24 @@ test("has title", async ({ page }) => {
 	await expect(page).toHaveTitle(/LoRA Inspector/);
 });
 
-test("test", async ({ page }) => {
-	await page.goto("/");
-	// await page.getByText("Choose a file").click();
-
-	// const file = await fetch(
-	//   "https://lora-inspector-test-files.us-east-1.linodeobjects.com/boo.safetensors",
-	// ).then((resp) => {
-	//   return resp.arrayBuffer();
-	// });
-	// console.log(file.suggestedFilename());
-
-	// Click on <strong> "Choose a file"
-	// await page.click('text=Choose a file');
-	//
+async function uploadBooSafetensors(page) {
 	await page.evaluate(() => {
 		const hiddenInput = document.getElementById("file");
 		if (hiddenInput) {
-			// Modify CSS properties to make the element visible
 			hiddenInput.style.display = "block";
 		}
 	});
-
-	// const [fileChooser] = await Promise.all([
-	//    // It is important to call waitForEvent before click to set up waiting.
-	//    page.waitForEvent('filechooser'),
-	//    // Opens the file chooser.
-	//    ,
-	//  ])
 
 	page.on("filechooser", (fileChooser) => {
 		fileChooser.setFiles(["boo.safetensors"]);
 	});
 
 	await page.getByText("Choose a safetensors file").click();
+}
 
-	// await expect(page.locator(".box__input input")).toBeVisible();
-
-	// await page.locator("#file").setInputFiles("boo.safetensors");
-	// await fileChooser.setFiles(["boo.safetensors"]);
+test("file upload shows network data", async ({ page }) => {
+	await page.goto("/");
+	await uploadBooSafetensors(page);
 
 	await expect(page.locator("#network-rank")).toContainText("4", {
 		timeout: 10000,
@@ -53,6 +32,64 @@ test("test", async ({ page }) => {
 	await expect(page.locator("#network-alpha")).toContainText("4.0");
 	await expect(page.locator("#network-module")).toContainText("kohya-ss/lora");
 	await expect(page.locator("#network-type")).toContainText("LoRA");
+});
+
+test("section nav renders all 6 sections after file upload", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await uploadBooSafetensors(page);
+
+	await expect(page.locator("#network-rank")).toContainText("4", {
+		timeout: 10000,
+	});
+
+	const nav = page.getByRole("navigation", { name: "Page sections" });
+	await expect(nav).toBeVisible();
+
+	for (const section of [
+		"Metadata",
+		"Network",
+		"Training",
+		"Optimizer",
+		"Dataset",
+		"Advanced",
+	]) {
+		await expect(nav.getByRole("link", { name: section })).toBeVisible();
+	}
+});
+
+test("sections exist on page after file upload", async ({ page }) => {
+	await page.goto("/");
+	await uploadBooSafetensors(page);
+
+	await expect(page.locator("#network-rank")).toContainText("4", {
+		timeout: 10000,
+	});
+
+	for (const id of [
+		"metadata",
+		"network",
+		"training",
+		"optimizer",
+		"dataset",
+		"advanced",
+	]) {
+		await expect(page.locator(`#${id}`)).toBeAttached();
+	}
+});
+
+test("metadata section shows SD model name", async ({ page }) => {
+	await page.goto("/");
+	await uploadBooSafetensors(page);
+
+	await expect(page.locator("#network-rank")).toContainText("4", {
+		timeout: 10000,
+	});
+
+	await expect(page.locator("#metadata")).toContainText(
+		"v1-5-pruned-emaonly.ckpt",
+	);
 });
 
 test("drag and drop file upload", async ({ page }) => {

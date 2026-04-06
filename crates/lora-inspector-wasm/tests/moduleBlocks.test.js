@@ -168,30 +168,73 @@ test("parseSDKey throws error for invalid/unknown key patterns", (t) => {
 test("parseSDKey handles Flux double_blocks block ID extraction correctly", (t) => {
 	// Test various block IDs to ensure correct parsing
 	const testCases = [
-		{ key: "lora_unet_double_blocks_0_txt_mlp_2", expectedId: "0", expectedIdx: 0, expectedName: "DB00" },
-		{ key: "lora_unet_double_blocks_5_img_attn_qkv", expectedId: "5", expectedIdx: 5, expectedName: "DB05" },
-		{ key: "lora_unet_double_blocks_15_txt_attn_proj", expectedId: "15", expectedIdx: 15, expectedName: "DB15" },
+		{
+			key: "lora_unet_double_blocks_0_txt_mlp_2",
+			expectedId: "0",
+			expectedIdx: 0,
+			expectedName: "DB00",
+		},
+		{
+			key: "lora_unet_double_blocks_5_img_attn_qkv",
+			expectedId: "5",
+			expectedIdx: 5,
+			expectedName: "DB05",
+		},
+		{
+			key: "lora_unet_double_blocks_15_txt_attn_proj",
+			expectedId: "15",
+			expectedIdx: 15,
+			expectedName: "DB15",
+		},
 	];
 
 	for (const { key, expectedId, expectedIdx, expectedName } of testCases) {
 		const result = parseSDKey(key);
-		t.is(result.blockId, expectedId, `Block ID should be "${expectedId}" for ${key}`);
+		t.is(
+			result.blockId,
+			expectedId,
+			`Block ID should be "${expectedId}" for ${key}`,
+		);
 		t.is(result.idx, expectedIdx, `Index should be ${expectedIdx} for ${key}`);
-		t.is(result.name, expectedName, `Name should be ${expectedName} for ${key}`);
+		t.is(
+			result.name,
+			expectedName,
+			`Name should be ${expectedName} for ${key}`,
+		);
 	}
 });
 
 test("parseSDKey handles Flux single_blocks block ID extraction correctly", (t) => {
 	// Test various block IDs to ensure correct parsing
 	const testCases = [
-		{ key: "lora_unet_single_blocks_0_linear1", expectedId: "0", expectedName: "SB00" },
-		{ key: "lora_unet_single_blocks_7_linear2", expectedId: "7", expectedName: "SB07" },
-		{ key: "lora_unet_single_blocks_20_linear1", expectedId: "20", expectedName: "SB20" },
+		{
+			key: "lora_unet_single_blocks_0_linear1",
+			expectedId: "0",
+			expectedName: "SB00",
+		},
+		{
+			key: "lora_unet_single_blocks_7_linear2",
+			expectedId: "7",
+			expectedName: "SB07",
+		},
+		{
+			key: "lora_unet_single_blocks_20_linear1",
+			expectedId: "20",
+			expectedName: "SB20",
+		},
 	];
 
 	for (const { key, expectedId, expectedName } of testCases) {
 		const result = parseSDKey(key);
-		t.is(result.blockId, expectedId, `Block ID should be ${expectedId} for ${key}`);
-		t.is(result.name, expectedName, `Name should be ${expectedName} for ${key}`);
+		t.is(
+			result.blockId,
+			expectedId,
+			`Block ID should be ${expectedId} for ${key}`,
+		);
+		t.is(
+			result.name,
+			expectedName,
+			`Name should be ${expectedName} for ${key}`,
+		);
 	}
 });

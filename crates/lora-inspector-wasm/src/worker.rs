@@ -4,7 +4,7 @@ use std::fmt;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-// extern crate console_error_panic_hook;
+// extern crate console_panic_hook;
 
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
@@ -27,7 +27,7 @@ impl fmt::Display for LoraWorker {
 impl LoraWorker {
     #[wasm_bindgen(constructor)]
     pub fn new_from_buffer(buffer: &[u8], filename: &str) -> Result<LoraWorker, String> {
-        // panic::set_hook(Box::new(console_error_panic_hook::hook));
+        // panic::set_hook(Box::new(console_panic_hook::hook));
         console_error_panic_hook::set_once();
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
         let file = LoRAFile::new_from_buffer(buffer, filename, &candle_core::Device::Cpu);

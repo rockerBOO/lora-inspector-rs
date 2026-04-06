@@ -123,7 +123,27 @@ async function init_wasm_in_worker() {
 	}
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	self.onerror = (error) => {
-		console.log("There is an error inside your worker!", error);
+		console.error("Uncaught error in worker:", error);
+		self.postMessage({
+			messageType: "worker_error",
+			message: String(error),
+			isPanic: String(error).includes("panicked"),
+		});
+	};
+
+	self.onunhandledrejection = (event) => {
+		const reason = event.reason;
+		const message = reason?.message ?? String(reason);
+		const isPanic =
+			message.includes("panicked") ||
+			message.includes("assertion failed") ||
+			message.includes("dlmalloc");
+		console.error("Unhandled rejection in worker:", reason);
+		self.postMessage({
+			messageType: "worker_error",
+			message,
+			isPanic,
+		});
 	};
 
 	self.onmessage = async (e) => {
@@ -384,10 +404,28 @@ async function loadWorker(file, worker) {
 		});
 	} catch (err) {
 		console.error("Could not upload the LoRA", err);
+		// The panic hook stores the human-readable message (file + line + message)
+		// in a global before the wasm exception is thrown.
+		// The thrown exception itself only carries "unreachable executed" as its
+		// message, but err.stack has the full wasm call trace including user code.
+		const panicMsg = globalThis.__cph_last_panic;
+		globalThis.__cph_last_panic = undefined;
+
+		// Combine: panic message from the hook + wasm call stack from the exception.
+		// This gives both "what panicked" and "where in user code".
+		const errStack = err?.stack ?? "";
+		const message = panicMsg
+			? `${panicMsg}\nCall stack:\n\n${errStack}`
+			: (err?.message ?? String(err));
+		const isPanic =
+			panicMsg != null ||
+			message.includes("panicked") ||
+			message.includes("assertion failed") ||
+			message.includes("unreachable");
 		self.postMessage({
 			messageType: "metadata_error",
-			message: "could not parse the LoRA",
-			errorMessage: err,
+			message,
+			isPanic,
 			errorCode: 1,
 		});
 	}

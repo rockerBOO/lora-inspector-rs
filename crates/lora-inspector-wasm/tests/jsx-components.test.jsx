@@ -127,6 +127,40 @@ describe("Metadata Display Components", () => {
 			expect(screen.getByText("Partial Model")).toBeDefined();
 			// Should render without crashing
 		});
+
+		it("formats elapsed time as h/m/s omitting zero leading units", async () => {
+			const { ModelSpec } = await import(
+				"../assets/js/components/metadata/ModelSpec.jsx"
+			);
+
+			// 1h 50m 0s = 6600 seconds
+			const start = 1000000;
+			const metadata = new Map([
+				["ss_training_started_at", String(start)],
+				["ss_training_finished_at", String(start + 6600)],
+			]);
+
+			render(<ModelSpec metadata={metadata} />);
+
+			expect(screen.getByText("1h 50m 0s")).toBeDefined();
+		});
+
+		it("formats elapsed time with only minutes and seconds when under an hour", async () => {
+			const { ModelSpec } = await import(
+				"../assets/js/components/metadata/ModelSpec.jsx"
+			);
+
+			// 3m 30s = 210 seconds
+			const start = 1000000;
+			const metadata = new Map([
+				["ss_training_started_at", String(start)],
+				["ss_training_finished_at", String(start + 210)],
+			]);
+
+			render(<ModelSpec metadata={metadata} />);
+
+			expect(screen.getByText("3m 30s")).toBeDefined();
+		});
 	});
 
 	describe("VAE Component", () => {
