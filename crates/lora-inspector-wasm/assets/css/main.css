@@ -967,7 +967,8 @@ text {
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 1.25em;
-		border-bottom: 1px solid color-mix(in srgb, var(--accent-bg-color) 60%, var(--color));
+		border-bottom: 1px solid
+			color-mix(in srgb, var(--accent-bg-color) 60%, var(--color));
 
 		h2 {
 			margin: 0;

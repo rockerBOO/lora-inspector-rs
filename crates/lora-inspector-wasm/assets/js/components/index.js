@@ -18,6 +18,7 @@ export { BucketInfo } from "./dataset/BucketInfo.jsx";
 export { Buckets } from "./dataset/Buckets.jsx";
 // Dataset components
 export { CaptionDropout } from "./dataset/CaptionDropout.jsx";
+export { CaptionSettings } from "./dataset/CaptionSettings.jsx";
 export { Dataset } from "./dataset/Dataset.jsx";
 export { Subset } from "./dataset/Subset.jsx";
 export { TagFrequency } from "./dataset/TagFrequency.jsx";

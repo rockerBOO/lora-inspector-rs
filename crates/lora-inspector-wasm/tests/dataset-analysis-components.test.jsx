@@ -121,6 +121,107 @@ describe("Dataset Components", () => {
 		});
 	});
 
+	describe("CaptionSettings Component", () => {
+		it("imports from CaptionSettings.jsx and displays caption settings", async () => {
+			const { CaptionSettings } = await import(
+				"../assets/js/components/dataset/CaptionSettings.jsx"
+			);
+
+			const captionMetadata = new Map([
+				["ss_caption_dropout_rate", "0.2"],
+				["ss_caption_dropout_every_n_epochs", "3"],
+				["ss_caption_tag_dropout_rate", "0.1"],
+			]);
+
+			render(<CaptionSettings metadata={captionMetadata} />);
+
+			expect(screen.getByText("0.2")).toBeDefined();
+			expect(screen.getByText("3")).toBeDefined();
+		});
+	});
+
+	describe("Max token length in ss_datasets path", () => {
+		it("renders Max token length when ss_max_token_length present in shared-settings branch", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "photos",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+				},
+				{
+					image_directory: "sketches",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+				},
+			];
+			const metadata = new Map([
+				["ss_datasets", JSON.stringify(datasets)],
+				["ss_max_token_length", "225"],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("Max token length")).toBeDefined();
+			expect(screen.getByText("225")).toBeDefined();
+		});
+
+		it("renders Max token length when ss_max_token_length present in per-dataset branch", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "hires",
+					enable_bucket: true,
+					resolution: [1024, 1024],
+					num_repeats: 2,
+				},
+				{
+					image_directory: "lores",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+				},
+			];
+			const metadata = new Map([
+				["ss_datasets", JSON.stringify(datasets)],
+				["ss_max_token_length", "150"],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("Max token length")).toBeDefined();
+			expect(screen.getByText("150")).toBeDefined();
+		});
+
+		it("does not render Max token length when ss_max_token_length absent", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "photos",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+				},
+			];
+			const metadata = new Map([["ss_datasets", JSON.stringify(datasets)]]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.queryByText("Max token length")).toBeNull();
+		});
+	});
+
 	describe("TagFrequency Component", () => {
 		it("should display tag frequency data", async () => {
 			const { TagFrequency } = await import(
@@ -149,6 +250,124 @@ describe("Dataset Components", () => {
 			expect(() =>
 				render(<TagFrequency tagFrequency={emptyTagFrequency} />),
 			).not.toThrow();
+		});
+	});
+
+	describe("ss_tag_frequency top-level metadata key", () => {
+		it("renders tag frequencies from ss_tag_frequency (aleriia format)", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			// aleriia_metadata.safetensors format: ss_tag_frequency at top level,
+			// no ss_datasets, paired with ss_dataset_dirs/ss_resolution
+			const tagFrequency = {
+				"2_aleriia v": { "1girl": 60, "breasts": 56, "black hair": 13 },
+			};
+			const metadata = new Map([
+				["ss_resolution", "(512, 512)"],
+				["ss_enable_bucket", "True"],
+				["ss_tag_frequency", JSON.stringify(tagFrequency)],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("Tag frequencies")).toBeDefined();
+			expect(screen.getByText("2_aleriia v")).toBeDefined();
+			expect(screen.getByText("1girl")).toBeDefined();
+			expect(screen.getByText("60")).toBeDefined();
+		});
+
+		it("renders tag frequencies from ss_tag_frequency with multiple dirs (boo format)", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			// boo.safetensors format: multiple directories in ss_tag_frequency
+			const tagFrequency = {
+				"150_cp-ede": { "1girl": 120, "smile": 80 },
+				"8_anime": { "anime style": 8 },
+			};
+			const metadata = new Map([
+				["ss_resolution", "(768, 768)"],
+				["ss_enable_bucket", "True"],
+				["ss_tag_frequency", JSON.stringify(tagFrequency)],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("150_cp-ede")).toBeDefined();
+			expect(screen.getByText("8_anime")).toBeDefined();
+			expect(screen.getByText("1girl")).toBeDefined();
+			expect(screen.getByText("anime style")).toBeDefined();
+		});
+
+		it("still renders tag_frequency from ss_datasets datasets", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			// Original ss_datasets format with tag_frequency inside dataset objects
+			const datasets = [
+				{
+					image_directory: "photos",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+					tag_frequency: {
+						photos: { portrait: 40, outdoor: 20 },
+					},
+				},
+			];
+			const metadata = new Map([["ss_datasets", JSON.stringify(datasets)]]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("Tag frequencies")).toBeDefined();
+			expect(screen.getByText("portrait")).toBeDefined();
+		});
+
+		it("renders both ss_datasets tag_frequency and ss_tag_frequency when both present", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const datasets = [
+				{
+					image_directory: "photos",
+					enable_bucket: true,
+					resolution: [512, 512],
+					num_repeats: 1,
+					tag_frequency: { photos: { portrait: 40 } },
+				},
+			];
+			const topLevelTagFreq = {
+				"extra_dir": { "extra_tag": 10 },
+			};
+			const metadata = new Map([
+				["ss_datasets", JSON.stringify(datasets)],
+				["ss_tag_frequency", JSON.stringify(topLevelTagFreq)],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.getByText("portrait")).toBeDefined();
+			expect(screen.getByText("extra_tag")).toBeDefined();
+		});
+
+		it("does not render tag frequencies section when ss_tag_frequency is absent", async () => {
+			const { Dataset } = await import(
+				"../assets/js/components/dataset/Dataset.jsx"
+			);
+
+			const metadata = new Map([
+				["ss_resolution", "(512, 512)"],
+				["ss_enable_bucket", "True"],
+			]);
+
+			render(<Dataset metadata={metadata} />);
+
+			expect(screen.queryByText("Tag frequencies")).toBeNull();
 		});
 	});
 });
@@ -546,5 +765,106 @@ describe("Interactive Analysis Components", () => {
 
 			expect(screen.getByText("text_model.encoder.layers.0")).toBeDefined();
 		});
+	});
+});
+
+describe("Subset Component", () => {
+	it("renders image_dir as a heading", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = { image_dir: "/data/my_images" };
+		render(<Subset subset={subset} />);
+
+		expect(screen.getByRole("heading", { level: 4 })).toBeDefined();
+		expect(screen.getByText("/data/my_images")).toBeDefined();
+	});
+
+	it("renders class_tokens when present", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = { image_dir: "/data/images", class_tokens: "my_character" };
+		render(<Subset subset={subset} />);
+
+		expect(screen.getByText("Class tokens")).toBeDefined();
+		expect(screen.getByText("my_character")).toBeDefined();
+	});
+
+	it("renders num_repeats, keep_tokens, and is_reg when present", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = {
+			image_dir: "/data/images",
+			num_repeats: 10,
+			keep_tokens: 2,
+			is_reg: true,
+		};
+		render(<Subset subset={subset} />);
+
+		expect(screen.getByText("Repeats")).toBeDefined();
+		expect(screen.getByText("10")).toBeDefined();
+		expect(screen.getByText("Keep tokens")).toBeDefined();
+		expect(screen.getByText("2")).toBeDefined();
+		expect(screen.getByText("Regularization")).toBeDefined();
+		expect(screen.getByText("True")).toBeDefined();
+	});
+
+	it("does not render rows for absent fields", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = { image_dir: "/data/images" };
+		render(<Subset subset={subset} />);
+
+		expect(screen.queryByText("Class tokens")).toBeNull();
+		expect(screen.queryByText("Repeats")).toBeNull();
+		expect(screen.queryByText("Keep tokens")).toBeNull();
+		expect(screen.queryByText("Regularization")).toBeNull();
+		expect(screen.queryByText("Flip aug")).toBeNull();
+		expect(screen.queryByText("Color aug")).toBeNull();
+	});
+
+	it("renders boolean fields as True/False strings", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = {
+			image_dir: "/data/images",
+			flip_aug: false,
+			color_aug: true,
+			shuffle_caption: false,
+			random_crop: true,
+			enable_wildcard: false,
+		};
+		render(<Subset subset={subset} />);
+
+		expect(screen.getByText("Flip aug")).toBeDefined();
+		expect(screen.getByText("Color aug")).toBeDefined();
+		const trues = screen.getAllByText("True");
+		const falses = screen.getAllByText("False");
+		expect(trues.length).toBe(2);
+		expect(falses.length).toBe(3);
+	});
+
+	it("renders face_crop_aug_range as min, max string", async () => {
+		const { Subset } = await import(
+			"../assets/js/components/dataset/Subset.jsx"
+		);
+
+		const subset = {
+			image_dir: "/data/images",
+			face_crop_aug_range: [1.0, 3.0],
+		};
+		render(<Subset subset={subset} />);
+
+		expect(screen.getByText("Face crop aug range")).toBeDefined();
+		expect(screen.getByText("1, 3")).toBeDefined();
 	});
 });

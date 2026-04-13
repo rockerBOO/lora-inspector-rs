@@ -11,6 +11,9 @@ export default defineConfig({
 		format: "es",
 	},
 	plugins: [react(), wasm()],
+	server: {
+		allowedHosts: ["hostmachine"],
+	},
 	build: {
 		// main: {
 		//   entry: resolve(__dirname, "index.html"),
