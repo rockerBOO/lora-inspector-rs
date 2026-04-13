@@ -1,6 +1,6 @@
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
-export function CaptionDropout({ metadata }) {
+export function CaptionSettings({ metadata }) {
 	return (
 		<div className="row space-apart">
 			<MetaAttribute

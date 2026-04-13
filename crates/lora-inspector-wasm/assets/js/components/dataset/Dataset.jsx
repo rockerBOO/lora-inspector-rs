@@ -1,6 +1,7 @@
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 import { Buckets } from "./Buckets.jsx";
-import { CaptionDropout } from "./CaptionDropout.jsx";
+import { CaptionSettings } from "./CaptionSettings.jsx";
+import { TagFrequency } from "./TagFrequency.jsx";
 
 const SOURCE_KEYS = [
 	"image_directory",
@@ -117,6 +118,35 @@ function KohyaDataset({ metadata }) {
 	);
 }
 
+function TopLevelTagFrequency({ metadata }) {
+	if (!metadata.has("ss_tag_frequency")) return null;
+
+	let tagFrequency;
+	try {
+		tagFrequency = JSON.parse(metadata.get("ss_tag_frequency"));
+	} catch (e) {
+		console.error(e);
+		return null;
+	}
+
+	const dirs = Object.entries(tagFrequency);
+	if (dirs.length === 0) return null;
+
+	return (
+		<div>
+			<h3>Tag frequencies</h3>
+			<div className="tag-frequencies row space-apart">
+				{dirs.map(([dir, frequency]) => (
+					<div key={dir}>
+						<h4>{dir}</h4>
+						<TagFrequency tagFrequency={frequency} />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
 export function Dataset({ metadata }) {
 	if (metadata.has("ss_datasets")) {
 		let datasets;
@@ -134,7 +164,15 @@ export function Dataset({ metadata }) {
 				<div>
 					<MetaAttribute name="Directories" value={sources.join(", ")} />
 					<Buckets dataset={shared} metadata={metadata} />
-					<CaptionDropout metadata={metadata} />
+					{metadata.has("ss_max_token_length") && (
+						<MetaAttribute
+							name="Max token length"
+							valueClassName="number"
+							value={metadata.get("ss_max_token_length")}
+						/>
+					)}
+					<CaptionSettings metadata={metadata} />
+					<TopLevelTagFrequency metadata={metadata} />
 				</div>
 			);
 		}
@@ -148,7 +186,15 @@ export function Dataset({ metadata }) {
 						metadata={metadata}
 					/>
 				))}
-				<CaptionDropout metadata={metadata} />
+				{metadata.has("ss_max_token_length") && (
+					<MetaAttribute
+						name="Max token length"
+						valueClassName="number"
+						value={metadata.get("ss_max_token_length")}
+					/>
+				)}
+				<CaptionSettings metadata={metadata} />
+				<TopLevelTagFrequency metadata={metadata} />
 			</div>
 		);
 	}
@@ -157,7 +203,13 @@ export function Dataset({ metadata }) {
 		return (
 			<div>
 				<KohyaDataset metadata={metadata} />
-				<CaptionDropout metadata={metadata} />
+				<MetaAttribute
+					name="Max token length"
+					valueClassName="number"
+					value={metadata.get("ss_max_token_length")}
+				/>
+				<CaptionSettings metadata={metadata} />
+				<TopLevelTagFrequency metadata={metadata} />
 			</div>
 		);
 	}
