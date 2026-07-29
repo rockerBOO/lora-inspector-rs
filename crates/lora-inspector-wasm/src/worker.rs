@@ -575,9 +575,9 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        // The low-rank fast path in `effective_scale` sums the same quantity in a
-        // different order than a full materialization, so it only agrees with this
-        // previously-recorded value up to f32 rounding, not bit-for-bit.
+        // `effective_scale` sums this quantity via small Gram matrices rather than the
+        // full materialized product, so results only agree up to f32 rounding, not
+        // bit-for-bit.
         let expected = 0.42464358477734687;
         let result = worker
             .l2_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
@@ -602,8 +602,7 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        // Same rationale as the `l2_norm` test above: the low-rank fast path only
-        // agrees with this recorded value up to f32 rounding.
+        // Same reasoning as the `l2_norm` test above: agrees only up to f32 rounding.
         let expected = 0.42464358477734687;
         let result = worker
             .matrix_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
