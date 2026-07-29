@@ -194,15 +194,71 @@ impl LoRAFile {
     pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
         match self.weights.as_ref() {
             None => Ok(None),
-            Some(_) => match self.scale_weight(base_name) {
-                Ok(t) => Ok(Some(self.l2_norm::<f64>(&t)?)),
-                Err(InspectorError::UnsupportedNetworkType) => Ok(None),
-                Err(InspectorError::Candle(candle_core::Error::SafeTensor(
-                    SafeTensorError::TensorNotFound(_),
-                ))) => Ok(None),
-                Err(e) => Err(e),
-            },
+            Some(_) => {
+                if let Some(norm) = self.lora_frobenius_norm(base_name)? {
+                    return Ok(Some(norm));
+                }
+
+                match self.scale_weight(base_name) {
+                    Ok(t) => Ok(Some(self.l2_norm::<f64>(&t)?)),
+                    Err(InspectorError::UnsupportedNetworkType) => Ok(None),
+                    Err(InspectorError::Candle(candle_core::Error::SafeTensor(
+                        SafeTensorError::TensorNotFound(_),
+                    ))) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
         }
+    }
+
+    /// Frobenius norm of the reconstructed `up @ down` delta weight, computed from the
+    /// low-rank factors directly instead of materializing the full `m x n` product.
+    ///
+    /// `||up @ down||_F^2 == trace((up^T up)(down down^T))`, which only requires the
+    /// `rank x rank` Gram matrices of `up` and `down`. For layers with a huge output
+    /// dimension (e.g. DiT modulation/projection layers), the full product can be
+    /// hundreds of MB to reconstruct just to throw away everything but its norm, which
+    /// can exhaust the wasm heap. Returns `Ok(None)` when the layer isn't a plain 2D
+    /// LoRA up/down pair (conv/tucker/other decompositions fall back to full
+    /// materialization since this identity doesn't directly apply to them).
+    fn lora_frobenius_norm(&self, base_name: &str) -> Result<Option<f64>> {
+        let weights = match self.weights.as_ref() {
+            Some(weights) => weights,
+            None => return Ok(None),
+        };
+
+        let up = match weights.up(base_name) {
+            Ok(t) => t,
+            Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                return Ok(None)
+            }
+            Err(e) => return Err(InspectorError::from(e)),
+        };
+        let down = match weights.down(base_name) {
+            Ok(t) => t,
+            Err(candle_core::Error::SafeTensor(SafeTensorError::TensorNotFound(_))) => {
+                return Ok(None)
+            }
+            Err(e) => return Err(InspectorError::from(e)),
+        };
+
+        if up.dims().len() != 2 || down.dims().len() != 2 {
+            return Ok(None);
+        }
+
+        let alpha = weights.alpha(base_name)?;
+        let rank = down.dims()[0] as f64;
+        let scale = alpha.0 as f64 / rank;
+
+        let up = up.to_dtype(candle_core::DType::F64)?;
+        let down = down.to_dtype(candle_core::DType::F64)?;
+
+        let gram_u = up.t()?.matmul(&up)?; // rank x rank
+        let gram_v = down.matmul(&down.t()?)?; // rank x rank
+
+        let frob_sq: f64 = gram_u.mul(&gram_v)?.sum_all()?.to_scalar()?;
+
+        Ok(Some(frob_sq.max(0.0).sqrt() * scale.abs()))
     }
 
     pub fn factorization_balance(&self, base_name: &str) -> Result<Option<f64>> {
@@ -564,7 +620,11 @@ mod tests {
         let eff = lora_file.effective_scale(base_name)?.unwrap();
         let scaled = lora_file.scale_weight(base_name)?;
         let l2 = lora_file.l2_norm::<f64>(&scaled)?;
-        assert!((eff - l2).abs() < 1e-10);
+        // `effective_scale` takes a low-rank shortcut (trace of small Gram matrices)
+        // instead of materializing the full up @ down product, so it sums the same
+        // quantity in a different order than `l2_norm` and only agrees up to f32
+        // rounding, not bit-for-bit.
+        assert!((eff - l2).abs() / l2.abs() < 1e-5, "eff={eff} l2={l2}");
         Ok(())
     }
 

@@ -5,7 +5,7 @@ export function PretrainedModel({ metadata }) {
 	return (
 		<div className="pretrained-model row space-apart">
 			<MetaAttribute
-				name="SD model name"
+				name="Base model name"
 				value={metadata.get("ss_sd_model_name")}
 			/>
 			{metadata.has("ss_model_type") && (

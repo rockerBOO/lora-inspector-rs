@@ -1,7 +1,7 @@
 {
 	"name": "lora-inspector-wasm",
 	"version": "1.0.0",
-	"description": "",
+	"description": "Inspect and analyze LoRA files for diffusion models (UNet and DiT architectures like Stable Diffusion, Flux, and Krea), including network type, weight norms, rank health, and metadata, via CLI and WebAssembly.",
 	"keywords": [],
 	"author": "",
 	"license": "ISC",

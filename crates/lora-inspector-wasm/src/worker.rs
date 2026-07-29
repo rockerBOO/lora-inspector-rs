@@ -246,46 +246,27 @@ impl LoraWorker {
     pub fn l2_norm(&self, base_name: &str) -> Option<f64> {
         console_error_panic_hook::set_once();
 
-        match self.file.scale_weight(base_name) {
-            Ok(scaled_weight) => self
-                .file
-                .l2_norm(&scaled_weight)
-                .map_err(|e| {
-                    console::error_1(
-                        &format!("L2 norm calculation for {} Error: {:#?}", base_name, e).into(),
-                    );
-                    e
-                })
-                .ok(),
-            Err(e) => {
+        self.file
+            .effective_scale(base_name)
+            .map_err(|e| {
                 console::error_1(
-                    &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),
+                    &format!("L2 norm calculation for {} Error: {:#?}", base_name, e).into(),
                 );
-                None
-            }
-        }
+            })
+            .ok()
+            .flatten()
     }
 
     pub fn matrix_norm(&self, base_name: &str) -> Option<f64> {
         console_error_panic_hook::set_once();
-        match self.file.scale_weight(base_name) {
-            Ok(scaled_weight) => self
-                .file
-                .matrix_norm(&scaled_weight)
-                .map_err(|e| {
-                    console::error_1(
-                        &format!("Matrix norm for {} Error: {:#?}", base_name, e).into(),
-                    );
-                    e
-                })
-                .ok(),
-            Err(e) => {
-                console::error_1(
-                    &format!("Error scaling weight for {} Error: {:#?}", base_name, e).into(),
-                );
-                None
-            }
-        }
+
+        self.file
+            .effective_scale(base_name)
+            .map_err(|e| {
+                console::error_1(&format!("Matrix norm for {} Error: {:#?}", base_name, e).into());
+            })
+            .ok()
+            .flatten()
     }
 
     pub fn network_module(&self) -> String {
@@ -296,6 +277,7 @@ impl LoraWorker {
             Some(NetworkModule::MusubiTunerLoRAFlux2) => "musubi-tuner/lora_flux_2".to_owned(),
             Some(NetworkModule::KohyaSSLoRALumina) => "kohya-ss/lora_lumina".to_owned(),
             Some(NetworkModule::KohyaSSLoRASD3) => "kohya-ss/lora_sd3".to_owned(),
+            Some(NetworkModule::MusubiTunerLoRAKrea2) => "musubi-tuner/lora_krea2".to_owned(),
             Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
             Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
             Some(NetworkModule::KohyaSSOFT) => "kohya-ss/oft".to_owned(),
@@ -593,9 +575,16 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        assert_eq!(
-            worker.l2_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k"),
-            Some(0.42464358477734687)
+        // `effective_scale` sums this quantity via small Gram matrices rather than the
+        // full materialized product, so results only agree up to f32 rounding, not
+        // bit-for-bit.
+        let expected = 0.42464358477734687;
+        let result = worker
+            .l2_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
+            .unwrap();
+        assert!(
+            (result - expected).abs() / expected < 1e-5,
+            "got {result}, expected {expected}"
         );
     }
 
@@ -613,11 +602,14 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        assert_eq!(
-            worker.matrix_norm(
-                "lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k"
-            ),
-            Some(0.42464358477734687)
+        // Same reasoning as the `l2_norm` test above: agrees only up to f32 rounding.
+        let expected = 0.42464358477734687;
+        let result = worker
+            .matrix_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
+            .unwrap();
+        assert!(
+            (result - expected).abs() / expected < 1e-5,
+            "got {result}, expected {expected}"
         );
     }
 

@@ -17,6 +17,7 @@ pub enum NetworkModule {
     MusubiTunerLoRAFlux2,
     KohyaSSLoRALumina,
     KohyaSSLoRASD3,
+    MusubiTunerLoRAKrea2,
     KohyaSSLoRAFA,
     KohyaSSDyLoRA,
     KohyaSSOFT,
