@@ -68,6 +68,7 @@ impl Metadata {
             Some(NetworkModule::MusubiTunerLoRAFlux2) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRALumina) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRASD3) => Some(NetworkType::LoRA),
+            Some(NetworkModule::MusubiTunerLoRAKrea2) => Some(NetworkType::LoRA),
             None => None,
         }
     }
@@ -95,6 +96,7 @@ impl Metadata {
                 "networks.lora_flux" => Some(NetworkModule::KohyaSSLoRAFlux),
                 "networks.lora_flux_2" => Some(NetworkModule::MusubiTunerLoRAFlux2),
                 "networks.lora_sd3" => Some(NetworkModule::KohyaSSLoRASD3),
+                "networks.lora_krea2" => Some(NetworkModule::MusubiTunerLoRAKrea2),
                 "networks.lora_fa" => Some(NetworkModule::KohyaSSLoRAFA),
                 "networks.dylora" => Some(NetworkModule::KohyaSSDyLoRA),
                 "networks.oft" => Some(NetworkModule::KohyaSSOFT),

@@ -31,6 +31,13 @@ const SDXL_RE =
 
 const SDXL_NUM_OF_BLOCKS = 26;
 
+// Krea 2 (musubi-tuner networks.lora_krea2) DiT block naming
+const KREA2_BLOCK_RE =
+	/lora_unet_(?<block_type>blocks|txtfusion_layerwise_blocks|txtfusion_refiner_blocks)_(?<block_id>\d+)_(?<subblock_type>attn_\w+|mlp_\w+)/;
+
+const KREA2_NUM_OF_BLOCKS = 28;
+const KREA2_NUM_OF_LAYERWISE_BLOCKS = 2;
+
 /**
  * @typedef {Object} Module
  * @property {number} idx - The index of the module
@@ -228,6 +235,56 @@ function parseSDKey(key) {
 			blockType: groups.block_type,
 			name: `TE${padTwo(blockId)}`,
 			isAttention: true,
+		};
+	}
+
+	// Krea 2: single-tensor modules (no block index)
+	if (
+		key.includes("lora_unet_first") ||
+		key.includes("lora_unet_last_linear") ||
+		key.includes("lora_unet_tmlp_") ||
+		key.includes("lora_unet_tproj_") ||
+		key.includes("lora_unet_txtfusion_projector") ||
+		key.includes("lora_unet_txtmlp_")
+	) {
+		return {
+			...result,
+			idx: 0,
+			blockIdx: 0,
+			name: "KREA2_IN",
+			type: "embedder",
+		};
+	}
+
+	// Krea 2 DiT blocks (main stream + txtfusion layerwise/refiner blocks)
+	if (key.includes("lora_unet_blocks_") || key.includes("txtfusion_")) {
+		const matches = key.match(KREA2_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`Krea2: Did not match on key: ${key} ${KREA2_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+
+		let namePrefix = "TB";
+		let blockIdxOffset = 0;
+		if (groups.block_type === "txtfusion_layerwise_blocks") {
+			namePrefix = "TFL";
+			blockIdxOffset = KREA2_NUM_OF_BLOCKS;
+		} else if (groups.block_type === "txtfusion_refiner_blocks") {
+			namePrefix = "TFR";
+			blockIdxOffset = KREA2_NUM_OF_BLOCKS + KREA2_NUM_OF_LAYERWISE_BLOCKS;
+		}
+
+		return {
+			...result,
+			type: groups.subblock_type.startsWith("attn") ? "attentions" : "mlp",
+			idx: idx,
+			blockId: `${idx}`,
+			blockType: groups.block_type,
+			blockIdx: blockIdxOffset + idx,
+			name: `${namePrefix}${padTwo(idx)}`,
+			isAttention: groups.subblock_type.startsWith("attn"),
 		};
 	}
 
