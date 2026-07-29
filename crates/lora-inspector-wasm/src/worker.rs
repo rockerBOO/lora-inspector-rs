@@ -575,9 +575,16 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        assert_eq!(
-            worker.l2_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k"),
-            Some(0.42464358477734687)
+        // The low-rank fast path in `effective_scale` sums the same quantity in a
+        // different order than a full materialization, so it only agrees with this
+        // previously-recorded value up to f32 rounding, not bit-for-bit.
+        let expected = 0.42464358477734687;
+        let result = worker
+            .l2_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
+            .unwrap();
+        assert!(
+            (result - expected).abs() / expected < 1e-5,
+            "got {result}, expected {expected}"
         );
     }
 
@@ -595,11 +602,15 @@ mod tests {
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
             .unwrap());
 
-        assert_eq!(
-            worker.matrix_norm(
-                "lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k"
-            ),
-            Some(0.42464358477734687)
+        // Same rationale as the `l2_norm` test above: the low-rank fast path only
+        // agrees with this recorded value up to f32 rounding.
+        let expected = 0.42464358477734687;
+        let result = worker
+            .matrix_norm("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
+            .unwrap();
+        assert!(
+            (result - expected).abs() / expected < 1e-5,
+            "got {result}, expected {expected}"
         );
     }
 
