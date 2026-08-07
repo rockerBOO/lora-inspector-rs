@@ -51,3 +51,6 @@ perf.data.old
 .yarn/
 .yarnrc.yml
 .yarn-integrity
+
+# Superpowers skill working docs (specs/plans), not project documentation
+docs/superpowers/
