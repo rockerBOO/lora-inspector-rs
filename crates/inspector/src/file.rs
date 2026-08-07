@@ -787,4 +787,39 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    #[ignore] // Only run with: cargo test -- --ignored
+    fn load_minimax_h3_file() -> crate::Result<()> {
+        // Regression test for a diffusers-native PEFT LoRA (lora_A/lora_B with a
+        // ".default." adapter-name segment, bare "transformer_blocks.N" and
+        // "token_refiner.refiner_blocks.N" keys) that currently parses as 0 layers.
+        let file = "/mnt/900/lora/h3/minimax_h3_fl2v_turbo_4step_v0.1.safetensors";
+        let buffer = load_file(file)?;
+        let filename = String::from(file);
+        let lora_file = LoRAFile::new_from_buffer(&buffer, &filename, &Device::Cpu);
+
+        assert!(lora_file.is_tensors_loaded());
+        assert_eq!(lora_file.format(), weight::LoRAFormat::Peft);
+
+        let base_names = lora_file.base_names();
+        assert!(!base_names.is_empty(), "expected some base names");
+        assert!(
+            base_names.contains(&"transformer_blocks.0.attn.to_q".to_string()),
+            "base names should not retain the adapter name segment: {:?}",
+            base_names.iter().take(5).collect::<Vec<_>>()
+        );
+
+        let scaled = lora_file
+            .scale_weight("transformer_blocks.0.attn.to_q")
+            .expect("could not scale weight");
+        assert_eq!(scaled.dims(), &[7168, 5376]);
+
+        let scales = lora_file.effective_scales_all();
+        assert!(!scales.is_empty(), "expected at least some layers");
+
+        assert!(!lora_file.dims().is_empty(), "expected some LoRA ranks");
+
+        Ok(())
+    }
 }

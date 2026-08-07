@@ -21,7 +21,23 @@ use crate::tensor::kron;
 fn is_peft(keys: Vec<String>) -> bool {
     keys.into_iter()
         .take(10)
-        .any(|k| k.contains("transformer.") || k.contains("diffusion_model."))
+        .any(|k| k.contains("lora_A") || k.contains("lora_B"))
+}
+
+/// Looks up a PEFT lora_A/lora_B tensor, trying the plain `{base_name}.{marker}.weight`
+/// key first, then falling back to `{base_name}.{marker}.default.weight` for LoRAs saved
+/// with an explicit (default-named) PEFT adapter.
+fn peft_weight<F>(get: F, base_name: &str, marker: &str) -> Result<Tensor, candle_core::Error>
+where
+    F: Fn(&str) -> Result<Tensor, candle_core::Error>,
+{
+    let plain = format!("{base_name}.{marker}.weight");
+    match get(&plain) {
+        Err(candle_core::Error::SafeTensor(safetensors::SafeTensorError::TensorNotFound(_))) => {
+            get(&format!("{base_name}.{marker}.default.weight"))
+        }
+        result => result,
+    }
 }
 
 /// Converts tensor into DType thats compatible with candle
@@ -34,6 +50,14 @@ fn to_compatible_dtype(tensor: &candle_core::Tensor) -> Result<Tensor, candle_co
 }
 
 pub fn get_base_name(name: &str) -> String {
+    // PEFT format may insert an adapter name (e.g. "default") between the
+    // lora_A/lora_B marker and the trailing "weight" segment, so cut
+    // everything from the marker onward rather than filtering by name.
+    let parts: Vec<&str> = name.split('.').collect();
+    if let Some(marker_idx) = parts.iter().position(|p| *p == "lora_A" || *p == "lora_B") {
+        return parts[..marker_idx].join(".");
+    }
+
     name.split('.')
         .filter(|part| {
             !matches!(
@@ -616,6 +640,9 @@ impl Weight for BufferedLoRAWeight {
                     self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
                 } else if k.contains("oft_blocks") {
                     self.get(k).map(|v| v.dims().last().copied()).ok().flatten()
+                // PEFT
+                } else if k.contains("lora_A") {
+                    self.get(k).map(|v| v.dims()[0]).ok()
                 } else {
                     None
                 }
@@ -637,19 +664,17 @@ impl Weight for BufferedLoRAWeight {
     }
 
     fn up(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        let lora_up = match self.format {
-            LoRAFormat::Peft => format!("{}.lora_B.weight", base_name),
-            _ => format!("{}.lora_up.weight", base_name),
-        };
-        self.get(&lora_up)
+        match self.format {
+            LoRAFormat::Peft => peft_weight(|k| self.get(k), base_name, "lora_B"),
+            _ => self.get(&format!("{}.lora_up.weight", base_name)),
+        }
     }
 
     fn down(&self, base_name: &str) -> Result<Tensor, candle_core::Error> {
-        let lora_down = match self.format {
-            LoRAFormat::Peft => format!("{}.lora_A.weight", base_name),
-            _ => format!("{}.lora_down.weight", base_name),
-        };
-        self.get(&lora_down)
+        match self.format {
+            LoRAFormat::Peft => peft_weight(|k| self.get(k), base_name, "lora_A"),
+            _ => self.get(&format!("{}.lora_down.weight", base_name)),
+        }
     }
 
     fn alpha(&self, base_name: &str) -> Result<Alpha, candle_core::Error> {
@@ -1259,6 +1284,37 @@ mod tests {
 
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.alpha");
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
+    }
+
+    #[test]
+    fn get_base_name_strips_peft_adapter_name_segment() {
+        // Diffusers-native PEFT LoRAs (e.g. MiniMax H3) insert an adapter name
+        // ("default") between lora_A/lora_B and weight.
+        let base_name = get_base_name("transformer_blocks.0.attn.to_q.lora_A.default.weight");
+        assert_eq!(base_name, "transformer_blocks.0.attn.to_q");
+
+        let base_name = get_base_name("transformer_blocks.0.attn.to_q.lora_B.default.weight");
+        assert_eq!(base_name, "transformer_blocks.0.attn.to_q");
+    }
+
+    #[test]
+    fn is_peft_detects_bare_transformer_blocks_keys() {
+        // No "transformer." or "diffusion_model." prefix, unlike the Flux-style
+        // PEFT keys is_peft previously assumed.
+        let keys = vec![
+            "transformer_blocks.0.attn.to_q.lora_A.default.weight".to_string(),
+            "transformer_blocks.0.attn.to_q.lora_B.default.weight".to_string(),
+        ];
+        assert!(is_peft(keys));
+    }
+
+    #[test]
+    fn is_peft_detects_token_refiner_keys() {
+        let keys = vec![
+            "token_refiner.refiner_blocks.0.attn.to_q.lora_A.default.weight".to_string(),
+            "token_refiner.refiner_blocks.0.attn.to_q.lora_B.default.weight".to_string(),
+        ];
+        assert!(is_peft(keys));
     }
 
     // fn load_keys_json() -> serde_json::Result<Vec<String>> {

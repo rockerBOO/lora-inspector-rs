@@ -20,6 +20,11 @@ const FLUX_SINGLE =
 const FLUX_PEFT =
 	/transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)(\.(?<type>\w+))?\.?(?<subtype>\w+)?/;
 
+// MiniMax H3 (diffusers-native PEFT, no "transformer." prefix): bare
+// transformer_blocks.N.* plus a token_refiner.refiner_blocks.N.* block group.
+const H3_BLOCK_RE =
+	/(?<block_type>transformer_blocks|token_refiner\.refiner_blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn|ff)/;
+
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
 
@@ -121,6 +126,32 @@ function parseSDKey(key) {
 			blockIdx: 0,
 			name: "IMG_IN",
 			type: "embedder",
+		};
+	}
+
+	// MiniMax H3 bare transformer_blocks / token_refiner.refiner_blocks
+	if (
+		key.startsWith("transformer_blocks.") ||
+		key.startsWith("token_refiner.refiner_blocks.")
+	) {
+		const matches = key.match(H3_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`H3: Did not match on key: ${key} ${H3_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+		const namePrefix =
+			groups.block_type === "token_refiner.refiner_blocks" ? "TR" : "TB";
+
+		return {
+			...result,
+			type: groups.subblock_type === "attn" ? "attentions" : "mlp",
+			idx: idx,
+			blockId: idx,
+			blockType: groups.block_type,
+			name: `${namePrefix}${padTwo(idx)}`,
+			isAttention: groups.subblock_type === "attn",
 		};
 	}
 
