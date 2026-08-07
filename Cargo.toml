@@ -14,5 +14,5 @@ dependencies = {candle-core = {version = "0.3.2"}, getrandom = {version = "0.2",
 
 [profile]
 dev = {package = {insta = {opt-level = 3}}}
-release = {lto = true, opt-level = "z", codegen-units = 1, incremental = false}
+release = {lto = true, opt-level = "z", codegen-units = 1, incremental = false, package = {inspector = {opt-level = 3}}}
 
