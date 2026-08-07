@@ -506,7 +506,14 @@ function parseSDKey(key) {
 			? Number.parseInt(groups.subblock_id)
 			: 0;
 		const isSampler = groups.subtype === "op" || groups.subtype === "conv";
-		const idx = 3 * blockId + subBlockId;
+		// Unlike SDXL_RE's transformer_blocks match (where block_id is a
+		// supergroup and the flat index is reconstructed via 3*blockId +
+		// subBlockId), SDXL_RESNET_RE's block_id is already the flat SGM
+		// input_blocks/output_blocks index -- e.g. "input_blocks_3_0_op" is
+		// SGM's IN03 downsampler directly. subBlockId here is just the
+		// submodule's position within that container (ResBlock/Downsample is
+		// always slot 0), so it plays no part in the index.
+		const idx = blockId;
 
 		result.type = isSampler
 			? groups.block_type === "input"

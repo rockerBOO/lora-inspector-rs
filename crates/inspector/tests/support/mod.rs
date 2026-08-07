@@ -56,23 +56,31 @@ pub fn synthesize_safetensors(fixture: &Fixture) -> Vec<u8> {
     let mut key_order: Vec<&String> = fixture.keys.keys().collect();
     key_order.sort();
 
-    let buffers: Vec<Vec<u8>> = key_order
+    // A single shared zero-filled buffer, sized to the largest individual tensor,
+    // backs every TensorView via a sub-slice. Tensor contents are never read for
+    // parsing/classification purposes, so aliasing the same zeroed bytes across
+    // every key is safe and keeps peak memory at O(largest tensor) instead of
+    // O(sum of all tensor bytes).
+    let max_len = key_order
         .iter()
         .map(|key| {
             let info = &fixture.keys[*key];
             let dtype = dtype_from_str(&info.dtype);
             let n_elements: usize = info.shape.iter().product();
-            vec![0u8; n_elements * dtype.size()]
+            n_elements * dtype.size()
         })
-        .collect();
+        .max()
+        .unwrap_or(0);
+    let shared_buf = vec![0u8; max_len];
 
     let views: Vec<(String, TensorView)> = key_order
         .iter()
-        .zip(buffers.iter())
-        .map(|(key, buf)| {
+        .map(|key| {
             let info = &fixture.keys[*key];
             let dtype = dtype_from_str(&info.dtype);
-            let view = TensorView::new(dtype, info.shape.clone(), buf)
+            let n_elements: usize = info.shape.iter().product();
+            let needed_len = n_elements * dtype.size();
+            let view = TensorView::new(dtype, info.shape.clone(), &shared_buf[0..needed_len])
                 .unwrap_or_else(|e| panic!("failed to build tensor view for {key}: {e:?}"));
             ((*key).clone(), view)
         })
