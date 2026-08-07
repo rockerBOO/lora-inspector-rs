@@ -24,6 +24,10 @@ fn is_peft(keys: Vec<String>) -> bool {
         .any(|k| k.contains("lora_A") || k.contains("lora_B"))
 }
 
+fn is_text_encoder_key(key: &str) -> bool {
+    key.contains("lora_te") || key.contains("text_encoder") || key.contains("text_model")
+}
+
 /// Looks up a PEFT lora_A/lora_B tensor, trying the plain `{base_name}.{marker}.weight`
 /// key first, then falling back to `{base_name}.{marker}.default.weight` for LoRAs saved
 /// with an explicit (default-named) PEFT adapter.
@@ -312,11 +316,17 @@ impl WeightKey for BufferedLoRAWeight {
     }
 
     fn unet_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_unet")
+        self.keys()
+            .into_iter()
+            .filter(|k| !is_text_encoder_key(k))
+            .collect()
     }
 
     fn text_encoder_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_te")
+        self.keys()
+            .into_iter()
+            .filter(|k| is_text_encoder_key(k))
+            .collect()
     }
 
     fn alpha_keys(&self) -> Vec<String> {
@@ -827,11 +837,17 @@ impl WeightKey for LoRAWeight {
     }
 
     fn unet_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_unet")
+        self.keys()
+            .into_iter()
+            .filter(|k| !is_text_encoder_key(k))
+            .collect()
     }
 
     fn text_encoder_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_te")
+        self.keys()
+            .into_iter()
+            .filter(|k| is_text_encoder_key(k))
+            .collect()
     }
 
     fn alpha_keys(&self) -> Vec<String> {
@@ -1315,6 +1331,66 @@ mod tests {
             "token_refiner.refiner_blocks.0.attn.to_q.lora_B.default.weight".to_string(),
         ];
         assert!(is_peft(keys));
+    }
+
+    #[test]
+    fn is_text_encoder_key_matches_known_prefixes() {
+        assert!(is_text_encoder_key(
+            "lora_te_text_model_encoder_layers_0_self_attn_q_proj.lora_down.weight"
+        ));
+        assert!(is_text_encoder_key(
+            "lora_te1_text_model_encoder_layers_5_self_attn_q_proj.alpha"
+        ));
+        assert!(is_text_encoder_key(
+            "text_encoder.encoder.layers.0.self_attn.q_proj.lora_A.weight"
+        ));
+        assert!(!is_text_encoder_key(
+            "lora_unet_blocks_0_cross_attn_k.lora_down.weight"
+        ));
+        assert!(!is_text_encoder_key(
+            "diffusion_model.blocks.0.cross_attn.k.lora_A.weight"
+        ));
+        assert!(!is_text_encoder_key(
+            "transformer_blocks.0.attn.add_k_proj.lora_down.weight"
+        ));
+    }
+
+    #[test]
+    fn unet_keys_matches_diffusion_model_prefixed_and_bare_keys() {
+        let buffer = safetensors::serialize(
+            vec![
+                (
+                    "diffusion_model.blocks.0.cross_attn.k.lora_down.weight".to_string(),
+                    safetensors::tensor::TensorView::new(
+                        safetensors::Dtype::F32,
+                        vec![4, 8],
+                        &[0u8; 4 * 8 * 4],
+                    )
+                    .unwrap(),
+                ),
+                (
+                    "transformer_blocks.0.attn.add_k_proj.lora_up.weight".to_string(),
+                    safetensors::tensor::TensorView::new(
+                        safetensors::Dtype::F32,
+                        vec![8, 4],
+                        &[0u8; 8 * 4 * 4],
+                    )
+                    .unwrap(),
+                ),
+            ],
+            &None,
+        )
+        .unwrap();
+
+        let weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+        let unet_keys = weight.unet_keys();
+        assert_eq!(
+            unet_keys.len(),
+            2,
+            "expected both keys classified as unet, got {:?}",
+            unet_keys
+        );
+        assert!(weight.text_encoder_keys().is_empty());
     }
 
     // fn load_keys_json() -> serde_json::Result<Vec<String>> {

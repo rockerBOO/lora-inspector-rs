@@ -1,0 +1,120 @@
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+
+use safetensors::tensor::TensorView;
+use safetensors::Dtype;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct FixtureTensorInfo {
+    pub dtype: String,
+    pub shape: Vec<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct Fixture {
+    #[allow(dead_code)]
+    pub source: String,
+    pub keys: HashMap<String, FixtureTensorInfo>,
+    pub metadata: Option<HashMap<String, String>>,
+}
+
+pub fn load_fixture(relative_path: &str) -> Fixture {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(relative_path);
+    let data = fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("failed to read fixture {}: {}", path.display(), e));
+    serde_json::from_str(&data)
+        .unwrap_or_else(|e| panic!("failed to parse fixture {}: {}", path.display(), e))
+}
+
+fn dtype_from_str(dtype: &str) -> Dtype {
+    match dtype {
+        "BOOL" => Dtype::BOOL,
+        "U8" => Dtype::U8,
+        "I8" => Dtype::I8,
+        "I16" => Dtype::I16,
+        "U16" => Dtype::U16,
+        "F16" => Dtype::F16,
+        "BF16" => Dtype::BF16,
+        "I32" => Dtype::I32,
+        "U32" => Dtype::U32,
+        "F32" => Dtype::F32,
+        "F64" => Dtype::F64,
+        "I64" => Dtype::I64,
+        "U64" => Dtype::U64,
+        other => panic!("unsupported fixture dtype: {other}"),
+    }
+}
+
+/// Builds a valid, zero-filled safetensors buffer matching a fixture's key/shape/dtype
+/// layout. Numeric values don't matter here -- only shapes, dtypes, and key names,
+/// since the matrix tests assert on parsing/classification, not on math.
+pub fn synthesize_safetensors(fixture: &Fixture) -> Vec<u8> {
+    let mut key_order: Vec<&String> = fixture.keys.keys().collect();
+    key_order.sort();
+
+    // A single shared zero-filled buffer, sized to the largest individual tensor,
+    // backs every TensorView via a sub-slice. Tensor contents are never read for
+    // parsing/classification purposes, so aliasing the same zeroed bytes across
+    // every key is safe and keeps peak memory at O(largest tensor) instead of
+    // O(sum of all tensor bytes).
+    let max_len = key_order
+        .iter()
+        .map(|key| {
+            let info = &fixture.keys[*key];
+            let dtype = dtype_from_str(&info.dtype);
+            let n_elements: usize = info.shape.iter().product();
+            n_elements * dtype.size()
+        })
+        .max()
+        .unwrap_or(0);
+    let shared_buf = vec![0u8; max_len];
+
+    let views: Vec<(String, TensorView)> = key_order
+        .iter()
+        .map(|key| {
+            let info = &fixture.keys[*key];
+            let dtype = dtype_from_str(&info.dtype);
+            let n_elements: usize = info.shape.iter().product();
+            let needed_len = n_elements * dtype.size();
+            let view = TensorView::new(dtype, info.shape.clone(), &shared_buf[0..needed_len])
+                .unwrap_or_else(|e| panic!("failed to build tensor view for {key}: {e:?}"));
+            ((*key).clone(), view)
+        })
+        .collect();
+
+    safetensors::serialize(views, &fixture.metadata)
+        .unwrap_or_else(|e| panic!("failed to serialize synthetic safetensors buffer: {e:?}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn synthesize_safetensors_round_trips_through_candle() {
+        let fixture = load_fixture("sd15/kohya.json");
+        let buffer = synthesize_safetensors(&fixture);
+
+        let loaded = candle_core::safetensors::BufferedSafetensors::new(buffer)
+            .expect("synthetic buffer should be a valid safetensors file");
+        assert_eq!(loaded.tensors().len(), fixture.keys.len());
+    }
+
+    #[test]
+    fn synthesize_safetensors_embeds_fixture_metadata() {
+        let fixture = load_fixture("sdxl/lycoris.json");
+        assert!(
+            fixture.metadata.is_some(),
+            "expected fixture to carry a __metadata__ block for this test to be meaningful"
+        );
+        let buffer = synthesize_safetensors(&fixture);
+
+        let (_header_len, safetensors) = safetensors::SafeTensors::read_metadata(&buffer)
+            .expect("synthetic buffer should have a parseable safetensors header");
+        assert_eq!(safetensors.metadata(), &fixture.metadata);
+    }
+}

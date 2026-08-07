@@ -1,0 +1,4624 @@
+{
+  "source": "/mnt/900/lora/krea2/realism_engine_krea2_v2.safetensors",
+  "keys": {
+    "diffusion_model.blocks.2.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.5.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.25.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.17.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        1728
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.22.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.22.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.12.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.7.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.27.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.24.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.12.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.17.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.22.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.8.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.23.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.27.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.27.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.10.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.14.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.7.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.19.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.8.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.6.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.6.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        1728
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.7.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.26.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.10.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.8.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.27.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.8.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        1728
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.8.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.10.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.8.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        1728
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.24.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.9.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.3.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.10.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.8.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.22.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.7.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.16.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.26.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.12.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.17.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.15.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.26.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.0.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.6.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.8.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.6.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.20.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.1.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.0.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.3.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.15.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.22.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.12.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.27.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.14.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.15.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.10.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.12.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.7.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.25.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.12.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.13.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.14.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.3.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.9.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.15.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.21.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.16.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.11.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.5.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.17.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.4.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.27.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wv.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        640,
+        640
+      ]
+    },
+    "diffusion_model.blocks.5.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.13.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.22.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.24.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.up.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.26.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.23.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.9.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.17.attn.wk.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.18.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.4.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wq.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.mlp.up.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.25.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.15.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.25.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.24.mlp.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.1.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.11.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.25.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        4096,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.18.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.6.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.19.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.23.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.19.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.0.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.26.attn.wv.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.2.attn.wq.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.16.attn.gate.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.7.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wq.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.refiner_blocks.1.mlp.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1728,
+        640
+      ]
+    },
+    "diffusion_model.blocks.24.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.5.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.17.attn.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.6.attn.wo.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.1.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.2.attn.wo.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.13.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.11.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.14.mlp.down.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.0.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.25.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.7.attn.wk.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        384,
+        1536
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.22.attn.wk.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.txtfusion.layerwise_blocks.0.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.2.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    },
+    "diffusion_model.blocks.8.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.attn.wv.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.20.mlp.down.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.5.attn.wo.alpha": {
+      "dtype": "BF16",
+      "shape": []
+    },
+    "diffusion_model.blocks.9.mlp.gate.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.21.mlp.up.lokr_w1": {
+      "dtype": "BF16",
+      "shape": [
+        4,
+        4
+      ]
+    },
+    "diffusion_model.blocks.10.mlp.down.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        4096
+      ]
+    },
+    "diffusion_model.blocks.1.attn.gate.lokr_w2": {
+      "dtype": "BF16",
+      "shape": [
+        1536,
+        1536
+      ]
+    }
+  },
+  "metadata": {
+    "format": "pt",
+    "sshs_model_hash": "b605165132ca51ed14aa9d4726093ad386e36543981077f15da1bb16df2d15a2",
+    "training_info": "{\"step\": 6500, \"epoch\": 19}",
+    "ss_output_name": "realism_engine_krea2_v2",
+    "version": "1.0",
+    "software": "{\"name\": \"ai-toolkit\", \"repo\": \"https://github.com/ostris/ai-toolkit\", \"version\": \"0.10.18\"}",
+    "name": "realism_engine_krea2_v2",
+    "ss_base_model_version": "krea2",
+    "sshs_legacy_hash": "4d6c24d6"
+  }
+}

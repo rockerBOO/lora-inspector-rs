@@ -1,0 +1,4378 @@
+{
+  "source": "/mnt/900/lora/h3/minimax_h3_fl2v_turbo_4step_v0.1.safetensors",
+  "keys": {
+    "transformer_blocks.18.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.2.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.43.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.20.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.46.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.24.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.2.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.20.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.10.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.24.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.12.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.19.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.41.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.3.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.41.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.15.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.13.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.35.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.18.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.24.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.48.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.15.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.43.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.25.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.21.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.15.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.9.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.44.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.32.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.49.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.33.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.6.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.43.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.10.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.35.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.41.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.48.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.42.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.27.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.7.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.42.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.38.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.8.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.11.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.37.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.20.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.4.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.2.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.37.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.9.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.29.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.11.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.22.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.35.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.11.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.34.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.49.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.25.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.11.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.16.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.39.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.34.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.12.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.40.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.29.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.27.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.49.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.2.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.14.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.32.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.11.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.43.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.15.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.9.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.25.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.33.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.43.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.35.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.31.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.35.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.35.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.18.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.22.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.20.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.34.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.3.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.39.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.30.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.25.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.28.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.31.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.10.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.46.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.0.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.0.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.49.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.24.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.5.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.8.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.32.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.11.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.2.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.25.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.34.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.44.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.31.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.0.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.4.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.11.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.7.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.37.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.24.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.14.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.3.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.29.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.14.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.8.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.20.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.28.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.7.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.6.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.17.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.26.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.42.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.42.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.0.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.9.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.39.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.40.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.5.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.8.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.39.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.40.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.44.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.34.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.44.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.15.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.12.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.33.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.17.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.15.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.28.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.12.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.43.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.46.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.1.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.28.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.39.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.18.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.44.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.12.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.4.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.2.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.36.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.29.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.36.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.10.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.29.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.22.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.48.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.0.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.4.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.48.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.7.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.40.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.2.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.21.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.43.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.14.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.31.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.7.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.24.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.42.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.18.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.19.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.3.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.12.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "token_refiner.refiner_blocks.1.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.48.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.45.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.38.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.7.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.31.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.16.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.15.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.0.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.47.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.34.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.42.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.35.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.21.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.27.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.36.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.48.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.21.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.26.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.43.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.23.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.11.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.22.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.45.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.4.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.5.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.40.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.17.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.13.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.36.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.8.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.5.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.43.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.40.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.34.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.13.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.20.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.18.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.47.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.20.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.21.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.4.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.25.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.2.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.47.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.16.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.17.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.28.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.16.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.5.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.48.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.15.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.20.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.27.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.37.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.25.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.49.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.21.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.4.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.22.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.29.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.16.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.5.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.40.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.34.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.8.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.12.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.5.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.19.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.49.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.39.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.49.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.19.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.5.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.36.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.25.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.22.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.10.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.48.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.45.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.4.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.32.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.44.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.28.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.8.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.21.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.44.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.33.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.40.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.6.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.40.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.3.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.22.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.40.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.1.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.18.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.10.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.42.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.44.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.46.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.16.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.10.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.15.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.20.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.12.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.8.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.11.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.2.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.1.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.0.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.0.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.48.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.10.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.9.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.39.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.24.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.16.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.46.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.28.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.16.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.25.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.25.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.9.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.6.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.30.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.20.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.4.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.16.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.0.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.49.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.9.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.29.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.40.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.10.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.11.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.7.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.19.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.35.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.31.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.23.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.22.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.23.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.5.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.42.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.42.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.22.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.39.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.19.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.35.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.33.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.13.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.21.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.46.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.44.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.9.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.47.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.26.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.25.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.5.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.8.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.37.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.0.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.46.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.19.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.2.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.43.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.33.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.28.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.42.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.32.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.46.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.41.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.29.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.44.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.29.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.7.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.49.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.41.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.23.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.3.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.16.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.41.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.37.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.21.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.21.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.0.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.49.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.44.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.18.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.38.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.40.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.29.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.36.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.37.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.24.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.19.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.28.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.36.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.11.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.20.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.30.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.30.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.9.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.44.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.2.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.38.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.13.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.36.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.49.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.11.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.1.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.0.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.3.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.7.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.24.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.34.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.28.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.10.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.0.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.13.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.34.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.22.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.18.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.23.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.15.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.3.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.36.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.48.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.43.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.28.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.26.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.43.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.3.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.35.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.13.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.36.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.35.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.36.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.18.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.12.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.45.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.13.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.48.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.3.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.24.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.29.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.7.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.21.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.42.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.16.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.37.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.7.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.12.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.39.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.27.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.38.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.1.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.13.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.45.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.29.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.42.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.33.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.1.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.47.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.3.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.17.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.47.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.49.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.37.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.18.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.12.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.26.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.19.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.17.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.8.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.47.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.19.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.4.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.8.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.26.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.1.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.5.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.22.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.24.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.22.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.8.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.37.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.36.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.9.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.5.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.45.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.9.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.13.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.30.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.18.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.27.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.21.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.2.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.27.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.46.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "transformer_blocks.34.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.39.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.4.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.20.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.3.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "token_refiner.refiner_blocks.0.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.15.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.48.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.46.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.10.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.0.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.35.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.23.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.39.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.46.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.14.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.19.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.25.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.34.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.37.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.0.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.4.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.19.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.38.attn.to_k.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.41.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "token_refiner.refiner_blocks.0.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.46.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.31.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.37.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.6.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.39.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.9.attn.to_v.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.38.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.26.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.15.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.16.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.12.attn.to_q.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    },
+    "transformer_blocks.10.ff.net.0.proj.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.14.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.7.ff.net.0.proj.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        28672,
+        128
+      ]
+    },
+    "transformer_blocks.30.attn.to_out.0.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.13.ff.net.2.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        5376,
+        128
+      ]
+    },
+    "transformer_blocks.28.attn.to_v.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.32.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.13.attn.to_out.0.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        7168
+      ]
+    },
+    "token_refiner.refiner_blocks.1.attn.to_q.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        5376
+      ]
+    },
+    "transformer_blocks.23.ff.net.2.lora_A.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        128,
+        14336
+      ]
+    },
+    "transformer_blocks.24.attn.to_k.lora_B.default.weight": {
+      "dtype": "BF16",
+      "shape": [
+        7168,
+        128
+      ]
+    }
+  },
+  "metadata": {
+    "format": "pt",
+    "source": "/mnt/aigc/fanxiangyu/repos/video_gen/zoe-diffusion/results/dmd_minimax_h3_t2va4/checkpointing/00000650/gen-base_dit.pt",
+    "floating_dtype": "bfloat16"
+  }
+}
