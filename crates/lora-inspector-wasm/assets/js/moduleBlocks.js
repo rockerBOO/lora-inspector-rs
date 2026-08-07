@@ -20,10 +20,24 @@ const FLUX_SINGLE =
 const FLUX_PEFT =
 	/transformer\.(?<block_type>single_transformer_blocks|transformer_blocks)\.(?<block_id>\d+)(\.(?<type>\w+))?\.?(?<subtype>\w+)?/;
 
-// MiniMax H3 (diffusers-native PEFT, no "transformer." prefix): bare
-// transformer_blocks.N.* plus a token_refiner.refiner_blocks.N.* block group.
+// MiniMax H3 / Qwen-Image (diffusers-native PEFT, no "transformer." prefix):
+// bare transformer_blocks.N.* plus a token_refiner.refiner_blocks.N.* block
+// group. Qwen-Image adds txt_mlp/img_mlp feed-forward subtypes alongside H3's
+// generic "ff".
 const H3_BLOCK_RE =
-	/(?<block_type>transformer_blocks|token_refiner\.refiner_blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn|ff)/;
+	/(?<block_type>transformer_blocks|token_refiner\.refiner_blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn|ff|txt_mlp|img_mlp)/;
+
+// LTX 2.3 audio/video multimodal DiT (diffusers-native, "diffusion_model."
+// prefix): diffusion_model.transformer_blocks.N.<attn1|attn2|audio_attn1|
+// audio_attn2|audio_to_video_attn|video_to_audio_attn>.*
+const LTX_BLOCK_RE =
+	/diffusion_model\.transformer_blocks\.(?<block_id>\d+)\.(?<subblock_type>audio_attn\d+|audio_to_video_attn|video_to_audio_attn|attn\d+)/;
+
+// Wan 2.x video DiT block naming: kohya-style lora_unet_blocks_N_(self_attn|
+// cross_attn)_* / lora_unet_blocks_N_ffn_N, and diffusers-style
+// diffusion_model.blocks.N.<self_attn|cross_attn|ffn>.*
+const WAN_BLOCK_RE =
+	/(lora_unet|diffusion_model)[._]blocks[._](?<block_id>\d+)[._](?<subblock_type>self_attn|cross_attn|ffn)/;
 
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
@@ -36,9 +50,22 @@ const SDXL_RE =
 
 const SDXL_NUM_OF_BLOCKS = 26;
 
-// Krea 2 (musubi-tuner networks.lora_krea2) DiT block naming
+// LyCORIS SDXL/SD1.x (old-style webui block numbering) ResBlock/Downsample/
+// Upsample modules within input_blocks/output_blocks/middle_block: in_layers/
+// out_layers/emb_layers (ResBlock conv/norm/embedding projections),
+// skip_connection (ResBlock shortcut conv), and op/conv (downsampler/
+// upsampler convolutions). LyCORIS trains these alongside attention, unlike
+// kohya-ss LoRA which is attention-only, so they don't match SDXL_RE.
+const SDXL_RESNET_RE =
+	/(?<block_type>input|output|middle)_blocks?_(?<block_id>\d+)(_(?<subblock_id>\d+))?_(?<subtype>in_layers|out_layers|emb_layers|skip_connection|op|conv)/;
+
+// Krea 2 DiT block naming: kohya-style (musubi-tuner networks.lora_krea2)
+// lora_unet_blocks_N_attn_wq / lora_unet_txtfusion_layerwise_blocks_N_mlp_gate,
+// and diffusers-style diffusion_model.blocks.N.attn.wq / diffusion_model.
+// txtfusion.layerwise_blocks.N.mlp.down. The [._] separator classes let one
+// regex cover both naming conventions.
 const KREA2_BLOCK_RE =
-	/lora_unet_(?<block_type>blocks|txtfusion_layerwise_blocks|txtfusion_refiner_blocks)_(?<block_id>\d+)_(?<subblock_type>attn_\w+|mlp_\w+)/;
+	/(lora_unet|diffusion_model)[._](?<block_type>blocks|txtfusion[._]layerwise_blocks|txtfusion[._]refiner_blocks)[._](?<block_id>\d+)[._](?<subblock_type>attn\w*|mlp\w*)/;
 
 const KREA2_NUM_OF_BLOCKS = 28;
 const KREA2_NUM_OF_LAYERWISE_BLOCKS = 2;
@@ -269,6 +296,57 @@ function parseSDKey(key) {
 		};
 	}
 
+	// Wan 2.x DiT blocks (self_attn/cross_attn/ffn). Checked ahead of the Krea 2
+	// "lora_unet_blocks_"/"diffusion_model.blocks." guards below since both
+	// architectures can share the same "blocks_N_" prefix.
+	if (
+		(key.includes("_blocks_") || key.includes(".blocks.")) &&
+		(key.includes("self_attn") ||
+			key.includes("cross_attn") ||
+			key.includes("ffn"))
+	) {
+		const matches = key.match(WAN_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`Wan: Did not match on key: ${key} ${WAN_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+		const isAttention = groups.subblock_type !== "ffn";
+
+		return {
+			...result,
+			type: isAttention ? "attentions" : "mlp",
+			idx: idx,
+			blockId: `${idx}`,
+			blockType: "blocks",
+			blockIdx: idx,
+			name: `TB${padTwo(idx)}`,
+			isAttention: isAttention,
+		};
+	}
+
+	// LTX 2.3 audio/video multimodal DiT blocks
+	if (key.includes("diffusion_model.transformer_blocks.")) {
+		const matches = key.match(LTX_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`LTX: Did not match on key: ${key} ${LTX_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+
+		return {
+			...result,
+			type: "attentions",
+			idx: idx,
+			blockId: `${idx}`,
+			blockType: groups.subblock_type,
+			name: `TB${padTwo(idx)}`,
+			isAttention: true,
+		};
+	}
+
 	// Krea 2: single-tensor modules (no block index)
 	if (
 		key.includes("lora_unet_first") ||
@@ -288,7 +366,12 @@ function parseSDKey(key) {
 	}
 
 	// Krea 2 DiT blocks (main stream + txtfusion layerwise/refiner blocks)
-	if (key.includes("lora_unet_blocks_") || key.includes("txtfusion_")) {
+	if (
+		key.includes("lora_unet_blocks_") ||
+		key.includes("txtfusion_") ||
+		key.includes("diffusion_model.blocks.") ||
+		key.includes("diffusion_model.txtfusion.")
+	) {
 		const matches = key.match(KREA2_BLOCK_RE);
 		if (!matches) {
 			throw new Error(`Krea2: Did not match on key: ${key} ${KREA2_BLOCK_RE}`);
@@ -296,13 +379,17 @@ function parseSDKey(key) {
 
 		const groups = matches.groups;
 		const idx = Number.parseInt(groups.block_id);
+		// Normalize block_type since the diffusers-style match captures a
+		// literal "." separator (e.g. "txtfusion.layerwise_blocks") while the
+		// kohya-style match captures "_" (e.g. "txtfusion_layerwise_blocks").
+		const blockType = groups.block_type.replace(/\./g, "_");
 
 		let namePrefix = "TB";
 		let blockIdxOffset = 0;
-		if (groups.block_type === "txtfusion_layerwise_blocks") {
+		if (blockType === "txtfusion_layerwise_blocks") {
 			namePrefix = "TFL";
 			blockIdxOffset = KREA2_NUM_OF_BLOCKS;
-		} else if (groups.block_type === "txtfusion_refiner_blocks") {
+		} else if (blockType === "txtfusion_refiner_blocks") {
 			namePrefix = "TFR";
 			blockIdxOffset = KREA2_NUM_OF_BLOCKS + KREA2_NUM_OF_LAYERWISE_BLOCKS;
 		}
@@ -312,7 +399,7 @@ function parseSDKey(key) {
 			type: groups.subblock_type.startsWith("attn") ? "attentions" : "mlp",
 			idx: idx,
 			blockId: `${idx}`,
-			blockType: groups.block_type,
+			blockType: blockType,
 			blockIdx: blockIdxOffset + idx,
 			name: `${namePrefix}${padTwo(idx)}`,
 			isAttention: groups.subblock_type.startsWith("attn"),
@@ -369,32 +456,70 @@ function parseSDKey(key) {
 		key.includes("middle_block")
 	) {
 		const matches = key.match(SDXL_RE);
-		if (!matches) {
+		if (matches) {
+			const groups = matches.groups;
+			let idx = -1;
+			const blockId = groups.block_id;
+			const subBlockId = groups.subblock_id;
+
+			// Update result with extracted values
+			result.type = groups.type;
+			result.blockType = groups.block_type;
+			result.blockId = blockId;
+			result.subBlockId = subBlockId;
+
+			// Set idx and isAttention based on subtype
+			if (
+				groups.subtype === "attn1" ||
+				groups.subtype === "attn2" ||
+				groups.subtype === "ff"
+			) {
+				idx = 3 * Number.parseInt(blockId) + Number.parseInt(subBlockId);
+				result.isAttention = true;
+			}
+
+			// Set blockIdx and name based on block_type
+			if (groups.block_type === "input") {
+				result.blockIdx = 1 + idx;
+				result.name = `IN${padTwo(idx)}`;
+			} else if (groups.block_type === "output") {
+				result.blockIdx = SDXL_NUM_OF_BLOCKS + 1 + idx;
+				result.name = `OUT${padTwo(idx)}`;
+			} else if (groups.block_type === "middle") {
+				result.blockIdx = SDXL_NUM_OF_BLOCKS;
+			}
+
+			result.idx = idx;
+			return result;
+		}
+
+		// Fall back to ResBlock/Downsample/Upsample naming (LyCORIS trains these
+		// too, unlike attention-only kohya-ss LoRA)
+		const resnetMatches = key.match(SDXL_RESNET_RE);
+		if (!resnetMatches) {
 			throw new Error(`UNet: Did not match on key: ${key} ${SDXL_RE}`);
 		}
 
-		const groups = matches.groups;
-		let idx = -1;
-		const blockId = groups.block_id;
-		const subBlockId = groups.subblock_id;
+		const groups = resnetMatches.groups;
+		const blockId = Number.parseInt(groups.block_id);
+		const subBlockId = groups.subblock_id
+			? Number.parseInt(groups.subblock_id)
+			: 0;
+		const isSampler = groups.subtype === "op" || groups.subtype === "conv";
+		const idx = 3 * blockId + subBlockId;
 
-		// Update result with extracted values
-		result.type = groups.type;
+		result.type = isSampler
+			? groups.block_type === "input"
+				? "downsamplers"
+				: "upsamplers"
+			: "resnets";
 		result.blockType = groups.block_type;
-		result.blockId = blockId;
-		result.subBlockId = subBlockId;
+		result.blockId = `${blockId}`;
+		result.subBlockId = `${subBlockId}`;
+		result.isConv = !isSampler;
+		result.isSampler = isSampler;
+		result.idx = idx;
 
-		// Set idx and isAttention based on subtype
-		if (
-			groups.subtype === "attn1" ||
-			groups.subtype === "attn2" ||
-			groups.subtype === "ff"
-		) {
-			idx = 3 * Number.parseInt(blockId) + Number.parseInt(subBlockId);
-			result.isAttention = true;
-		}
-
-		// Set blockIdx and name based on block_type
 		if (groups.block_type === "input") {
 			result.blockIdx = 1 + idx;
 			result.name = `IN${padTwo(idx)}`;
@@ -403,9 +528,9 @@ function parseSDKey(key) {
 			result.name = `OUT${padTwo(idx)}`;
 		} else if (groups.block_type === "middle") {
 			result.blockIdx = SDXL_NUM_OF_BLOCKS;
+			result.name = `MID${padTwo(blockId)}`;
 		}
 
-		result.idx = idx;
 		return result;
 	}
 
