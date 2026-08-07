@@ -1384,7 +1384,12 @@ mod tests {
 
         let weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
         let unet_keys = weight.unet_keys();
-        assert_eq!(unet_keys.len(), 2, "expected both keys classified as unet, got {:?}", unet_keys);
+        assert_eq!(
+            unet_keys.len(),
+            2,
+            "expected both keys classified as unet, got {:?}",
+            unet_keys
+        );
         assert!(weight.text_encoder_keys().is_empty());
     }
 
