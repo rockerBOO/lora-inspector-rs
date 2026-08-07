@@ -55,83 +55,43 @@ fn load_and_check(
     file
 }
 
+// Run as a single #[test] rather than one per cell. cargo test runs tests in
+// parallel by default, each on its own OS thread with its own glibc malloc
+// arena; freed memory within an arena isn't reliably returned to the OS, so
+// 14 fixtures (several multi-GB) running concurrently drove peak RSS to
+// ~15GB even when access was mutex-serialized. Looping through all cells
+// within one test, on one thread, keeps only one fixture's tensors resident
+// at a time (~4GB peak), regardless of cargo's --test-threads setting.
 #[test]
-fn sd15_kohya() {
+fn architecture_format_matrix() {
     load_and_check("sd15/kohya.json", LoRAFormat::Kohya, true);
-}
-
-#[test]
-fn sdxl_kohya() {
     load_and_check("sdxl/kohya.json", LoRAFormat::Kohya, true);
-}
 
-#[test]
-fn sdxl_lycoris() {
-    // LoHA, but LoRAFormat::Lycoris is never constructed anywhere in weight.rs --
-    // the Kohya/Peft axis is purely about lora_A/B vs lora_up/down naming, so this
-    // still reports Kohya. The fixture's metadata (ss_network_module=lycoris.kohya,
-    // ss_network_args algo=loha) is embedded into the synthesized safetensors buffer,
-    // so LoRAFile::scale_weight's metadata-driven dispatch correctly routes to
-    // scale_hada_weight for this cell.
+    // sdxl/lycoris.json is LoHA, but LoRAFormat::Lycoris is never constructed
+    // anywhere in weight.rs -- the Kohya/Peft axis is purely about lora_A/B vs
+    // lora_up/down naming, so this still reports Kohya. The fixture's metadata
+    // (ss_network_module=lycoris.kohya, ss_network_args algo=loha) is embedded
+    // into the synthesized safetensors buffer, so LoRAFile::scale_weight's
+    // metadata-driven dispatch correctly routes to scale_hada_weight for this cell.
     load_and_check("sdxl/lycoris.json", LoRAFormat::Kohya, true);
-}
 
-#[test]
-fn flux1_kohya() {
     load_and_check("flux1/kohya.json", LoRAFormat::Kohya, true);
-}
-
-#[test]
-fn flux1_diffusers() {
     load_and_check("flux1/diffusers.json", LoRAFormat::Peft, true);
-}
-
-#[test]
-fn flux2_klein_kohya() {
     load_and_check("flux2_klein/kohya.json", LoRAFormat::Kohya, true);
-}
-
-#[test]
-fn flux2_klein_diffusers() {
     load_and_check("flux2_klein/diffusers.json", LoRAFormat::Peft, true);
-}
-
-#[test]
-fn wan_kohya() {
     load_and_check("wan/kohya.json", LoRAFormat::Kohya, true);
-}
-
-#[test]
-fn wan_diffusers() {
     load_and_check("wan/diffusers.json", LoRAFormat::Peft, true);
-}
-
-#[test]
-fn krea2_diffusers() {
     load_and_check("krea2/diffusers.json", LoRAFormat::Peft, true);
-}
 
-#[test]
-fn krea2_lycoris() {
-    // LoKr, but the file's metadata lacks ss_network_args/ss_network_module (the
-    // ai-toolkit trainer that produced it doesn't write kohya's sd-scripts metadata
-    // format), so LoRAFile::scale_weight can't tell it's LoKr and falls back to plain
-    // LoRA scaling, which errors on LoKr-only keys. Metadata-independent network-type
-    // detection is a separate, unscoped feature -- this cell stops at unet_keys().
+    // krea2/lycoris.json is LoKr, but the file's metadata lacks
+    // ss_network_args/ss_network_module (the ai-toolkit trainer that produced it
+    // doesn't write kohya's sd-scripts metadata format), so LoRAFile::scale_weight
+    // can't tell it's LoKr and falls back to plain LoRA scaling, which errors on
+    // LoKr-only keys. Metadata-independent network-type detection is a separate,
+    // unscoped feature -- this cell stops at unet_keys().
     load_and_check("krea2/lycoris.json", LoRAFormat::Kohya, false);
-}
 
-#[test]
-fn h3_diffusers() {
     load_and_check("h3/diffusers.json", LoRAFormat::Peft, true);
-}
-
-#[test]
-fn qwen_image_kohya() {
     load_and_check("qwen_image/kohya.json", LoRAFormat::Kohya, true);
-}
-
-#[test]
-fn ltx23_diffusers() {
     load_and_check("ltx23/diffusers.json", LoRAFormat::Peft, true);
 }
