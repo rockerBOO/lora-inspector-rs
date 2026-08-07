@@ -157,22 +157,6 @@ fn matmul_rm_abt(a: &[f64], rows_a: usize, cols: usize) -> Vec<f64> {
     out
 }
 
-/// A^T @ B for row-major A (rows × cols_a) and B (rows × cols_b). Returns (cols_a × cols_b) row-major.
-/// Out[i,j] = sum_k a[k*cols_a + i] * b[k*cols_b + j]
-fn matmul_rm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize) -> Vec<f64> {
-    let mut out = vec![0.0f64; cols_a * cols_b];
-    for i in 0..cols_a {
-        for j in 0..cols_b {
-            let mut s = 0.0;
-            for k in 0..rows {
-                s += a[k * cols_a + i] * b[k * cols_b + j];
-            }
-            out[i * cols_b + j] = s;
-        }
-    }
-    out
-}
-
 /// Jacobi eigendecomp wrapper that accepts a row-major symmetric matrix
 /// and delegates to the column-major `jacobi_sym`.
 ///
@@ -211,33 +195,62 @@ pub fn singular_values_rm(
     // B = down @ down^T  (rank × rank, row-major)
     let b = matmul_rm_abt(down_rm, rank, in_features);
 
-    // Eigendecomp: A = Q_a D_a Q_a^T,  eigenvalues = S_up^2
-    let (lam_a, q_a) = jacobi_sym_rm(&a, rank);
-    // Eigendecomp: B = Q_b D_b Q_b^T,  eigenvalues = S_dn^2
-    let (lam_b, q_b) = jacobi_sym_rm(&b, rank);
+    singular_values_from_grams_rm(&a, &b, rank)
+}
 
-    // S_up = sqrt(|lam_a|), S_dn = sqrt(|lam_b|)
-    let s_up: Vec<f64> = lam_a.iter().map(|v| v.abs().sqrt()).collect();
-    let s_dn: Vec<f64> = lam_b.iter().map(|v| v.abs().sqrt()).collect();
+/// Plain row-major `A @ B` for square `n × n` matrices. `rank` is small
+/// (typically well under a few hundred), so an unaccelerated triple loop
+/// here is negligible compared to the eigendecompositions around it.
+fn matmul_rm_square(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
+    let mut out = vec![0.0f64; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            let mut s = 0.0;
+            for k in 0..n {
+                s += a[i * n + k] * b[k * n + j];
+            }
+            out[i * n + j] = s;
+        }
+    }
+    out
+}
 
-    // C = diag(s_up) @ Q_a^T @ Q_b @ diag(s_dn)   (rank × rank)
-    // Step 1: T1 = Q_a^T @ Q_b  (row-major, cols_a=rank, cols_b=rank, rows=rank)
-    let t1 = matmul_rm_atb(&q_a, &q_b, rank, rank, rank);
-    // Step 2: scale rows by s_up and cols by s_dn
-    let mut c = vec![0.0f64; rank * rank];
-    for row in 0..rank {
-        for col in 0..rank {
-            c[row * rank + col] = s_up[row] * t1[row * rank + col] * s_dn[col];
+/// Continuation of `singular_values_rm` starting from the already-computed
+/// `rank × rank` Gram matrices `A = up^T @ up` and `B = down @ down^T`
+/// (both row-major). Factored out so callers with a `rank × out`/`rank × in`
+/// contraction (which dominates cost for wide LoRA layers) can compute the
+/// Gram matrices with a faster backend than the plain Rust loops here.
+///
+/// Only needs **one** eigendecomposition-with-eigenvectors plus one
+/// eigenvalues-only decomposition, rather than three, via the identity:
+/// `eig((up@down)(up@down)^T) == eig(up @ B @ up^T) == eig(B^(1/2) @ A @ B^(1/2))`
+/// (nonzero eigenvalues of `X@Y` equal those of `Y@X` for `X = up @ B^(1/2)`,
+/// `Y = B^(1/2) @ up^T`). So the squared singular values of `up @ down` are
+/// exactly the eigenvalues of `M = B^(1/2) @ A @ B^(1/2)`.
+fn singular_values_from_grams_rm(a: &[f64], b: &[f64], rank: usize) -> Vec<f64> {
+    // Eigendecomp: B = Q_b D_b Q_b^T, used to build B^(1/2) = Q_b diag(sqrt(|D_b|)) Q_b^T.
+    let (lam_b, q_b) = jacobi_sym_rm(b, rank);
+    let s_b: Vec<f64> = lam_b.iter().map(|v| v.abs().sqrt()).collect();
+
+    let mut b_half = vec![0.0f64; rank * rank];
+    for i in 0..rank {
+        for j in 0..rank {
+            let mut s = 0.0;
+            for k in 0..rank {
+                s += q_b[i * rank + k] * s_b[k] * q_b[j * rank + k];
+            }
+            b_half[i * rank + j] = s;
         }
     }
 
-    // Singular values of C = singular values of up @ down
-    // Compute C^T C (row-major) and eigendecomp
-    let ctc = matmul_rm_ata(&c, rank, rank);
-    let (lam_c, _) = jacobi_sym_rm(&ctc, rank);
+    // M = B^(1/2) @ A @ B^(1/2)  (rank × rank, symmetric)
+    let m = matmul_rm_square(&matmul_rm_square(&b_half, a, rank), &b_half, rank);
 
-    // Singular values = sqrt(eigenvalues of C^T C), descending
-    lam_c.iter().map(|v| v.abs().sqrt()).collect()
+    // Eigenvalues of M are the squared singular values of up @ down; eigenvectors
+    // unused, so skip accumulating them (symmetric matrix: row-major == column-major).
+    let lam_m = jacobi::jacobi_eigenvalues_only(&m, rank);
+
+    lam_m.iter().map(|v| v.abs().sqrt()).collect()
 }
 
 // ── Candle tensor interface ──────────────────────────────────────────────────
@@ -260,37 +273,33 @@ pub fn flatten_to_2d(t: &candle_core::Tensor) -> crate::Result<candle_core::Tens
 ///
 /// Handles conv shapes [out, rank, 1, 1] transparently.
 /// Returns singular values in descending order (length = rank).
+///
+/// The `rank × out`/`rank × in_features` Gram matrices (`up^T @ up`,
+/// `down @ down^T`) are computed via candle's matmul (backed by a real GEMM
+/// kernel) rather than the plain nested-loop `f64` fallback used by
+/// [`singular_values_rm`], since for wide LoRA layers (large `out`/`in_features`)
+/// that contraction dominates cost. Only the resulting `rank × rank` matrices
+/// are pulled out to `f64` for the Jacobi eigendecomposition, which is cheap
+/// regardless of implementation at typical LoRA ranks.
 pub fn singular_values(
     up: &candle_core::Tensor,
     down: &candle_core::Tensor,
 ) -> crate::Result<Vec<f64>> {
-    let up2 = flatten_to_2d(up)?;
-    let down2 = flatten_to_2d(down)?;
+    let up2 = flatten_to_2d(up)?.to_dtype(candle_core::DType::F32)?;
+    let down2 = flatten_to_2d(down)?.to_dtype(candle_core::DType::F32)?;
 
-    let out = up2.dim(0)?;
     let rank = up2.dim(1)?;
-    let in_features = down2.dim(1)?;
 
-    // to_vec2 produces row-major (standard Rust nested Vec layout)
-    // BF16 is not directly castable to F64; promote to F32 first.
-    let up_f32 = match up2.dtype() {
-        candle_core::DType::BF16 => up2.to_dtype(candle_core::DType::F32)?,
-        _ => up2.clone(),
-    };
-    let up_rm: Vec<f64> = up_f32
-        .to_dtype(candle_core::DType::F64)?
-        .flatten_all()?
-        .to_vec1::<f64>()?;
-    let down_f32 = match down2.dtype() {
-        candle_core::DType::BF16 => down2.to_dtype(candle_core::DType::F32)?,
-        _ => down2.clone(),
-    };
-    let down_rm: Vec<f64> = down_f32
-        .to_dtype(candle_core::DType::F64)?
-        .flatten_all()?
-        .to_vec1::<f64>()?;
+    // A = up^T @ up  (rank × rank), B = down @ down^T (rank × rank)
+    let a = up2.t()?.matmul(&up2)?.to_dtype(candle_core::DType::F64)?;
+    let b = down2
+        .matmul(&down2.t()?)?
+        .to_dtype(candle_core::DType::F64)?;
 
-    Ok(singular_values_rm(&up_rm, &down_rm, out, rank, in_features))
+    let a_rm: Vec<f64> = a.flatten_all()?.to_vec1::<f64>()?;
+    let b_rm: Vec<f64> = b.flatten_all()?.to_vec1::<f64>()?;
+
+    Ok(singular_values_from_grams_rm(&a_rm, &b_rm, rank))
 }
 
 /// Compute singular values of `up @ down` using the rank×rank core trick.
@@ -398,12 +407,42 @@ fn matmul_cm_atb(a: &[f64], b: &[f64], rows: usize, cols_a: usize, cols_b: usize
 }
 
 pub mod jacobi {
-    /// Jacobi eigendecomposition of a symmetric n×n matrix stored
+    /// Off-diagonal Frobenius norm of a column-major symmetric `n×n` matrix.
+    fn off_diag_norm(a: &[f64], n: usize) -> f64 {
+        let mut s = 0.0;
+        for col in 0..n {
+            for row in 0..col {
+                let v = a[row + col * n];
+                s += 2.0 * v * v;
+            }
+        }
+        s.sqrt()
+    }
+
+    /// Cyclic Jacobi eigendecomposition of a symmetric n×n matrix stored
     /// column-major in `m` (length n*n).
     ///
-    /// Returns `(eigenvalues, eigenvectors_col_major)` sorted descending
-    /// by eigenvalue.
+    /// Sweeps through all `(p, q)` pairs in a fixed order each pass rather
+    /// than searching for the globally-largest off-diagonal entry every
+    /// rotation (classical Jacobi): a full sweep is O(n^2) rotations with no
+    /// per-rotation search, converging in a small constant number of sweeps,
+    /// vs. classical Jacobi's O(n^2) search repeated for as many rotations as
+    /// it takes to converge (effectively O(n^4) for realistic matrices).
+    ///
+    /// Returns `(eigenvalues, eigenvectors_col_major)` sorted descending by
+    /// eigenvalue.
     pub fn jacobi_sym(m: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
+        jacobi_sym_impl(m, n, true)
+    }
+
+    /// Same as [`jacobi_sym`] but skips accumulating eigenvectors, which is
+    /// roughly half the per-rotation cost, for callers that only need
+    /// eigenvalues.
+    pub fn jacobi_eigenvalues_only(m: &[f64], n: usize) -> Vec<f64> {
+        jacobi_sym_impl(m, n, false).0
+    }
+
+    fn jacobi_sym_impl(m: &[f64], n: usize, want_vectors: bool) -> (Vec<f64>, Vec<f64>) {
         debug_assert_eq!(
             m.len(),
             n * n,
@@ -412,72 +451,87 @@ pub mod jacobi {
             n * n
         );
         let mut a = m.to_vec(); // working copy, column-major
-                                // eigenvector matrix starts as identity
-        let mut v = vec![0.0f64; n * n];
-        for i in 0..n {
-            v[i * n + i] = 1.0;
-        }
+        let mut v = if want_vectors {
+            let mut v = vec![0.0f64; n * n];
+            for i in 0..n {
+                v[i * n + i] = 1.0;
+            }
+            v
+        } else {
+            Vec::new()
+        };
 
-        let max_sweeps = 100 * n * n;
-        let eps = f64::EPSILON * 4.0;
+        // Convergence is measured relative to the matrix's own scale so this
+        // works for Gram matrices of any magnitude, not just those near 1.0.
+        let scale = a
+            .iter()
+            .map(|x| x * x)
+            .sum::<f64>()
+            .sqrt()
+            .max(f64::MIN_POSITIVE);
+        let tol = f64::EPSILON * 4.0 * scale;
+        // Cyclic Jacobi converges quadratically once off-diagonal entries are
+        // small; a small constant number of sweeps is enough regardless of n.
+        let max_sweeps = 60;
 
         for _ in 0..max_sweeps {
-            // Find largest off-diagonal |a[p,q]| (column-major: a[p + q*n])
-            let mut max_val = 0.0f64;
-            let mut p = 0usize;
-            let mut q = 1usize;
-            for col in 0..n {
-                for row in 0..col {
-                    let val = a[row + col * n].abs();
-                    if val > max_val {
-                        max_val = val;
-                        p = row;
-                        q = col;
-                    }
-                }
-            }
-            if max_val < eps {
+            if off_diag_norm(&a, n) < tol {
                 break;
             }
 
-            // Compute rotation angle
-            let app = a[p + p * n];
-            let aqq = a[q + q * n];
-            let apq = a[p + q * n];
-            let tau = (aqq - app) / (2.0 * apq);
-            let t = if tau >= 0.0 {
-                1.0 / (tau + (1.0 + tau * tau).sqrt())
-            } else {
-                -1.0 / (-tau + (1.0 + tau * tau).sqrt())
-            };
-            let c = 1.0 / (1.0 + t * t).sqrt();
-            let s = t * c;
+            for q in 1..n {
+                for p in 0..q {
+                    let apq = a[p + q * n];
+                    // Skip negligible/exactly-zero pivots: rotating on them is a
+                    // no-op at best, and an exact zero would divide 0.0/0.0 (NaN)
+                    // below. Classical Jacobi never reached this line for a zero
+                    // pivot since it always picked the largest remaining entry;
+                    // a fixed cyclic sweep visits every pair, so this guard is
+                    // required for correctness, not just performance.
+                    if apq == 0.0 {
+                        continue;
+                    }
 
-            // Update diagonal
-            a[p + p * n] = app - t * apq;
-            a[q + q * n] = aqq + t * apq;
-            a[p + q * n] = 0.0;
-            a[q + p * n] = 0.0;
+                    let app = a[p + p * n];
+                    let aqq = a[q + q * n];
+                    let tau = (aqq - app) / (2.0 * apq);
+                    let t = if tau >= 0.0 {
+                        1.0 / (tau + (1.0 + tau * tau).sqrt())
+                    } else {
+                        -1.0 / (-tau + (1.0 + tau * tau).sqrt())
+                    };
+                    let c = 1.0 / (1.0 + t * t).sqrt();
+                    let s = t * c;
 
-            // Update remaining rows/cols
-            for r in 0..n {
-                if r == p || r == q {
-                    continue;
+                    // Update diagonal
+                    a[p + p * n] = app - t * apq;
+                    a[q + q * n] = aqq + t * apq;
+                    a[p + q * n] = 0.0;
+                    a[q + p * n] = 0.0;
+
+                    // Update remaining rows/cols
+                    for r in 0..n {
+                        if r == p || r == q {
+                            continue;
+                        }
+                        let arp = a[r + p * n];
+                        let arq = a[r + q * n];
+                        a[r + p * n] = c * arp - s * arq;
+                        a[p + r * n] = a[r + p * n];
+                        a[r + q * n] = s * arp + c * arq;
+                        a[q + r * n] = a[r + q * n];
+                    }
+
+                    // Accumulate eigenvectors
+                    if want_vectors {
+                        for r in 0..n {
+                            let vrp = v[r + p * n];
+                            let vrq = v[r + q * n];
+                            v[r + p * n] = c * vrp - s * vrq;
+                            v[r + q * n] = s * vrp + c * vrq;
+                        }
+                    }
                 }
-                let arp = a[r + p * n];
-                let arq = a[r + q * n];
-                a[r + p * n] = c * arp - s * arq;
-                a[p + r * n] = a[r + p * n];
-                a[r + q * n] = s * arp + c * arq;
-                a[q + r * n] = a[r + q * n];
-            }
-
-            // Accumulate eigenvectors
-            for r in 0..n {
-                let vrp = v[r + p * n];
-                let vrq = v[r + q * n];
-                v[r + p * n] = c * vrp - s * vrq;
-                v[r + q * n] = s * vrp + c * vrq;
             }
         }
 
@@ -487,13 +541,18 @@ pub mod jacobi {
 
         let eigenvalues: Vec<f64> = pairs.iter().map(|(val, _)| *val).collect();
 
-        // Reorder eigenvectors (columns) to match sorted eigenvalues
-        let mut eigenvectors = vec![0.0f64; n * n];
-        for (new_col, (_, old_col)) in pairs.iter().enumerate() {
-            for row in 0..n {
-                eigenvectors[row + new_col * n] = v[row + old_col * n];
+        let eigenvectors = if want_vectors {
+            // Reorder eigenvectors (columns) to match sorted eigenvalues
+            let mut eigenvectors = vec![0.0f64; n * n];
+            for (new_col, (_, old_col)) in pairs.iter().enumerate() {
+                for row in 0..n {
+                    eigenvectors[row + new_col * n] = v[row + old_col * n];
+                }
             }
-        }
+            eigenvectors
+        } else {
+            Vec::new()
+        };
 
         (eigenvalues, eigenvectors)
     }
@@ -666,6 +725,151 @@ mod tests {
         let down = Tensor::from_vec(vec![1.0f32, 0.0, 0.0], (1, 3), dev).unwrap();
         let svs = singular_values(&up, &down).unwrap();
         assert!((svs[0] - 2.0).abs() < 1e-5, "sv[0]={}", svs[0]);
+    }
+
+    /// Deterministic xorshift PRNG so regression fixtures are reproducible
+    /// without pulling in a `rand` dependency.
+    fn xorshift_vec(len: usize, seed: u64) -> Vec<f32> {
+        let mut state = seed;
+        (0..len)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                ((state as f64 / u64::MAX as f64) * 2.0 - 1.0) as f32
+            })
+            .collect()
+    }
+
+    fn xorshift_sym(n: usize, seed: u64) -> Vec<f64> {
+        let mut state = seed;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state as f64 / u64::MAX as f64) * 2.0 - 1.0
+        };
+        let mut m = vec![0.0f64; n * n];
+        for i in 0..n {
+            for j in i..n {
+                let v = next();
+                m[i + j * n] = v;
+                m[j + i * n] = v;
+            }
+        }
+        m
+    }
+
+    /// Regression guard for the upcoming eigendecomposition-count reduction
+    /// and Jacobi rewrite: pins today's `singular_values` output for a
+    /// fixed-seed, moderately-sized (rank 32) random up/down pair.
+    #[test]
+    fn singular_values_matches_golden_reference() {
+        use candle_core::{Device, Tensor};
+        let dev = &Device::Cpu;
+        let (out, rank, in_features) = (256, 32, 256);
+        let up = Tensor::from_vec(xorshift_vec(out * rank, 1), (out, rank), dev).unwrap();
+        let down = Tensor::from_vec(
+            xorshift_vec(rank * in_features, 2),
+            (rank, in_features),
+            dev,
+        )
+        .unwrap();
+
+        let svs = singular_values(&up, &down).unwrap();
+        assert_eq!(svs.len(), rank);
+
+        // Singular values must be sorted descending and non-negative.
+        assert!(svs.windows(2).all(|w| w[0] >= w[1] - 1e-9));
+        assert!(svs.iter().all(|&s| s >= 0.0));
+
+        // Golden reference captured from this same implementation prior to
+        // the eigendecomposition-count reduction / cyclic Jacobi rewrite.
+        // Tolerance is relative (1e-3) since the Gram matrices are formed in
+        // f32 (see `singular_values`), which already caps achievable precision
+        // well below f64, independent of eigensolver choice.
+        let golden_top5 = [
+            123.21000480950784,
+            120.68052912415921,
+            116.7523811023853,
+            114.77819517802014,
+            111.50699348929611,
+        ];
+        for (i, &g) in golden_top5.iter().enumerate() {
+            let rel = (svs[i] - g).abs() / g.abs().max(1e-9);
+            assert!(rel < 1e-3, "sv[{i}]={} golden={g} rel={rel}", svs[i]);
+        }
+    }
+
+    /// Randomized correctness sanity check for the Jacobi eigensolver:
+    /// A @ V ≈ V @ diag(eigenvalues) and V is orthonormal.
+    #[test]
+    fn jacobi_sym_reconstructs_random_symmetric_matrix() {
+        use super::jacobi::jacobi_sym;
+        let n = 48;
+        let m = xorshift_sym(n, 7);
+        let (vals, vecs) = jacobi_sym(&m, n);
+
+        // V^T V ≈ I
+        for i in 0..n {
+            for j in 0..n {
+                let dot: f64 = (0..n).map(|k| vecs[k + i * n] * vecs[k + j * n]).sum();
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!(
+                    (dot - expected).abs() < 1e-8,
+                    "V^T V [{i},{j}] = {dot}, expected {expected}"
+                );
+            }
+        }
+
+        // A @ V ≈ V @ diag(vals), checked column by column.
+        for col in 0..n {
+            for row in 0..n {
+                let av: f64 = (0..n).map(|k| m[row + k * n] * vecs[k + col * n]).sum();
+                let vlambda = vecs[row + col * n] * vals[col];
+                assert!(
+                    (av - vlambda).abs() < 1e-6,
+                    "A@V[{row},{col}]={av} V@Lambda={vlambda}"
+                );
+            }
+        }
+    }
+
+    /// Cyclic Jacobi visits every `(p, q)` pair each sweep, including exact
+    /// zeros — unlike classical (max-pivot-search) Jacobi, which never landed
+    /// on a zero entry. A block-diagonal matrix whose off-block entries are
+    /// exactly zero AND whose diagonal happens to repeat across two different
+    /// blocks is the true failure case for pair `(p, q)` straddling those
+    /// blocks: `apq == 0.0` AND `aqq - app == 0.0`, so `tau = 0.0 / 0.0` is
+    /// NaN without the zero-pivot guard, poisoning the whole matrix.
+    ///
+    /// (A matrix that's *already* fully diagonal doesn't exercise this: the
+    /// off-diagonal-norm convergence check exits before any rotation runs.
+    /// This one has genuine off-diagonal energy in one block, so it must
+    /// iterate, and lands on the zero/equal-diagonal pair in the process.)
+    #[test]
+    fn jacobi_sym_handles_zero_pivot_with_equal_diagonal_without_nan() {
+        use super::jacobi::jacobi_sym;
+        let n = 4;
+        // Column-major 4x4, block-diagonal: rows/cols {0,1} form a 2x2 block
+        // with real off-diagonal energy; rows/cols {2,3} are zero off-diagonal
+        // with equal diagonal value 2.0 (matching pair (2,3) exactly).
+        let m = vec![
+            1.0, 0.5, 0.0, 0.0, // col 0
+            0.5, 1.0, 0.0, 0.0, // col 1
+            0.0, 0.0, 2.0, 0.0, // col 2
+            0.0, 0.0, 0.0, 2.0, // col 3
+        ];
+        let (vals, vecs) = jacobi_sym(&m, n);
+
+        assert!(vals.iter().all(|v| v.is_finite()), "vals={:?}", vals);
+        assert!(vecs.iter().all(|v| v.is_finite()), "vecs contain NaN/inf");
+
+        let mut expected = [1.5, 0.5, 2.0, 2.0];
+        expected.sort_by(|a, b| b.partial_cmp(a).unwrap());
+        for (got, want) in vals.iter().zip(expected.iter()) {
+            assert!((got - want).abs() < 1e-9, "got={got} want={want}");
+        }
     }
 
     // ── RankMetrics tests ───────────────────────────────────────────────────
