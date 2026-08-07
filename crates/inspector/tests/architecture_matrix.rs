@@ -70,15 +70,10 @@ fn sdxl_lycoris() {
     // LoHA, but LoRAFormat::Lycoris is never constructed anywhere in weight.rs --
     // the Kohya/Peft axis is purely about lora_A/B vs lora_up/down naming, so this
     // still reports Kohya. The fixture's metadata (ss_network_module=lycoris.kohya,
-    // algo=loha) would correctly route scale_weight() to scale_hada_weight, but
-    // support::synthesize_safetensors builds the tensor buffer with
-    // `safetensors::serialize(views, &None)`, which never writes a `__metadata__`
-    // header -- so the synthesized file always has no metadata block, regardless of
-    // what the fixture JSON contains. LoRAFile::scale_weight's network-type dispatch
-    // is metadata-only, so it falls back to plain LoRA scaling here, which errors on
-    // hada-only keys. This is a test-harness gap (out of scope for this task), not a
-    // product bug -- this cell stops at unet_keys().
-    load_and_check("sdxl/lycoris.json", LoRAFormat::Kohya, false);
+    // ss_network_args algo=loha) is embedded into the synthesized safetensors buffer,
+    // so LoRAFile::scale_weight's metadata-driven dispatch correctly routes to
+    // scale_hada_weight for this cell.
+    load_and_check("sdxl/lycoris.json", LoRAFormat::Kohya, true);
 }
 
 #[test]

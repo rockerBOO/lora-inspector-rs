@@ -17,7 +17,6 @@ pub struct Fixture {
     #[allow(dead_code)]
     pub source: String,
     pub keys: HashMap<String, FixtureTensorInfo>,
-    #[allow(dead_code)]
     pub metadata: Option<HashMap<String, String>>,
 }
 
@@ -79,7 +78,7 @@ pub fn synthesize_safetensors(fixture: &Fixture) -> Vec<u8> {
         })
         .collect();
 
-    safetensors::serialize(views, &None)
+    safetensors::serialize(views, &fixture.metadata)
         .unwrap_or_else(|e| panic!("failed to serialize synthetic safetensors buffer: {e:?}"))
 }
 
@@ -95,5 +94,19 @@ mod tests {
         let loaded = candle_core::safetensors::BufferedSafetensors::new(buffer)
             .expect("synthetic buffer should be a valid safetensors file");
         assert_eq!(loaded.tensors().len(), fixture.keys.len());
+    }
+
+    #[test]
+    fn synthesize_safetensors_embeds_fixture_metadata() {
+        let fixture = load_fixture("sdxl/lycoris.json");
+        assert!(
+            fixture.metadata.is_some(),
+            "expected fixture to carry a __metadata__ block for this test to be meaningful"
+        );
+        let buffer = synthesize_safetensors(&fixture);
+
+        let (_header_len, safetensors) = safetensors::SafeTensors::read_metadata(&buffer)
+            .expect("synthetic buffer should have a parseable safetensors header");
+        assert_eq!(safetensors.metadata(), &fixture.metadata);
     }
 }
