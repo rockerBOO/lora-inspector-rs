@@ -3,7 +3,8 @@ use inspector::metadata::compare_metadata;
 use inspector::{file, metadata, norms, statistic, InspectorError};
 use serde::{Deserialize, Serialize};
 use std::io;
-use std::{collections::HashMap, fs::File, io::Read, path::PathBuf};
+use std::io::{Read, Seek, SeekFrom};
+use std::{collections::HashMap, fs::File, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Inspect LoRA file weights and norms")]
@@ -33,6 +34,20 @@ enum Command {
         /// Path to the second safetensors file
         #[clap(long)]
         file2: PathBuf,
+    },
+
+    /// Extract a lightweight JSON fixture (key names, shapes, dtypes, and
+    /// raw __metadata__) from a safetensors file's header, without loading
+    /// tensor data. Used to build committed test fixtures from large local
+    /// LoRA files.
+    ExtractFixture {
+        /// Path to the safetensors file
+        #[clap(short, long)]
+        file: PathBuf,
+
+        /// Path to write the JSON fixture to
+        #[clap(short, long)]
+        out: PathBuf,
     },
 }
 
@@ -181,7 +196,9 @@ fn main() -> Result<()> {
                 println!("new: {}", v.new);
             }
             Ok(())
-        } // Handle other subcommands...
+        }
+
+        Command::ExtractFixture { file, out } => extract_fixture(file, out),
     }
 }
 
@@ -388,8 +405,6 @@ fn parse_block_weights(file: PathBuf, output_format: &str) -> Result<()> {
     Ok(())
 }
 
-use std::io::{Seek, SeekFrom};
-
 const HEADER_LENGTH_BYTES: u64 = 8;
 
 fn metadata_from_file(file_path: PathBuf) -> Result<metadata::Metadata> {
@@ -418,4 +433,72 @@ fn metadata_from_file(file_path: PathBuf) -> Result<metadata::Metadata> {
     Ok(metadata::Metadata {
         metadata: Some(metadata.__metadata__.clone()),
     })
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FixtureTensorInfo {
+    dtype: String,
+    shape: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Fixture {
+    source: String,
+    keys: HashMap<String, FixtureTensorInfo>,
+    metadata: Option<HashMap<String, String>>,
+}
+
+fn extract_fixture(file: PathBuf, out: PathBuf) -> Result<()> {
+    let mut f = File::open(&file)?;
+    f.seek(SeekFrom::Start(0))?;
+
+    let mut len_buf = [0u8; 8];
+    f.read_exact(&mut len_buf)?;
+    let header_len = u64::from_le_bytes(len_buf);
+
+    let mut header_data = vec![0u8; header_len as usize];
+    f.read_exact(&mut header_data)?;
+
+    #[derive(Deserialize)]
+    struct RawTensorInfo {
+        dtype: String,
+        shape: Vec<usize>,
+    }
+
+    let header: HashMap<String, serde_json::Value> = serde_json::from_slice(&header_data)?;
+
+    let mut keys = HashMap::new();
+    let mut metadata = None;
+
+    for (key, value) in header {
+        if key == "__metadata__" {
+            metadata = serde_json::from_value(value).ok();
+            continue;
+        }
+        let info: RawTensorInfo = serde_json::from_value(value)?;
+        keys.insert(
+            key,
+            FixtureTensorInfo {
+                dtype: info.dtype,
+                shape: info.shape,
+            },
+        );
+    }
+
+    let fixture = Fixture {
+        source: file.display().to_string(),
+        keys,
+        metadata,
+    };
+
+    let json = serde_json::to_string_pretty(&fixture)?;
+    std::fs::write(&out, json)?;
+
+    println!(
+        "Wrote fixture with {} keys to {}",
+        fixture.keys.len(),
+        out.display()
+    );
+
+    Ok(())
 }
