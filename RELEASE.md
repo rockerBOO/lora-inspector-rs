@@ -1,6 +1,7 @@
 # Release Process
 
 ## Quick Release
+
 ```bash
 # Commit any pending changes first
 git add <files>
@@ -19,6 +20,7 @@ git push origin main && git push origin <tag>
 ```
 
 ## Version Commands
+
 ```bash
 ./scripts/check_version.py              # Check current version
 ./scripts/bump_release.py major         # → 2.0.0-beta.1
@@ -30,6 +32,7 @@ git push origin main && git push origin <tag>
 ```
 
 ## Version Types
+
 - `--pre alpha|beta|rc` to specify prerelease type (default: beta)
 - Versions with suffix (e.g., `1.0.0-beta.1`) = prerelease
 - All releases are created as drafts
