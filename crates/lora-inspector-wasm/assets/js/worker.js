@@ -96,7 +96,12 @@ async function ensureWeightsLoaded(name) {
 	try {
 		await loadPromise;
 	} finally {
-		weightLoadPromises.delete(name);
+		// Only remove the entry this call started/observed -- a failed load's
+		// finally can otherwise race a newer retry's finally and delete its
+		// still-in-flight promise instead of its own.
+		if (weightLoadPromises.get(name) === loadPromise) {
+			weightLoadPromises.delete(name);
+		}
 	}
 }
 
