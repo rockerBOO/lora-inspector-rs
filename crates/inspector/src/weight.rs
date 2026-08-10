@@ -18,7 +18,7 @@ use crate::tensor::kron;
 //   Load weights only when required
 // LoRAWeight
 
-fn is_peft(keys: Vec<String>) -> bool {
+pub(crate) fn is_peft(keys: Vec<String>) -> bool {
     keys.into_iter()
         .take(10)
         .any(|k| k.contains("lora_A") || k.contains("lora_B"))
