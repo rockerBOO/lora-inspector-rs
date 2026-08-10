@@ -224,7 +224,7 @@ mod tests {
         let too_big: u64 = 200_000_000;
         buffer[0..8].copy_from_slice(&too_big.to_le_bytes());
         let result = parse_header(&buffer);
-        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("exceeds maximum"));
     }
 
     #[test]
