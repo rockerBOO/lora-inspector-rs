@@ -18,7 +18,7 @@ use crate::tensor::kron;
 //   Load weights only when required
 // LoRAWeight
 
-fn is_peft(keys: Vec<String>) -> bool {
+pub(crate) fn is_peft(keys: Vec<String>) -> bool {
     keys.into_iter()
         .take(10)
         .any(|k| k.contains("lora_A") || k.contains("lora_B"))
@@ -736,16 +736,25 @@ impl BufferedLoRAWeight {
 }
 
 pub trait WeightKey {
+    /// Correctness reference `HeaderIndex` is tested against in `header.rs`'s
+    /// `header_index_matches_buffered_weight_for_boo_file` test; not called
+    /// from non-test code since the header-based migration.
+    #[cfg_attr(not(test), allow(dead_code))]
     fn keys(&self) -> Vec<String>;
     fn keys_by_key(&self, key: &str) -> Vec<String>;
     #[allow(dead_code)]
     fn up_keys(&self) -> Vec<String>;
     #[allow(dead_code)]
     fn down_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn unet_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn text_encoder_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn weight_keys(&self) -> Vec<String>;
+    #[allow(dead_code)]
     fn alpha_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn base_names(&self) -> Vec<String>;
 }
 
@@ -757,7 +766,12 @@ pub trait Weight {
 
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error>;
 
+    /// Correctness reference `HeaderIndex` is tested against in `header.rs`'s
+    /// `header_index_matches_buffered_weight_for_boo_file` test; not called
+    /// from non-test code since the header-based migration.
+    #[cfg_attr(not(test), allow(dead_code))]
     fn format(&self) -> LoRAFormat;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn precision(&self) -> Option<DType>;
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
     fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
@@ -772,6 +786,7 @@ pub trait Weight {
     fn alphas(&self) -> HashSet<Alpha>;
     #[allow(dead_code)]
     fn dora_scale(&self, key: &str) -> Result<Tensor, candle_core::Error>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn dims(&self) -> HashSet<usize>;
     #[allow(dead_code)]
     fn shapes(&self) -> HashMap<String, Vec<usize>>;

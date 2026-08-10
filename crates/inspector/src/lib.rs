@@ -11,6 +11,7 @@ use wasm_bindgen::JsValue;
 pub struct KeyParser;
 
 pub mod file;
+mod header;
 pub mod metadata;
 pub mod network;
 pub mod norms;

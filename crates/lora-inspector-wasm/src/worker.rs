@@ -26,13 +26,20 @@ impl fmt::Display for LoraWorker {
 #[wasm_bindgen]
 impl LoraWorker {
     #[wasm_bindgen(constructor)]
+    /// `buffer` must contain at least the safetensors header: the 8-byte
+    /// little-endian length prefix plus that many bytes of header JSON. Tensor
+    /// payload bytes are not required here — call `reload_from_buffer` with the
+    /// full file later to load weight values.
     pub fn new_from_buffer(buffer: &[u8], filename: &str) -> Result<LoraWorker, String> {
-        // panic::set_hook(Box::new(console_panic_hook::hook));
         console_error_panic_hook::set_once();
-        let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
-        let file = LoRAFile::new_from_buffer(buffer, filename, &candle_core::Device::Cpu);
+        let metadata = Metadata::new_from_header_buffer(buffer).map_err(|e| e.to_string());
+        let file = LoRAFile::new_from_header_buffer(buffer, filename).map_err(|e| e.to_string());
 
-        metadata.map(|metadata| LoraWorker { metadata, file })
+        match (metadata, file) {
+            (Ok(metadata), Ok(file)) => Ok(LoraWorker { metadata, file }),
+            (Err(e), _) => Err(e),
+            (_, Err(e)) => Err(e),
+        }
     }
 
     pub fn unload(&mut self) {
@@ -332,6 +339,10 @@ impl LoraWorker {
             .unwrap_or(Ok(JsValue::NULL))
     }
 
+    pub fn tensor_info(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
+        serde_wasm_bindgen::to_value(&self.file.tensor_info())
+    }
+
     pub fn effective_scales_all(&self) -> Result<JsValue, JsValue> {
         console_error_panic_hook::set_once();
         let scales = self.file.effective_scales_all();
@@ -391,6 +402,7 @@ mod tests {
 
         let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         let _ = worker
             .scale_weight("lora_unet_down_blocks_1_resnets_1_conv2")
@@ -415,6 +427,7 @@ mod tests {
             "lora_unet_down_blocks_1_resnets_1_conv2.safetensors",
         )
         .expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         worker.scale_weights();
 
@@ -435,6 +448,51 @@ mod tests {
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
 
         assert_eq!(worker.base_names().len(), 264);
+    }
+
+    #[wasm_bindgen_test]
+    async fn header_only_constructor_exposes_keys_without_loading_weights() {
+        wasm_bindgen_test_configure!(run_in_browser);
+        let buffer = load_test_file(file("boo.safetensors").as_str())
+            .await
+            .unwrap();
+
+        let mut len_bytes = [0u8; 8];
+        len_bytes.copy_from_slice(&buffer[0..8]);
+        let header_len = u64::from_le_bytes(len_bytes) as usize;
+        let header_only = &buffer[0..8 + header_len];
+
+        let worker = LoraWorker::new_from_buffer(header_only, "boo.safetensors")
+            .expect("load from header buffer");
+
+        assert!(!worker.is_tensors_loaded());
+        assert!(!worker.keys().is_empty());
+        assert!(!worker.base_names().is_empty());
+        assert!(worker.tensor_info().is_ok());
+    }
+
+    #[wasm_bindgen_test]
+    async fn reload_from_buffer_loads_weights_after_header_only_construction() {
+        wasm_bindgen_test_configure!(run_in_browser);
+        let buffer = load_test_file(file("boo.safetensors").as_str())
+            .await
+            .unwrap();
+
+        let mut len_bytes = [0u8; 8];
+        len_bytes.copy_from_slice(&buffer[0..8]);
+        let header_len = u64::from_le_bytes(len_bytes) as usize;
+        let header_only = &buffer[0..8 + header_len];
+
+        let mut worker = LoraWorker::new_from_buffer(header_only, "boo.safetensors")
+            .expect("load from header buffer");
+        assert!(!worker.is_tensors_loaded());
+
+        worker.reload_from_buffer(&buffer);
+        assert!(worker.is_tensors_loaded());
+
+        assert!(worker
+            .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
+            .is_ok());
     }
 
     #[wasm_bindgen_test]
@@ -496,8 +554,9 @@ mod tests {
             .await
             .unwrap();
 
-        let worker =
+        let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         assert_eq!(worker.alphas().len(), 1);
     }
@@ -509,8 +568,9 @@ mod tests {
             .await
             .unwrap();
 
-        let worker =
+        let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         assert_eq!(worker.alphas().len(), 1);
     }
@@ -550,6 +610,7 @@ mod tests {
 
         let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         assert!(worker
             .scale_weight("lora_unet_up_blocks_3_attentions_2_transformer_blocks_0_attn1_to_k")
@@ -570,6 +631,7 @@ mod tests {
 
         let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         assert!(worker
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
@@ -597,6 +659,7 @@ mod tests {
 
         let mut worker =
             LoraWorker::new_from_buffer(&buffer, "boo.safetensors").expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         assert!(worker
             .scale_weight("lora_unet_down_blocks_1_attentions_0_transformer_blocks_0_attn2_to_k")
@@ -659,8 +722,9 @@ mod tests {
             .await
             .unwrap();
 
-        let worker = LoraWorker::new_from_buffer(&buffer, "Pixel Sorting.safetensors")
+        let mut worker = LoraWorker::new_from_buffer(&buffer, "Pixel Sorting.safetensors")
             .expect("load from buffer");
+        worker.reload_from_buffer(&buffer);
 
         for base_name in worker.base_names().into_iter().take(2) {
             let norms = worker.norms(
