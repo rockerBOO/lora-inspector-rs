@@ -19,6 +19,13 @@ pub struct LayerScale {
     pub is_outlier: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorInfo {
+    pub name: String,
+    pub dtype: String,
+    pub shape: Vec<usize>,
+}
+
 /// LoRA file buffer
 #[derive(Debug)]
 pub struct LoRAFile {
@@ -26,6 +33,7 @@ pub struct LoRAFile {
     weights: Option<BufferedLoRAWeight>,
     scaled_weights: HashMap<String, candle_core::Tensor>,
     metadata: Option<Metadata>,
+    header: Option<crate::header::HeaderIndex>,
 }
 
 // const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
@@ -33,6 +41,7 @@ pub struct LoRAFile {
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: &str, device: &Device) -> LoRAFile {
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
+        let header = crate::header::parse_header(buffer).ok().map(|(h, _)| h);
 
         LoRAFile {
             filename: filename.to_string(),
@@ -41,7 +50,24 @@ impl LoRAFile {
                 .unwrap_or_else(|_| None),
             scaled_weights: HashMap::new(),
             metadata: metadata.map(Some).unwrap_or_else(|_| None),
+            header,
         }
+    }
+
+    /// Builds a `LoRAFile` from just the safetensors header — no tensor payload
+    /// bytes required. `is_tensors_loaded()` will be `false`; call
+    /// `reload_weights` with the full file buffer before any weight-value
+    /// operation (`scale_weight`, `effective_scale`, `rank_metrics`, ...).
+    pub fn new_from_header_buffer(buffer: &[u8], filename: &str) -> Result<LoRAFile> {
+        let (header, meta_map) = crate::header::parse_header(buffer)?;
+
+        Ok(LoRAFile {
+            filename: filename.to_string(),
+            weights: None,
+            scaled_weights: HashMap::new(),
+            metadata: Some(Metadata { metadata: meta_map }),
+            header: Some(header),
+        })
     }
 
     pub fn unload(&mut self) {
@@ -64,30 +90,30 @@ impl LoRAFile {
     }
 
     pub fn unet_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.unet_keys())
+            .map(|h| h.unet_keys())
             .unwrap_or_default()
     }
 
     pub fn text_encoder_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.text_encoder_keys())
+            .map(|h| h.text_encoder_keys())
             .unwrap_or_default()
     }
 
     pub fn weight_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.weight_keys())
+            .map(|h| h.weight_keys())
             .unwrap_or_default()
     }
 
     pub fn alpha_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.alpha_keys())
+            .map(|h| h.alpha_keys())
             .unwrap_or_default()
     }
 
@@ -99,29 +125,37 @@ impl LoRAFile {
     }
 
     pub fn dims(&self) -> HashSet<usize> {
-        self.weights
-            .as_ref()
-            .map(|weights| weights.dims())
-            .unwrap_or_default()
+        self.header.as_ref().map(|h| h.dims()).unwrap_or_default()
     }
 
     pub fn precision(&self) -> Option<weight::DType> {
-        self.weights
-            .as_ref()
-            .and_then(|weights| weights.precision())
+        self.header.as_ref().and_then(|h| h.precision())
     }
 
     pub fn keys(&self) -> Vec<String> {
-        self.weights
-            .as_ref()
-            .map(|weights| weights.keys())
-            .unwrap_or_default()
+        self.header.as_ref().map(|h| h.keys()).unwrap_or_default()
     }
 
     pub fn base_names(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.base_names())
+            .map(|h| h.base_names())
+            .unwrap_or_default()
+    }
+
+    pub fn tensor_info(&self) -> Vec<TensorInfo> {
+        self.header
+            .as_ref()
+            .map(|h| {
+                h.tensor_info()
+                    .into_iter()
+                    .map(|(name, dtype, shape)| TensorInfo {
+                        name,
+                        dtype: dtype.to_string(),
+                        shape,
+                    })
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
@@ -146,9 +180,9 @@ impl LoRAFile {
     }
 
     pub fn format(&self) -> weight::LoRAFormat {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.format())
+            .map(|h| h.format())
             .unwrap_or(weight::LoRAFormat::Kohya)
     }
 
@@ -712,6 +746,54 @@ mod tests {
         assert_eq!(outliers, vec![false, false, false, false, true]);
         assert!((median - 1.0).abs() < 1e-10);
         assert!((threshold - 1.5).abs() < 1e-10);
+    }
+
+    fn header_only_bytes(buffer: &[u8]) -> &[u8] {
+        let mut len_bytes = [0u8; 8];
+        len_bytes.copy_from_slice(&buffer[0..8]);
+        let header_len = u64::from_le_bytes(len_bytes) as usize;
+        &buffer[0..8 + header_len]
+    }
+
+    #[test]
+    fn header_only_load_exposes_keys_without_weights() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let lora_file =
+            LoRAFile::new_from_header_buffer(header_only_bytes(&buffer), "boo.safetensors")?;
+
+        assert!(!lora_file.is_tensors_loaded());
+        assert!(!lora_file.keys().is_empty());
+        assert!(!lora_file.base_names().is_empty());
+        assert!(!lora_file.unet_keys().is_empty());
+        assert!(!lora_file.tensor_info().is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn header_only_load_keys_match_full_buffer_load() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let header_file =
+            LoRAFile::new_from_header_buffer(header_only_bytes(&buffer), "boo.safetensors")?;
+        let full_file = LoRAFile::new_from_buffer(&buffer, "boo.safetensors", &Device::Cpu);
+
+        let mut header_keys = header_file.keys();
+        let mut full_keys = full_file.keys();
+        header_keys.sort();
+        full_keys.sort();
+        assert_eq!(header_keys, full_keys);
+
+        assert_eq!(header_file.dims(), full_file.dims());
+        assert_eq!(header_file.format(), full_file.format());
+        assert_eq!(header_file.precision(), full_file.precision());
+
+        Ok(())
+    }
+
+    #[test]
+    fn header_only_load_rejects_truncated_buffer() {
+        let result = LoRAFile::new_from_header_buffer(&[1_u8, 2, 3], "boo.safetensors");
+        assert!(result.is_err());
     }
 
     #[test]

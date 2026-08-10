@@ -19,6 +19,13 @@ impl Metadata {
         )
     }
 
+    /// Builds `Metadata` from just the safetensors header (see
+    /// `crate::header::parse_header`), without requiring tensor payload bytes.
+    pub fn new_from_header_buffer(buffer: &[u8]) -> crate::Result<Metadata> {
+        let (_header, meta_map) = crate::header::parse_header(buffer)?;
+        Ok(Metadata { metadata: meta_map })
+    }
+
     pub fn metadata_size(&self) -> usize {
         self.metadata.as_ref().map_or(0, |m| m.len())
     }
