@@ -15,14 +15,12 @@ import { LRScheduler } from "../training/LRScheduler.jsx";
 import { Optimizer } from "../training/Optimizer.jsx";
 import { WaveletLoss } from "../training/WaveletLoss.jsx";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
-import { Headline } from "./Headline.jsx";
 import { Section } from "./Section.jsx";
 
 export function Main({ metadata, filename, worker }) {
 	if (!metadata) {
 		return (
 			<main>
-				<Headline filename={filename} />
 				<div className="row space-apart">
 					<LoRANetwork
 						metadata={metadata}
