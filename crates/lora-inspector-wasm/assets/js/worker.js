@@ -32,32 +32,55 @@ function clearIdleTimer(name) {
 	}
 }
 
+async function readHeaderBytes(file) {
+	const lengthBuffer = await file.slice(0, 8).arrayBuffer();
+	const headerLen = Number(new DataView(lengthBuffer).getBigUint64(0, true));
+	const headerBuffer = await file.slice(0, 8 + headerLen).arrayBuffer();
+	return new Uint8Array(headerBuffer);
+}
+
 async function reloadWorker(file) {
-	const buffer = await readFile(file);
+	const buffer = await readHeaderBytes(file);
 	addWorker(file.name, new LoraWorkerClass(buffer, file.name));
 }
 
-async function ensureLoaded(name) {
+// Ensures the LoraWorker object exists (reconstructing it from just the file's
+// header if it was GC'd), without requiring tensor weight bytes to be loaded.
+async function ensureHeaderLoaded(name) {
 	const loraWorker = loraWorkers.get(name);
 	const file = files.get(name);
 
 	if (!loraWorker) {
-		// Worker was fully freed — reconstruct from scratch
 		if (!file) throw new Error(`Cannot reload worker ${name}: file not found`);
 		await reloadWorker(file);
-	} else if (!loraWorker.is_tensors_loaded()) {
-		// Worker alive but weights unloaded (idle timeout) — reload weights only, metadata stays
-		if (!file)
-			throw new Error(`Cannot reload weights for ${name}: file not found`);
-		const buffer = await readFile(file);
-		loraWorker.reload_from_buffer(buffer);
 	}
 
 	setIdleTimer(name);
 }
 
+// Ensures the LoraWorker object exists AND its tensor weight bytes are loaded
+// (the full file, via readFile) — required before any weight-value operation
+// (scale_weight, norms, rank_metrics, effective_scale, alphas, ...).
+async function ensureWeightsLoaded(name) {
+	await ensureHeaderLoaded(name);
+
+	const loraWorker = getWorker(name);
+	if (!loraWorker.is_tensors_loaded()) {
+		const file = files.get(name);
+		if (!file)
+			throw new Error(`Cannot reload weights for ${name}: file not found`);
+		const buffer = await readFile(file);
+		loraWorker.reload_from_buffer(buffer);
+	}
+}
+
 async function withWorker(name, fn) {
-	await ensureLoaded(name);
+	await ensureHeaderLoaded(name);
+	return fn(getWorker(name));
+}
+
+async function withWeights(name, fn) {
+	await ensureWeightsLoaded(name);
 	return fn(getWorker(name));
 }
 
@@ -192,6 +215,15 @@ async function init_wasm_in_worker() {
 			});
 		} else if (e.data.messageType === "weight_keys") {
 			getWeightKeys(e);
+		} else if (e.data.messageType === "tensor_info") {
+			getTensorInfo(e).then((tensorInfo) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "tensor_info",
+						tensorInfo,
+					});
+				}
+			});
 		} else if (e.data.messageType === "keys") {
 			getKeys(e).then((keys) => {
 				if (e.data.reply) {
@@ -390,7 +422,7 @@ async function readFile(file) {
 }
 
 async function loadWorker(file, worker) {
-	const buffer = await readFile(file);
+	const buffer = await readHeaderBytes(file);
 
 	try {
 		const loraWorker = addWorker(file.name, new worker(buffer, file.name));
@@ -466,9 +498,13 @@ async function getBaseNames(e) {
 	return withWorker(e.data.name, (w) => w.base_names());
 }
 
+async function getTensorInfo(e) {
+	return withWorker(e.data.name, (w) => w.tensor_info());
+}
+
 async function getNorms(e) {
 	const baseName = e.data.baseName;
-	return withWorker(e.data.name, (w) => {
+	return withWeights(e.data.name, (w) => {
 		try {
 			return [
 				w.norms(baseName, [
@@ -490,9 +526,9 @@ async function getNorms(e) {
 }
 
 async function getL2Norms(e) {
-	await ensureLoaded(e.data.name);
+	await ensureWeightsLoaded(e.data.name);
 	clearIdleTimer(e.data.name); // prevent idle timeout from firing during long batch loop
-	const loraWorker = getWorker(e.data.name); // held across loop — ensureLoaded already called
+	const loraWorker = getWorker(e.data.name); // held across loop — ensureWeightsLoaded already called
 
 	const baseNames = loraWorker.base_names();
 	const totalCount = baseNames.length;
@@ -615,7 +651,7 @@ async function getAlphaKeys(e) {
 }
 
 async function getAlphas(e) {
-	return withWorker(e.data.name, (w) =>
+	return withWeights(e.data.name, (w) =>
 		Array.from(w.alphas()).sort((a, b) => a - b),
 	);
 }
@@ -629,7 +665,7 @@ async function getRankStabilized(e) {
 }
 
 async function getDoraScales(e) {
-	return withWorker(e.data.name, (w) =>
+	return withWeights(e.data.name, (w) =>
 		Array.from(w.doraScales()).sort((a, b) => a > b),
 	);
 }
@@ -654,16 +690,16 @@ async function getNetworkType(e) {
 
 async function getEffectiveScale(e) {
 	const baseName = e.data.baseName;
-	return withWorker(e.data.name, (w) => w.effective_scale(baseName));
+	return withWeights(e.data.name, (w) => w.effective_scale(baseName));
 }
 
 async function getEffectiveScalesAll(e) {
-	return withWorker(e.data.name, (w) => w.effective_scales_all());
+	return withWeights(e.data.name, (w) => w.effective_scales_all());
 }
 
 async function getRankMetrics(e) {
 	const baseName = e.data.baseName;
-	return withWorker(e.data.name, (w) => {
+	return withWeights(e.data.name, (w) => {
 		try {
 			const metrics = w.rank_metrics(baseName);
 			return [metrics, undefined];
