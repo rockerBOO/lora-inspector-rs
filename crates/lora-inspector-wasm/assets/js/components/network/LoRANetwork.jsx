@@ -3,19 +3,12 @@ import { trySyncMessage } from "../../message.js";
 import { MetaAttribute } from "../ui/MetaAttribute.jsx";
 
 export function LoRANetwork({ metadata, filename, worker }) {
-	const [alphas, setAlphas] = useState([
-		metadata?.get("ss_network_alpha") ?? undefined,
-	]);
+	const alphas = [metadata?.get("ss_network_alpha") ?? undefined];
 	const [dims, setDims] = useState([
 		metadata?.get("ss_network_dim") ?? undefined,
 	]);
 
 	useEffect(() => {
-		trySyncMessage({ messageType: "alphas", name: filename }, worker).then(
-			(resp) => {
-				setAlphas(resp.alphas);
-			},
-		);
 		trySyncMessage({ messageType: "dims", name: filename }, worker).then(
 			(resp) => {
 				setDims(resp.dims);

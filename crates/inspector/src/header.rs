@@ -3,6 +3,11 @@ use std::collections::{HashMap, HashSet};
 use crate::weight::{get_base_name, is_peft, DType, LoRAFormat};
 use crate::InspectorError;
 
+/// Matches the upstream `safetensors` crate's own sanity bound on header size
+/// (`safetensors::tensor::MAX_HEADER_SIZE`), enforced here as defense in depth
+/// since this module intentionally bypasses `SafeTensors::read_metadata`.
+const MAX_HEADER_SIZE: usize = 100_000_000;
+
 /// A tensor's shape/dtype as recorded in the safetensors header, without its
 /// payload bytes.
 #[derive(Debug, Clone)]
@@ -138,6 +143,12 @@ pub fn parse_header(
     len_bytes.copy_from_slice(&buffer[0..8]);
     let header_len = u64::from_le_bytes(len_bytes) as usize;
 
+    if header_len > MAX_HEADER_SIZE {
+        return Err(InspectorError::Msg(format!(
+            "safetensors header length {header_len} exceeds maximum of {MAX_HEADER_SIZE} bytes"
+        )));
+    }
+
     let stop = 8usize
         .checked_add(header_len)
         .ok_or_else(|| InspectorError::Msg("safetensors header length overflow".to_string()))?;
@@ -204,6 +215,15 @@ mod tests {
     #[test]
     fn parse_header_rejects_buffer_smaller_than_length_prefix() {
         let result = parse_header(&[1_u8, 2, 3]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_header_rejects_header_len_over_max_header_size() {
+        let mut buffer = vec![0u8; 16];
+        let too_big: u64 = 200_000_000;
+        buffer[0..8].copy_from_slice(&too_big.to_le_bytes());
+        let result = parse_header(&buffer);
         assert!(result.is_err());
     }
 

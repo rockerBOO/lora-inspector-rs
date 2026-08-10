@@ -8,7 +8,7 @@ use crate::{
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
     svd,
-    weight::{self, BufferedLoRAWeight, Weight, WeightKey},
+    weight::{self, BufferedLoRAWeight, Weight},
     InspectorError, Result,
 };
 

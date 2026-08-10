@@ -6,6 +6,11 @@ const files = new Map();
 // loraWorkers are specific objects that manage the LoRA file, buffer, and inspection.
 const loraWorkers = new Map();
 
+// In-flight ensureWeightsLoaded() promises, keyed by file name, so concurrent
+// weight-value requests for the same file share a single full-file read
+// instead of each triggering their own.
+const weightLoadPromises = new Map();
+
 let LoraWorkerClass = null;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const idleTimers = new Map();
@@ -32,9 +37,16 @@ function clearIdleTimer(name) {
 	}
 }
 
+const MAX_HEADER_SIZE = 100_000_000;
+
 async function readHeaderBytes(file) {
 	const lengthBuffer = await file.slice(0, 8).arrayBuffer();
 	const headerLen = Number(new DataView(lengthBuffer).getBigUint64(0, true));
+	if (headerLen > MAX_HEADER_SIZE) {
+		throw new Error(
+			`safetensors header length ${headerLen} exceeds maximum of ${MAX_HEADER_SIZE} bytes — file may not be a valid safetensors file`,
+		);
+	}
 	const headerBuffer = await file.slice(0, 8 + headerLen).arrayBuffer();
 	return new Uint8Array(headerBuffer);
 }
@@ -65,12 +77,26 @@ async function ensureWeightsLoaded(name) {
 	await ensureHeaderLoaded(name);
 
 	const loraWorker = getWorker(name);
-	if (!loraWorker.is_tensors_loaded()) {
-		const file = files.get(name);
-		if (!file)
-			throw new Error(`Cannot reload weights for ${name}: file not found`);
-		const buffer = await readFile(file);
-		loraWorker.reload_from_buffer(buffer);
+	if (loraWorker.is_tensors_loaded()) {
+		return;
+	}
+
+	let loadPromise = weightLoadPromises.get(name);
+	if (!loadPromise) {
+		loadPromise = (async () => {
+			const file = files.get(name);
+			if (!file)
+				throw new Error(`Cannot reload weights for ${name}: file not found`);
+			const buffer = await readFile(file);
+			loraWorker.reload_from_buffer(buffer);
+		})();
+		weightLoadPromises.set(name, loadPromise);
+	}
+
+	try {
+		await loadPromise;
+	} finally {
+		weightLoadPromises.delete(name);
 	}
 }
 
