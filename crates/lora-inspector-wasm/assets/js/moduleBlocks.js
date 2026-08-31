@@ -22,8 +22,11 @@ const FLUX_PEFT =
 
 // MiniMax H3 (diffusers-native PEFT, no "transformer." prefix): bare
 // transformer_blocks.N.* plus a token_refiner.refiner_blocks.N.* block group.
+// Also covers the ai-toolkit trained variant, which prefixes keys with
+// "diffusion_model." and uses "blocks"/"token_refiner.blocks" with
+// attn.qkv_proj/attn.out_proj/mlp.fc1/mlp.fc2 sub-blocks.
 const H3_BLOCK_RE =
-	/(?<block_type>transformer_blocks|token_refiner\.refiner_blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn|ff)/;
+	/(?:diffusion_model\.)?(?<block_type>transformer_blocks|token_refiner\.refiner_blocks|blocks|token_refiner\.blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn(?:\.\w+)?|mlp(?:\.\w+)?|ff)/;
 
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
@@ -129,10 +132,13 @@ function parseSDKey(key) {
 		};
 	}
 
-	// MiniMax H3 bare transformer_blocks / token_refiner.refiner_blocks
+	// MiniMax H3 bare transformer_blocks / token_refiner.refiner_blocks,
+	// and the ai-toolkit variant's diffusion_model.blocks / diffusion_model.token_refiner.blocks
 	if (
 		key.startsWith("transformer_blocks.") ||
-		key.startsWith("token_refiner.refiner_blocks.")
+		key.startsWith("token_refiner.refiner_blocks.") ||
+		key.startsWith("diffusion_model.blocks.") ||
+		key.startsWith("diffusion_model.token_refiner.blocks.")
 	) {
 		const matches = key.match(H3_BLOCK_RE);
 		if (!matches) {
@@ -141,17 +147,20 @@ function parseSDKey(key) {
 
 		const groups = matches.groups;
 		const idx = Number.parseInt(groups.block_id);
-		const namePrefix =
-			groups.block_type === "token_refiner.refiner_blocks" ? "TR" : "TB";
+		const isRefiner =
+			groups.block_type === "token_refiner.refiner_blocks" ||
+			groups.block_type === "token_refiner.blocks";
+		const namePrefix = isRefiner ? "TR" : "TB";
+		const isAttention = groups.subblock_type.startsWith("attn");
 
 		return {
 			...result,
-			type: groups.subblock_type === "attn" ? "attentions" : "mlp",
+			type: isAttention ? "attentions" : "mlp",
 			idx: idx,
 			blockId: idx,
 			blockType: groups.block_type,
 			name: `${namePrefix}${padTwo(idx)}`,
-			isAttention: groups.subblock_type === "attn",
+			isAttention: isAttention,
 		};
 	}
 
