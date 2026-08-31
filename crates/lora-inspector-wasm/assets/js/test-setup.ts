@@ -4,11 +4,13 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, expect, vi } from "vitest";
 
 // jsdom does not implement IntersectionObserver
-const mockIntersectionObserver = vi.fn(() => ({
-	observe: vi.fn(),
-	unobserve: vi.fn(),
-	disconnect: vi.fn(),
-}));
+const mockIntersectionObserver = vi.fn(function () {
+	return {
+		observe: vi.fn(),
+		unobserve: vi.fn(),
+		disconnect: vi.fn(),
+	};
+});
 vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
 
 expect.extend(matchers);
