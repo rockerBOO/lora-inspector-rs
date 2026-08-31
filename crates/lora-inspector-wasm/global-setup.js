@@ -9,7 +9,12 @@ async function globalSetup(_config) {
 	if (resp.ok && resp.body) {
 		console.log("Writing to file:", fileName);
 		const writer = createWriteStream(fileName);
-		Readable.fromWeb(resp.body).pipe(writer);
+		await new Promise((resolve, reject) => {
+			Readable.fromWeb(resp.body)
+				.pipe(writer)
+				.on("finish", resolve)
+				.on("error", reject);
+		});
 	} else {
 		console.error("could not download the file");
 	}
