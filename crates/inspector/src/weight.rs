@@ -688,6 +688,12 @@ impl Weight for BufferedLoRAWeight {
                     Ok(x) => Ok(Alpha(
                         x.to_dtype(candle_core::DType::F32)?.to_scalar::<f32>()?,
                     )),
+                    // No stored alpha tensor: sd-scripts/musubi-tuner treat a
+                    // missing network_alpha as equal to the rank, giving a
+                    // scale of 1.0.
+                    Err(candle_core::Error::SafeTensor(
+                        safetensors::SafeTensorError::TensorNotFound(_),
+                    )) => Ok(Alpha(self.rank(base_name)? as f32)),
                     Err(e) => Err(e),
                 }
             }
@@ -910,7 +916,10 @@ impl Weight for LoRAWeight {
 
                 match x {
                     Some(x) => Ok(Alpha(x.to_scalar::<f32>()?)),
-                    None => Err(candle_core::Error::Msg("No alpha found".to_string())),
+                    // No stored alpha tensor: sd-scripts/musubi-tuner treat a
+                    // missing network_alpha as equal to the rank, giving a
+                    // scale of 1.0.
+                    None => Ok(Alpha(self.rank(base_name)? as f32)),
                 }
             }
         }
@@ -1609,6 +1618,65 @@ mod tests {
             result_dims.len(),
             result_dims.iter().collect::<HashSet<_>>().len()
         );
+    }
+
+    /// Builds a minimal single-layer LoRA safetensors buffer with lora_down/lora_up
+    /// weights but no `.alpha` tensor, matching LoRAs (e.g. musubi-tuner's Krea2
+    /// network) that omit alpha entirely rather than storing one per layer.
+    fn build_lora_buffer_without_alpha(base_name: &str, rank: usize, dim: usize) -> Vec<u8> {
+        let down_data = vec![1.0_f32; rank * dim];
+        let up_data = vec![1.0_f32; dim * rank];
+
+        let down_bytes: Vec<u8> = down_data.iter().flat_map(|f| f.to_le_bytes()).collect();
+        let up_bytes: Vec<u8> = up_data.iter().flat_map(|f| f.to_le_bytes()).collect();
+
+        let down_view = safetensors::tensor::TensorView::new(
+            safetensors::Dtype::F32,
+            vec![rank, dim],
+            &down_bytes,
+        )
+        .unwrap();
+        let up_view = safetensors::tensor::TensorView::new(
+            safetensors::Dtype::F32,
+            vec![dim, rank],
+            &up_bytes,
+        )
+        .unwrap();
+
+        let tensors = vec![
+            (format!("{base_name}.lora_down.weight"), down_view),
+            (format!("{base_name}.lora_up.weight"), up_view),
+        ];
+
+        safetensors::serialize(tensors, &None).unwrap()
+    }
+
+    #[test]
+    fn buffered_alpha_defaults_to_rank_when_alpha_tensor_missing() {
+        let base_name = "diffusion_model.blocks.10.mlp.gate";
+        let buffer = build_lora_buffer_without_alpha(base_name, 4, 8);
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let alpha = lora_weight.alpha(base_name).unwrap();
+        assert_eq!(alpha.0, 4.0);
+
+        let scaled = lora_weight.scale_lora_weight(base_name).unwrap();
+        assert_eq!(scaled.dims(), &[8, 8]);
+    }
+
+    #[test]
+    fn lora_weight_alpha_defaults_to_rank_when_alpha_tensor_missing() {
+        let base_name = "diffusion_model.blocks.26.attn.wq";
+        let buffer = build_lora_buffer_without_alpha(base_name, 4, 8);
+
+        let lora_weight = LoRAWeight::new(buffer).unwrap();
+
+        let alpha = lora_weight.alpha(base_name).unwrap();
+        assert_eq!(alpha.0, 4.0);
+
+        let scaled = lora_weight.scale_lora_weight(base_name).unwrap();
+        assert_eq!(scaled.dims(), &[8, 8]);
     }
 
     #[test]
