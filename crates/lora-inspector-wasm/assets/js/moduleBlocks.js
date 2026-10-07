@@ -39,9 +39,12 @@ const SDXL_RE =
 
 const SDXL_NUM_OF_BLOCKS = 26;
 
-// Krea 2 (musubi-tuner networks.lora_krea2) DiT block naming
+// Krea 2 (musubi-tuner networks.lora_krea2) DiT block naming. Covers both
+// the underscore-joined "lora_unet_"-prefixed keys and the dot-separated
+// "diffusion_model."-prefixed keys musubi-tuner also saves (e.g. rank_64
+// checkpoints), which use "." instead of "_" between segments.
 const KREA2_BLOCK_RE =
-	/lora_unet_(?<block_type>blocks|txtfusion_layerwise_blocks|txtfusion_refiner_blocks)_(?<block_id>\d+)_(?<subblock_type>attn_\w+|mlp_\w+)/;
+	/(?:lora_unet_|diffusion_model\.)(?<block_type>blocks|txtfusion[._]layerwise_blocks|txtfusion[._]refiner_blocks)[._](?<block_id>\d+)[._](?<subblock_type>attn[._]\w+|mlp[._]\w+)/;
 
 const KREA2_NUM_OF_BLOCKS = 28;
 const KREA2_NUM_OF_LAYERWISE_BLOCKS = 2;
@@ -285,7 +288,14 @@ function parseSDKey(key) {
 		key.includes("lora_unet_tmlp_") ||
 		key.includes("lora_unet_tproj_") ||
 		key.includes("lora_unet_txtfusion_projector") ||
-		key.includes("lora_unet_txtmlp_")
+		key.includes("lora_unet_txtmlp_") ||
+		key.includes("diffusion_model.first") ||
+		key.includes("diffusion_model.last_linear") ||
+		key.includes("diffusion_model.last.linear") ||
+		key.includes("diffusion_model.tmlp.") ||
+		key.includes("diffusion_model.tproj.") ||
+		key.includes("diffusion_model.txtfusion.projector") ||
+		key.includes("diffusion_model.txtmlp.")
 	) {
 		return {
 			...result,
@@ -297,7 +307,7 @@ function parseSDKey(key) {
 	}
 
 	// Krea 2 DiT blocks (main stream + txtfusion layerwise/refiner blocks)
-	if (key.includes("lora_unet_blocks_") || key.includes("txtfusion_")) {
+	if (key.includes("lora_unet_blocks_") || key.includes("txtfusion")) {
 		const matches = key.match(KREA2_BLOCK_RE);
 		if (!matches) {
 			throw new Error(`Krea2: Did not match on key: ${key} ${KREA2_BLOCK_RE}`);
@@ -308,10 +318,10 @@ function parseSDKey(key) {
 
 		let namePrefix = "TB";
 		let blockIdxOffset = 0;
-		if (groups.block_type === "txtfusion_layerwise_blocks") {
+		if (groups.block_type.includes("layerwise_blocks")) {
 			namePrefix = "TFL";
 			blockIdxOffset = KREA2_NUM_OF_BLOCKS;
-		} else if (groups.block_type === "txtfusion_refiner_blocks") {
+		} else if (groups.block_type.includes("refiner_blocks")) {
 			namePrefix = "TFR";
 			blockIdxOffset = KREA2_NUM_OF_BLOCKS + KREA2_NUM_OF_LAYERWISE_BLOCKS;
 		}
