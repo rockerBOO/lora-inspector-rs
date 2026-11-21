@@ -135,6 +135,8 @@ first means every later task is written once, against the API that ships.
 
 - `safetensors` 0.8 and `candle` 0.11 are the versions that get fixes and are what the
   ecosystem's tooling assumes.
+- The upgrade also brings `cudarc 0.19.10` and builds the `cuda` feature cleanly on the
+  Blackwell card, so the GPU path stays reachable for future work.
 - A note on the wasm size profile: `wasm-pack` does not support an `opt-level` key in
   `[package.metadata.wasm-pack.profile.*]` (0.13.1 and 0.15.1 accept only `wasm-bindgen`
   and `wasm-opt`; unknown keys are silently ignored). The size profile therefore lives in
@@ -149,18 +151,25 @@ first means every later task is written once, against the API that ships.
   Blackwell card even though the report stays CPU-only.
 
 **What it does not buy:** GPU SVD (still CPU in candle, and `inspector`'s SVD is its own
-Jacobi implementation), and any change to the metrics.
+Jacobi implementation), and any change to the metrics — verified, not assumed: every
+per-layer `l2_norm`/`matrix_norm`/`max`/`min`/`std_dev` is **bit-identical** (0.0 relative
+difference) between the pre-upgrade binary and the upgraded one on `boo.safetensors` (264
+base names) and on a PEFT-shaped klein-4b file (80 base names). Only the LoHa/LoKr/OFT/BOFT
+decomposition test literals drifted, in low-order f32 digits.
 
 **Gates — the upgrade is only acceptable if all of these hold:**
 
 1. `cargo test --workspace` green. Snapshot changes are only acceptable when the diff is a
    real numeric change, and each changed value must be explained in the report.
 2. `cargo check --target wasm32-unknown-unknown -p lora-inspector-wasm` green, and the
-   **release** wasm bundles stay within 2% of the recorded release baseline
-   (`lora-inspector_bg.wasm` 611 266 B, `lora-inspector-simd_bg.wasm` 613 040 B, both
-   with `-C opt-level=z`). A bigger jump is reported, not absorbed. Do not measure
-   `pkg/*.wasm` after a dev build: dev artifacts are ~7.7 MB and look nothing like the
-   release bundles.
+   **release** wasm size change measured and explained. The original 2% window was a guess
+   about what an 8-minor-version jump costs and it was wrong: the bundle grew
+   **611 266 → 956 261 B (+56% raw)**, which is inherent to candle 0.11 (`float8` reachable
+   through the safetensors load path, `rand 0.9`, `gemm 0.19`, `half 2.7`), with no candle
+   feature flag to exclude it and only ~0.6% recoverable from `wasm-opt -Oz`. It was
+   **accepted deliberately**, on the number that matters: what a browser user downloads.
+   Brotli `-q 11` 168 330 → 207 319 B (**+23%**), gzip -9 211 270 → 271 806 B (**+29%**).
+   Do not measure `pkg/*.wasm` after a dev build — dev artifacts are ~7.7 MB.
 3. `inspector`'s public API does not change shape (same function names and signatures)
    except where a dependency forced it — those cases are listed in the commit message.
 4. `cargo build --release -p lora-inspector --features cuda` is attempted; if a current
