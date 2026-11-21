@@ -1,3 +1,7 @@
+// The shared fixture module is compiled once per test binary, so helpers that
+// another test file uses (but this one does not) would warn as dead code here.
+#![allow(dead_code)]
+
 mod support;
 
 use candle_core::Device;

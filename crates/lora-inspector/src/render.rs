@@ -162,7 +162,11 @@ fn header_network_line(report: &Report, term: &Terminal) -> String {
     layers_total
 }
 
-fn render_block_section(report: &Report, term: &Terminal, opts: &ReportOptions) -> Option<String> {
+pub fn render_block_section(
+    report: &Report,
+    term: &Terminal,
+    opts: &ReportOptions,
+) -> Option<String> {
     let blocks = report.blocks.as_ref()?;
     let summary = report.summary.block_weight.as_ref();
 

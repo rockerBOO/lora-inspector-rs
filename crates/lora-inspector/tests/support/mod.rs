@@ -41,6 +41,22 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// Write a fixture whose only key matches no block family, so `blocks` is
+    /// an empty array rather than `null`.
+    pub fn write_ungroupable() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, ungroupable_fixture_bytes()).expect("write ungroupable fixture");
+        Fixture { path }
+    }
+
+    /// Write a fixture carrying a `__metadata__` map, so `--metadata` can be
+    /// exercised through the CLI.
+    pub fn write_metadata() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, metadata_fixture_bytes()).expect("write metadata fixture");
+        Fixture { path }
+    }
+
     /// Path of the written file.
     pub fn path(&self) -> &Path {
         &self.path
@@ -190,9 +206,32 @@ fn outlier_fixture_bytes() -> Vec<u8> {
     to_safetensors(tensors)
 }
 
+/// A fixture whose only key matches no block family (`txtfusion_projector`
+/// lands in `BlockGroup::Other`, so `blocks` is empty and `ungrouped` counts it).
+fn ungroupable_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    push_lora(&mut tensors, "txtfusion_projector", 4, 4.0, 2.5);
+    to_safetensors(tensors)
+}
+
+/// A fixture carrying a `__metadata__` map so the opt-in metadata path is real.
+fn metadata_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 1.0);
+    to_safetensors_with_metadata(
+        tensors,
+        serde_json::json!({ "modelspec.architecture": "flux" }),
+    )
+}
+
 /// Serialize tensors into the safetensors layout: 8-byte little-endian header
 /// length, JSON header with `data_offsets`, then little-endian `f32` payload.
 fn to_safetensors(tensors: Vec<Tensor>) -> Vec<u8> {
+    to_safetensors_with_metadata(tensors, serde_json::Value::Null)
+}
+
+/// [`to_safetensors`] with an optional `__metadata__` map (omit with `Null`).
+fn to_safetensors_with_metadata(tensors: Vec<Tensor>, metadata: serde_json::Value) -> Vec<u8> {
     let mut header = serde_json::Map::new();
     let mut offset = 0usize;
     for t in &tensors {
@@ -206,6 +245,9 @@ fn to_safetensors(tensors: Vec<Tensor>) -> Vec<u8> {
             }),
         );
         offset = end;
+    }
+    if !metadata.is_null() {
+        header.insert("__metadata__".to_string(), metadata);
     }
 
     let header_json = serde_json::to_string(&header).expect("serialize fixture header");
