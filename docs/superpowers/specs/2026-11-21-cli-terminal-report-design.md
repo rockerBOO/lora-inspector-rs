@@ -135,6 +135,13 @@ first means every later task is written once, against the API that ships.
 
 - `safetensors` 0.8 and `candle` 0.11 are the versions that get fixes and are what the
   ecosystem's tooling assumes.
+- A note on the wasm size profile: `wasm-pack` does not support an `opt-level` key in
+  `[package.metadata.wasm-pack.profile.*]` (0.13.1 and 0.15.1 accept only `wasm-bindgen`
+  and `wasm-opt`; unknown keys are silently ignored). The size profile therefore lives in
+  the Makefile as `RUSTFLAGS="-C opt-level=z"` on the two release wasm targets, combined
+  with `-C target-feature=+simd128` for the SIMD bundle. Removing the workspace's global
+  `opt-level = "z"` would otherwise grow the shipped bundle by 78%, which is why that
+  Makefile change is part of this phase rather than a nicety.
 - candle 0.11 ships `MmapedSafetensors`, which is the zero-copy loader the dropped
   `memmap2` item was looking for. It is **not** adopted in this project (the loader
   abstraction in `inspector` would have to change shape), but it is now reachable.
@@ -148,10 +155,12 @@ Jacobi implementation), and any change to the metrics.
 
 1. `cargo test --workspace` green. Snapshot changes are only acceptable when the diff is a
    real numeric change, and each changed value must be explained in the report.
-2. `cargo check --target wasm32-unknown-unknown -p lora-inspector-wasm` green, and
-   `make build-wasm-dev` produces a wasm no more than 10% larger than the recorded
-   baseline (`lora-inspector_bg.wasm` 7 737 686 B, `lora-inspector-simd_bg.wasm`
-   7 757 294 B). A bigger jump is reported, not absorbed.
+2. `cargo check --target wasm32-unknown-unknown -p lora-inspector-wasm` green, and the
+   **release** wasm bundles stay within 2% of the recorded release baseline
+   (`lora-inspector_bg.wasm` 611 266 B, `lora-inspector-simd_bg.wasm` 613 040 B, both
+   with `-C opt-level=z`). A bigger jump is reported, not absorbed. Do not measure
+   `pkg/*.wasm` after a dev build: dev artifacts are ~7.7 MB and look nothing like the
+   release bundles.
 3. `inspector`'s public API does not change shape (same function names and signatures)
    except where a dependency forced it — those cases are listed in the commit message.
 4. `cargo build --release -p lora-inspector --features cuda` is attempted; if a current

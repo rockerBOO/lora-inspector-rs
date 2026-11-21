@@ -92,7 +92,7 @@ The commit body lists any `inspector` signature that had to change, the new wasm
 **Files:**
 - Modify: `Cargo.toml` (root, `[profile]` block at the end)
 - Modify: `crates/lora-inspector/Cargo.toml` (keep `cuda` feature as is)
-- Modify: `crates/lora-inspector-wasm/Cargo.toml` — pin the wasm release size profile, which this task removes from the workspace default
+- Modify: `Makefile` — pin the wasm release size profile, which this task removes from the workspace default
 
 **Interfaces:**
 - Consumes: nothing.
@@ -117,7 +117,9 @@ Expected: well under the 13.3 s baseline recorded in the spec (it still computes
 
 - [ ] **Step 3b: Keep the wasm build size-pinned**
 
-The wasm release build inherited `opt-level = "z"` from the workspace profile that this task replaces, and it passes no `opt-level` of its own. Add `[package.metadata.wasm-pack.profile.release]` with `opt-level = "z"` to `crates/lora-inspector-wasm/Cargo.toml` so the shipped bundle keeps its size, and verify with `make build-wasm-dev && ls -l crates/lora-inspector-wasm/pkg/*.wasm` against the recorded baseline (7 737 686 B / 7 757 294 B — dev builds differ, so compare a release build if the sizes are far off).
+The wasm release build inherited `opt-level = "z"` from the workspace profile that this task replaces, and it passes no `opt-level` of its own. wasm-pack cannot be told: `[package.metadata.wasm-pack.profile.*]` accepts only `wasm-bindgen` and `wasm-opt` keys (0.13.1 and 0.15.1), and unknown keys are ignored silently — verified by capturing rustc invocations, which still received `-C opt-level=3`.
+
+So pin it in the Makefile instead: give `build-wasm` `RUSTFLAGS="-C opt-level=z"` and `build-wasm-simd` `RUSTFLAGS="-C target-feature=+simd128 -C opt-level=z"`, leaving the dev targets alone. Verify with a clean `make build-wasm && make build-wasm-simd` and compare against the release baseline `lora-inspector_bg.wasm` 611 266 B / `lora-inspector-simd_bg.wasm` 613 040 B (within ~2%). Never measure `pkg/` after a dev build — those artifacts are ~7.7 MB.
 
 - [ ] **Step 4: Run the existing suite**
 
