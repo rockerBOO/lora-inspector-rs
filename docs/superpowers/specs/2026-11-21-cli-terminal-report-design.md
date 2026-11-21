@@ -318,8 +318,8 @@ label `MID` rather than `MID01`. Reading the first integer after the pattern as 
 would swallow the sub-block id `0` and silently drop `attentions.0` from the sublayer.
 `middle_block_N` (the SD2/`middle_block` spelling) does carry an index.
 
-`BlockGroup::family()` maps groups to the two display families used by the compact tier:
-`UNet` for every block group except `TextEncoder`, `Other` for `TextEncoder`.
+`BlockGroup::family()` maps groups to the display families used by the compact tier:
+every block group is `UNet`, `TextEncoder` maps to `TextEncoder`, and `Other` maps to `Other`.
 
 Canonical ordering for display: Down/Input → Mid/Middle → Up/Output → Double →
 Single → SingleTransformer → Transformer → Refiner → TokenRefiner → TxtFusion →
