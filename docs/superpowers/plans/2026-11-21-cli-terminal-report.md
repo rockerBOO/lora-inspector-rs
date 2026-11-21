@@ -275,7 +275,7 @@ git commit -m "feat(inspector): expose the non-materializing effective-scale pat
 **Files:**
 - Create: `crates/lora-inspector/src/terminal.rs`
 - Modify: `crates/lora-inspector/src/main.rs` (add `mod terminal;`)
-- Modify: `crates/lora-inspector/Cargo.toml` (add `unicode-width = "0.1"`, `terminal_size = "0.3"`)
+- Modify: `crates/lora-inspector/Cargo.toml` (add `unicode-width = "0.2"`, `terminal_size = "0.4"`)
 
 **Interfaces:**
 - Consumes: nothing.
@@ -371,6 +371,8 @@ git commit -m "feat(cli): add width- and unicode-aware terminal primitives"
   - `pub struct Report { pub schema_version: u32, pub file: FileInfo, pub network: NetworkInfo, pub metadata: Option<HashMap<String, String>>, pub blocks: Option<Vec<BlockStat>>, pub ungrouped: Ungrouped, pub skipped: Skipped, pub rank: Option<Vec<RankLayer>>, pub summary: Summary }`, all `Serialize`. `schema_version` is the constant `1`.
   - `pub struct BlockStat { pub group: BlockGroup, pub family: BlockFamily, pub label: String, pub index: Option<usize>, pub layers: usize, pub mean: f64, pub max: f64, pub median: f64, pub outlier: bool }` — one flat row per (group, index); the group and family repeat on every row.
   - `pub struct Ungrouped { pub layers: usize, pub prefixes: Vec<String> }`, `pub struct Skipped { pub layers: usize, pub reason: Option<String> }`
+  - `pub struct RankLayer { pub base_name: String, pub group: BlockGroup, pub label: String, pub index: Option<usize>, pub nominal_rank: usize, pub effective_rank: f64, pub balance: f64, pub top1_energy: f64, pub dominance: Option<f64>, pub health: RankHealth, pub eff_scale: Option<f64>, pub outlier: bool }` — declared here because it is part of the `schema_version: 1` contract; Task 8 only fills it in. Field names and order match `blocks[]` wherever they overlap.
+  - `pub struct RankSummary { pub layers: usize, pub by_health: BTreeMap<String, usize>, pub median_balance: f64, pub weak_or_worse: usize, pub elapsed_ms: u128 }` — `by_health` always carries all five health words, including zeros, so an agent can index it safely.
   - `pub struct Summary { pub block_weight: Option<BlockWeightSummary>, pub rank: Option<RankSummary> }`, `pub struct BlockWeightSummary { pub median: f64, pub peak: Peak, pub outliers: usize }`, `pub struct Peak { pub label: String, pub value: f64, pub ratio_to_median: f64 }`
   - `pub fn build_blocks(file: &LoRAFile, opts: &ReportOptions) -> Result<(Vec<BlockStat>, Ungrouped, Skipped, BlockWeightSummary)>` — one pass over `base_names()`, using `low_rank_effective_scale` unless `opts.slow` is set (then `effective_scale`); layers returning `None` increment `skipped.layers` and set `skipped.reason`.
   - `pub fn build_network_info(file: &LoRAFile, meta: &Metadata, total_layers: usize, unet: usize, te: usize) -> NetworkInfo` — `rank`/`alpha` are sorted `Vec<usize>`/`Vec<f64>`.
@@ -379,7 +381,7 @@ git commit -m "feat(cli): add width- and unicode-aware terminal primitives"
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `crates/lora-inspector/tests/report.rs` with a `support` module that writes a synthetic safetensors file (8-byte LE header length, JSON header with `data_offsets`, little-endian f32 payload) into `std::env::temp_dir()` and deletes it at the end of the test. The synthetic file has 2 `down_blocks` layers with `up`/`down`/`alpha` and 2 `text_model_encoder.layers` layers, values chosen so the block means are round numbers.
+Create `crates/lora-inspector/tests/support/mod.rs` (the shared fixture helper, also used by Tasks 7 and 8) and `crates/lora-inspector/tests/report.rs` with `mod support;`. The helper writes a synthetic safetensors file (8-byte LE header length, JSON header with `data_offsets`, little-endian f32 payload) into `std::env::temp_dir()` and deletes it at the end of the test. The synthetic file has 2 `down_blocks` layers with `up`/`down`/`alpha` and 2 `text_model_encoder.layers` layers, values chosen so the block means are round numbers.
 
 ```rust
 #[test]
@@ -437,11 +439,11 @@ git commit -m "feat(cli): build the block-weight report without materializing we
 
 **Interfaces:**
 - Consumes: `Report`, `BlockStat`, `Ungrouped`, `Skipped`, `Summary`, `Terminal`, `Style` from Tasks 5–6.
-- Produces, for Task 9: `pub fn render(report: &Report, term: &Terminal, opts: &ReportOptions) -> String` (single string with trailing newline; sections separated by one blank line) and `pub fn render_header(report: &Report, term: &Terminal) -> String`.
+- Produces, for Task 9: `pub fn render(report: &Report, meta: &Metadata, term: &Terminal, opts: &ReportOptions) -> String` (single string with trailing newline; sections separated by one blank line) and `pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> String`. `meta` is passed separately on purpose: the header prints `modelspec.architecture` and `modelspec.trigger_phrase` even when `--metadata` is off, and `Report.metadata` stays `null` in that case.
 
 - [ ] **Step 1: Write the failing tests**
 
-`tests/render_snapshots.rs` reuses the synthetic fixture helper from `tests/report.rs` (move it to `tests/support/mod.rs` and `mod support;` from both) and, for each width in `[40, 60, 80, 120, 200]`, calls `insta::assert_snapshot!` on `render(&report, &terminal)`.
+`tests/render_snapshots.rs` starts with `mod support;` and reuses the helper Task 6 created in `tests/support/mod.rs` and, for each width in `[40, 60, 80, 120, 200]`, calls `insta::assert_snapshot!` on `render(&report, &meta, &terminal, &opts)`.
 
 Add one `--ascii` snapshot at width 80, and these named assertions:
 
@@ -499,16 +501,14 @@ git commit -m "feat(cli): render the report at three width tiers"
 ### Task 8: Rank pass with rayon
 
 **Files:**
-- Modify: `crates/lora-inspector/src/report.rs` (add `RankLayer`, `RankSummary`, `pub fn build_rank`, and wire `summary.rank`)
-- Modify: `crates/lora-inspector/Cargo.toml` (add `rayon = "1.10"`)
+- Modify: `crates/lora-inspector/src/report.rs` (add `pub fn build_rank` and wire `summary.rank`; the `RankLayer`/`RankSummary` types already exist from Task 6)
+- Modify: `crates/lora-inspector/Cargo.toml` (add `rayon = "1.12"`)
 - Create: `crates/lora-inspector/tests/rank.rs`
 
 **Interfaces:**
 - Consumes: `LoRAFile::rank_metrics(base_name) -> Result<Option<RankMetrics>>`, `inspector::svd::RankMetrics` fields `nominal_rank, effective_rank, balance, top1_energy, dominance, health`.
 - Produces, for Tasks 9:
-  - `pub struct RankLayer { pub base_name: String, pub group: BlockGroup, pub label: String, pub index: Option<usize>, pub nominal_rank: usize, pub effective_rank: f64, pub balance: f64, pub top1_energy: f64, pub dominance: Option<f64>, pub health: RankHealth, pub eff_scale: Option<f64>, pub outlier: bool }` — field names and order match `blocks[]` wherever they overlap.
-  - `pub struct RankSummary { pub layers: usize, pub by_health: BTreeMap<String, usize>, pub median_balance: f64, pub weak_or_worse: usize, pub elapsed_ms: u128 }` — `by_health` always carries all five health words, including zeros, so an agent can index it safely.
-  - `pub fn build_rank(file: &LoRAFile, blocks: Option<&[BlockStat]>, jobs: usize) -> Result<(Vec<RankLayer>, RankSummary)>` — builds a rayon pool of `jobs` threads, `par_iter` over the sorted base names, collects, sorts by `base_name`, then computes the summary. Deterministic by construction.
+  - `pub fn build_rank(file: &LoRAFile, jobs: usize) -> Result<(Vec<RankLayer>, RankSummary)>` — `group`/`label`/`index` for each row come from `inspector::blocks::parse_block_key(base_name)`, not from the block stats, so the rank pass has no ordering dependency on the block pass. — builds a rayon pool of `jobs` threads, `par_iter` over the sorted base names, collects, sorts by `base_name`, then computes the summary. Deterministic by construction.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -523,7 +523,7 @@ fn rank_layers_are_sorted_by_base_name() { /* assert windows(2).all(|w| w[0].bas
 fn health_summary_counts_every_layer() { /* assert by_health values sum to layers */ }
 
 #[test]
-fn rank_cross_checks_block_labels() { /* with &[BlockStat] passed in, assert every RankLayer.label equals the label of the block containing its base name */ }
+fn rank_labels_match_the_block_pass() { /* build blocks and rank from the same fixture; assert every RankLayer.label equals the label the block pass produced for the same base name */ }
 
 #[test]
 fn health_summary_always_has_all_five_keys() { /* assert by_health contains Good, Ok, Weak, Poor, Collapsed even when the count is 0 */ }
@@ -661,10 +661,9 @@ README, rewritten as the API reference people and agents both read:
 5. **Local build tip** — `RUSTFLAGS="-C target-cpu=x86-64-v3"`.
 6. State the breaking change to `block-weights --output-format json`.
 
-- [ ] **Step 3: Bump the version**
+- [ ] **Step 3: Prepare (do not run) the version bump**
 
-Run: `python3 scripts/bump_release.py minor`
-Note: this commits and tags — it is not a dry run. Confirm with the user first if they have not already approved the version bump.
+`scripts/bump_release.py` commits and creates a git tag — a side effect outside this branch that the controller asks the human about. Do not run it. Instead record in the report: the exact command to run (`python3 scripts/bump_release.py minor`) and why (breaking `block-weights --output-format json` change detailed in the README).
 
 - [ ] **Step 4: Final verification**
 
