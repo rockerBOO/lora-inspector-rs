@@ -37,11 +37,14 @@ Measured on this machine (Ryzen 7 5800X, 8 cores, release build):
    `factorization_balance`. The CLI calls none of them. The frontend's own
    "l2 norm" message is wired straight to `effective_scale`, so the browser already
    uses the cheap path and the CLI does not.
-4. **The release profile is misnested.** Root `Cargo.toml` writes `[profile]` with
-   `dev = {...}` / `release = {...}` inside it instead of `[profile.release]`. Cargo
-   silently ignores the `package = { inspector = { opt-level = 3 } }` override but
-   still applies the rest, so `candle-core` and `inspector` are compiled at
-   `-C opt-level=z` while the binary gets `3`. Verified by inspecting rustc flags.
+4. **The release profile puts the size profile in the wrong place.** Root `Cargo.toml`
+   wrote `[profile]` with `dev = {...}` / `release = {...}` inside it instead of
+   `[profile.release]`. Cargo still applied the inner `opt-level = "z"` as the *global*
+   release profile — to the binary and to every dependency — while the per-package
+   overrides did take effect (`inspector` at 3, `insta` at 3). On a fully clean release
+   build that is 78 crates at `opt-level=z` and 1 at 3; after the fix, 79 at 3 and none
+   at `z`. Note for anyone re-measuring: an incremental `cargo build` can report a
+   misleading mix because it reuses `z`-built rlibs, so `cargo clean --release` first.
 5. **The frontend's grouping cannot be ported as-is.** Its `moduleBlocks.js` is ~600
    lines of per-architecture regex. Run against the files in `/mnt/900/lora` it parses
    LTX 0/2880 keys, wan2.2 160/800, qwen-image 1680/2160 — the browser already shows

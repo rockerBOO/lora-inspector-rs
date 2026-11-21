@@ -92,6 +92,7 @@ The commit body lists any `inspector` signature that had to change, the new wasm
 **Files:**
 - Modify: `Cargo.toml` (root, `[profile]` block at the end)
 - Modify: `crates/lora-inspector/Cargo.toml` (keep `cuda` feature as is)
+- Modify: `crates/lora-inspector-wasm/Cargo.toml` — pin the wasm release size profile, which this task removes from the workspace default
 
 **Interfaces:**
 - Consumes: nothing.
@@ -108,11 +109,15 @@ The root manifest has a `[profile]` table containing `dev = {...}` and `release 
 
 - [ ] **Step 3: Re-measure**
 
-Run: `cargo clean -p candle-core -p inspector --release && cargo build --release -p lora-inspector -v 2>&1 | grep -oE "\-C opt-level=[a-z0-9]+" | sort | uniq -c`
-Expected: no `opt-level=z` entries.
+Run: `cargo clean --release && cargo build --release -p lora-inspector -v 2>&1 | grep -oE "\-C opt-level=[a-z0-9]+" | sort | uniq -c`
+Expected: no `opt-level=z` entries. A full `cargo clean --release` is required here: an incremental build reports a misleading mix because it reuses `z`-built rlibs.
 
 Run: `time ./target/release/lora-inspector block-weights --file boo.safetensors --output-format text >/dev/null`
 Expected: well under the 13.3 s baseline recorded in the spec (it still computes the wasteful norms; this task only changes codegen).
+
+- [ ] **Step 3b: Keep the wasm build size-pinned**
+
+The wasm release build inherited `opt-level = "z"` from the workspace profile that this task replaces, and it passes no `opt-level` of its own. Add `[package.metadata.wasm-pack.profile.release]` with `opt-level = "z"` to `crates/lora-inspector-wasm/Cargo.toml` so the shipped bundle keeps its size, and verify with `make build-wasm-dev && ls -l crates/lora-inspector-wasm/pkg/*.wasm` against the recorded baseline (7 737 686 B / 7 757 294 B — dev builds differ, so compare a release build if the sizes are far off).
 
 - [ ] **Step 4: Run the existing suite**
 
