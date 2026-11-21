@@ -31,6 +31,20 @@ const H3_BLOCK_RE =
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
 
+// MOSS-Image (sd-scripts networks.lora_generic) also names its DiT blocks
+// "layers.N", but the sub-modules are proj_q/proj_k/proj_v/proj_o for
+// attention and proj_ffn_up_gate/proj_ffn_down for the SwiGLU FFN. This has to
+// be checked before LUMINA_TRANSFORMER, whose type group does not cover them.
+const MOSS_IMAGE_BLOCK_RE =
+	/(?:lora_unet_|diffusion_model\.)layers[._](?<block_id>\d+)[._](?<subblock_type>proj_q|proj_k|proj_v|proj_o|proj_ffn_up_gate|proj_ffn_down)/;
+
+const MOSS_IMAGE_ATTENTION_MODULES = new Set([
+	"proj_q",
+	"proj_k",
+	"proj_v",
+	"proj_o",
+]);
+
 const GEMMA =
 	/.*te.*(?<block_type>layers).*_(?<block_id>\d+)_(?<type>self_attn_q_proj|self_attn_k_proj|self_attn_v_proj|self_attn_o_proj|mlp_down_proj|mlp_up_proj|mlp_gate_proj)/;
 
@@ -233,6 +247,29 @@ function parseSDKey(key) {
 			blockType: "linear",
 			name: "XE00",
 		};
+	}
+
+	// Parse MOSS-Image DiT layers
+	if (key.includes("unet_layers")) {
+		const matches = key.match(MOSS_IMAGE_BLOCK_RE);
+
+		if (matches) {
+			const groups = matches.groups;
+			const idx = Number.parseInt(groups.block_id);
+			const isAttention = MOSS_IMAGE_ATTENTION_MODULES.has(
+				groups.subblock_type,
+			);
+
+			return {
+				...result,
+				type: isAttention ? "attentions" : "mlp",
+				idx: idx,
+				blockId: idx,
+				blockType: "layers",
+				name: `TB${padTwo(idx)}`,
+				isAttention: isAttention,
+			};
+		}
 	}
 
 	// Parse Lumina transformer
