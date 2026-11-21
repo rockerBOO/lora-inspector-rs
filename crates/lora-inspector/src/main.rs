@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use std::{collections::HashMap, fs::File, io::Read, path::PathBuf};
 
+mod terminal;
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Inspect LoRA file weights and norms")]
 struct Cli {
