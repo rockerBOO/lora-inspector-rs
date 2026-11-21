@@ -13,6 +13,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum NetworkModule {
     KohyaSSLoRA,
+    KohyaSSLoRAGeneric,
     KohyaSSLoRAFlux,
     MusubiTunerLoRAFlux2,
     KohyaSSLoRALumina,
