@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 
-use crate::network::{NetworkArgs, NetworkModule, NetworkType, WeightDecomposition};
+use crate::network::{NetworkArgs, NetworkFamily, NetworkModule, NetworkType, WeightDecomposition};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
@@ -112,6 +112,63 @@ impl Metadata {
             },
             _ => None,
         }
+    }
+
+    /// Reads a metadata value, trimmed, treating blank values as absent.
+    fn metadata_value(&self, key: &str) -> Option<&str> {
+        self.metadata
+            .as_ref()?
+            .get(key)
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+    }
+
+    /// The module as the trainer names it, without its vendor prefix:
+    /// `networks.lora_generic` -> `lora_generic`, `lycoris.kohya` -> `kohya`.
+    pub fn network_module_name(&self) -> Option<String> {
+        let raw = self.metadata_value("ss_network_module")?;
+
+        Some(match raw.split_once('.') {
+            Some((_vendor, module)) if !module.is_empty() => module.to_string(),
+            _ => raw.to_string(),
+        })
+    }
+
+    /// Which trainer produced this file, from metadata alone.
+    /// Key-shape evidence is layered on top by [`Self::resolve_network_family`].
+    pub fn network_family(&self) -> NetworkFamily {
+        if let Some(module) = self.metadata_value("ss_network_module") {
+            if let Some(name) = module.strip_prefix("networks.") {
+                return match name {
+                    "lora_flux_2" | "lora_krea2" => NetworkFamily::MusubiTuner,
+                    _ => NetworkFamily::Kohya,
+                };
+            }
+
+            if module.starts_with("lycoris.") {
+                return NetworkFamily::Lycoris;
+            }
+        }
+
+        if let Some(version) = self.metadata_value("modelspec.implementation_version") {
+            if version.starts_with("sd-scripts/") {
+                return NetworkFamily::Kohya;
+            }
+        }
+
+        if let Some(implementation) = self.metadata_value("modelspec.implementation") {
+            if implementation.contains("kohya-ss/sd-scripts")
+                || implementation.contains("OpenMOSS/MOSS-Image")
+            {
+                return NetworkFamily::Kohya;
+            }
+
+            if implementation.contains("diffusers") {
+                return NetworkFamily::Diffusers;
+            }
+        }
+
+        NetworkFamily::Unknown
     }
 }
 
@@ -534,5 +591,113 @@ mod tests {
         assert!(diff.added.is_empty());
         assert!(diff.removed.is_empty());
         assert!(diff.changed.is_empty());
+    }
+
+    fn meta(pairs: &[(&str, &str)]) -> Metadata {
+        Metadata {
+            metadata: Some(
+                pairs
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            ),
+        }
+    }
+
+    #[test]
+    fn network_family_from_module_string() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")]).network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_anima")]).network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_flux_2")]).network_family(),
+            NetworkFamily::MusubiTuner
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_krea2")]).network_family(),
+            NetworkFamily::MusubiTuner
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "lycoris.kohya")]).network_family(),
+            NetworkFamily::Lycoris
+        );
+    }
+
+    #[test]
+    fn network_family_from_implementation() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation_version",
+                "sd-scripts/11d8cedd0c67b93a10f8b2d75f43554f6f12c794",
+            )])
+            .network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/OpenMOSS/MOSS-Image",
+            )])
+            .network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/huggingface/diffusers",
+            )])
+            .network_family(),
+            NetworkFamily::Diffusers
+        );
+    }
+
+    #[test]
+    fn network_family_unknown_cases() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(meta(&[]).network_family(), NetworkFamily::Unknown);
+        assert_eq!(
+            meta(&[("ss_network_module", "")]).network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "foo.bar")]).network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/nobody/some-trainer",
+            )])
+            .network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            Metadata { metadata: None }.network_family(),
+            NetworkFamily::Unknown
+        );
+    }
+
+    #[test]
+    fn network_module_name_strips_vendor_prefix() {
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")]).network_module_name(),
+            Some("lora_generic".to_string())
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "lycoris.kohya")]).network_module_name(),
+            Some("kohya".to_string())
+        );
+        assert_eq!(meta(&[]).network_module_name(), None);
+        assert_eq!(meta(&[("ss_network_module", "")]).network_module_name(), None);
     }
 }
