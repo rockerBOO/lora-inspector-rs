@@ -1,0 +1,16 @@
+diffusion_model.blocks.0.attn.out_proj
+diffusion_model.blocks.0.attn.qkv_proj
+diffusion_model.blocks.0.mlp.fc1
+diffusion_model.blocks.0.mlp.fc2
+diffusion_model.blocks.1.attn.qkv_proj
+diffusion_model.blocks.1.mlp.fc2
+diffusion_model.blocks.10.attn.out_proj
+diffusion_model.blocks.25.mlp.fc1
+diffusion_model.blocks.49.attn.qkv_proj
+diffusion_model.blocks.49.mlp.fc2
+diffusion_model.token_refiner.blocks.0.attn.out_proj
+diffusion_model.token_refiner.blocks.0.attn.qkv_proj
+diffusion_model.token_refiner.blocks.0.mlp.fc1
+diffusion_model.token_refiner.blocks.0.mlp.fc2
+diffusion_model.token_refiner.blocks.1.attn.qkv_proj
+diffusion_model.token_refiner.blocks.1.mlp.fc2

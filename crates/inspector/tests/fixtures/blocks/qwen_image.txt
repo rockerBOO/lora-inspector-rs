@@ -1,0 +1,16 @@
+transformer_blocks.0.attn.add_k_proj
+transformer_blocks.0.attn.add_q_proj
+transformer_blocks.0.attn.to_add_out
+transformer_blocks.0.attn.to_k
+transformer_blocks.0.attn.to_out.0
+transformer_blocks.0.attn.to_q
+transformer_blocks.0.attn.to_v
+transformer_blocks.0.img_mlp.net.0.proj
+transformer_blocks.0.img_mlp.net.2
+transformer_blocks.0.txt_mlp.net.0.proj
+transformer_blocks.1.attn.to_q
+transformer_blocks.1.img_mlp.net.2
+transformer_blocks.20.attn.to_v
+transformer_blocks.20.txt_mlp.net.2
+transformer_blocks.59.attn.to_out.0
+transformer_blocks.59.img_mlp.net.0.proj
