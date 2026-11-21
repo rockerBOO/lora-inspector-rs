@@ -3,7 +3,7 @@ source: crates/lora-inspector/tests/render_snapshots.rs
 expression: "render(& report, & meta, & terminal(120, false), & opts())"
 ---
 fixture.safetensors                                                                                               3.7 KB
-unknown · - · 4, 8 · 4, 8 · fp32 · 7 layers (4 unet, 2 te)
+unknown · rank 4, 8 · alpha 4.0, 8.0 · fp32 · 7 layers (4 unet, 2 te)
 
 block weight
 3 blocks  median 2.00  peak IN00 6.00 (3.0× median)
@@ -12,4 +12,4 @@ block weight
   TE00      █████████████                                 2.00    2 layers
   IN02      █                                             0.30     1 layer
 1 layer ungrouped (txtfusion_projector)
-1 layer skipped: no low-rank factor (LoHA/LoKr/OFT/BOFT) — pass --slow to include
+1 layer have no 2D low-rank factor — pass --slow to include

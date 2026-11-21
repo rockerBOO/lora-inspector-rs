@@ -19,7 +19,7 @@ use serde::Serialize;
 
 pub const SCHEMA_VERSION: u32 = 1;
 
-const SKIPPED_REASON: &str = "no low-rank factor (LoHA/LoKr/OFT/BOFT)";
+const SKIPPED_REASON: &str = "no 2D low-rank factor";
 const UNGROUPED_PREFIX_CAP: usize = 10;
 /// Near-zero floor for outlier thresholds and the peak ratio denominator.
 const OUTLIER_FLOOR: f64 = 1e-10;
@@ -35,16 +35,27 @@ pub struct ReportOptions {
     pub metadata: bool,
 }
 
+/// Which load path produced this report. The header-only path reads just
+/// `8 + header_len` bytes, so payload-derived fields are empty or `null` there;
+/// the marker is what lets a consumer tell "not loaded" from "not present".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Load {
+    Full,
+    HeaderOnly,
+}
+
 /// The top-level JSON document emitted by `--json`.
 #[derive(Debug, Clone, Serialize)]
 pub struct Report {
     pub schema_version: u32,
+    pub load: Load,
     pub file: FileInfo,
     pub network: NetworkInfo,
     pub metadata: Option<HashMap<String, String>>,
     pub blocks: Option<Vec<BlockStat>>,
-    pub ungrouped: Ungrouped,
-    pub skipped: Skipped,
+    pub ungrouped: Option<Ungrouped>,
+    pub skipped: Option<Skipped>,
     pub rank: Option<Vec<RankLayer>>,
     pub summary: Summary,
 }
@@ -529,22 +540,22 @@ pub fn build_report(
         None
     };
 
+    // The header-only path is exactly `--no-blocks` without `--rank`: neither
+    // the block pass nor the rank pass runs, so nothing payload-derived is
+    // computed. Every other combination loads the tensor payload.
+    let load = if !opts.blocks && !opts.rank {
+        Load::HeaderOnly
+    } else {
+        Load::Full
+    };
+
+    // When the block pass does not run, `blocks`, `ungrouped` and `skipped`
+    // are all `null` (not computed), matching the `null` vs `[]` contract.
     let (blocks, block_weight, ungrouped, skipped) = if opts.blocks {
         let (blocks, ungrouped, skipped, summary) = build_blocks(file, opts)?;
-        (Some(blocks), Some(summary), ungrouped, skipped)
+        (Some(blocks), Some(summary), Some(ungrouped), Some(skipped))
     } else {
-        (
-            None,
-            None,
-            Ungrouped {
-                layers: 0,
-                prefixes: Vec::new(),
-            },
-            Skipped {
-                layers: 0,
-                reason: None,
-            },
-        )
+        (None, None, None, None)
     };
 
     let (rank, rank_summary) = if opts.rank {
@@ -556,6 +567,7 @@ pub fn build_report(
 
     Ok(Report {
         schema_version: SCHEMA_VERSION,
+        load,
         file: FileInfo {
             path: path.to_string_lossy().into_owned(),
             size_bytes,

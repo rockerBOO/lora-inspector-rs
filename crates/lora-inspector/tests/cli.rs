@@ -43,6 +43,9 @@ fn json_is_a_single_object_and_independent_of_width() {
 
     assert!(narrow.is_object(), "--json must emit a single object");
     assert_eq!(narrow, wide, "--json must not depend on --width");
+    assert_eq!(narrow["load"], "full");
+    assert!(narrow["ungrouped"].is_object());
+    assert!(narrow["skipped"].is_object());
 }
 
 #[test]
@@ -64,6 +67,15 @@ fn no_blocks_skips_the_block_payload() {
     let fixture = support::Fixture::write();
     let value = run_json(&fixture, &["--no-blocks"]);
     assert!(value["blocks"].is_null());
+    assert_eq!(value["load"], "header_only");
+    assert!(
+        value["ungrouped"].is_null(),
+        "ungrouped is null when the block pass did not run"
+    );
+    assert!(
+        value["skipped"].is_null(),
+        "skipped is null when the block pass did not run"
+    );
 }
 
 #[test]

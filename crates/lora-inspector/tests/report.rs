@@ -164,8 +164,9 @@ fn layers_without_low_rank_factors_are_skipped_not_materialized() {
         &Device::Cpu,
     );
 
-    assert_eq!(report.skipped.layers, 1);
-    assert!(report.skipped.reason.is_some());
+    let skipped = report.skipped.as_ref().expect("skipped computed");
+    assert_eq!(skipped.layers, 1);
+    assert!(skipped.reason.is_some());
 
     // The cheap Gram path declines the hada layer rather than materializing it.
     assert_eq!(
@@ -186,11 +187,9 @@ fn layers_without_low_rank_factors_are_skipped_not_materialized() {
 #[test]
 fn ungrouped_layers_are_counted_with_their_prefix() {
     let (report, _fixture) = build(true);
-    assert_eq!(report.ungrouped.layers, 1);
-    assert_eq!(
-        report.ungrouped.prefixes,
-        vec!["txtfusion_projector".to_string()]
-    );
+    let ungrouped = report.ungrouped.as_ref().expect("ungrouped computed");
+    assert_eq!(ungrouped.layers, 1);
+    assert_eq!(ungrouped.prefixes, vec!["txtfusion_projector".to_string()]);
 }
 
 #[test]

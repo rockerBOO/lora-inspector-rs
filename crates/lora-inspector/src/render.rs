@@ -21,7 +21,7 @@ use crate::terminal::{Style, Terminal};
 const WIDE_MIN: usize = 100;
 const COMPACT_MIN: usize = 60;
 
-const SKIPPED_FALLBACK_REASON: &str = "no low-rank factor (LoHA/LoKr/OFT/BOFT)";
+const SKIPPED_FALLBACK_REASON: &str = "no 2D low-rank factor";
 
 const WIDE_LABEL_W: usize = 8;
 const WIDE_MEAN_W: usize = 8;
@@ -93,23 +93,19 @@ pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> Strin
 fn header_network_line(report: &Report, term: &Terminal) -> String {
     let sep = sep(term);
     let module = report.network.module.clone();
+    // `network.type` is absent from every tier when unknown rather than a bare
+    // `-`; rank and alpha are labelled so `4 · 4` never reads as two nameless
+    // numbers, and are omitted entirely when they hold no value.
     let ty = report
         .network
         .network_type
         .as_ref()
         .map(network_type_label)
-        .unwrap_or("-")
-        .to_string();
-    let rank = if report.network.rank.is_empty() {
-        "-".to_string()
-    } else {
-        join_usize(&report.network.rank)
-    };
-    let alpha = if report.network.alpha.is_empty() {
-        "-".to_string()
-    } else {
-        join_f64(&report.network.alpha)
-    };
+        .map(str::to_string);
+    let rank = (!report.network.rank.is_empty())
+        .then(|| format!("rank {}", join_usize(&report.network.rank)));
+    let alpha = (!report.network.alpha.is_empty())
+        .then(|| format!("alpha {}", join_f64_1dp(&report.network.alpha)));
     let precision = report.file.precision.as_deref().unwrap_or("-").to_string();
     let layers_total = count_noun(report.network.layers.total, "layer", "layers");
     let layers_full = format!(
@@ -117,40 +113,46 @@ fn header_network_line(report: &Report, term: &Terminal) -> String {
         layers_total, report.network.layers.unet, report.network.layers.text_encoder
     );
 
-    // Drop precision, then the layer breakdown, then type, then module.
-    let variants = [
+    // Degrade by dropping whole fields: the precision value, then the unet/te
+    // breakdown, then the network type, then the module, then alpha, then
+    // rank. The bare layer count is the floor. `None` entries are fields that
+    // have no value at all and never render.
+    let variants: Vec<Vec<String>> = [
         vec![
-            module.clone(),
+            Some(module.clone()),
             ty.clone(),
             rank.clone(),
             alpha.clone(),
-            precision.clone(),
-            layers_full.clone(),
+            Some(precision.clone()),
+            Some(layers_full.clone()),
         ],
         vec![
-            module.clone(),
+            Some(module.clone()),
             ty.clone(),
             rank.clone(),
             alpha.clone(),
-            layers_full.clone(),
+            Some(layers_full.clone()),
         ],
         vec![
-            module.clone(),
+            Some(module.clone()),
             ty.clone(),
             rank.clone(),
             alpha.clone(),
-            layers_total.clone(),
+            Some(layers_total.clone()),
         ],
         vec![
-            module.clone(),
+            Some(module.clone()),
             rank.clone(),
             alpha.clone(),
-            layers_total.clone(),
+            Some(layers_total.clone()),
         ],
-        vec![rank.clone(), alpha.clone(), layers_total.clone()],
-        vec![rank.clone(), layers_total.clone()],
-        vec![layers_total.clone()],
-    ];
+        vec![rank.clone(), alpha.clone(), Some(layers_total.clone())],
+        vec![rank.clone(), Some(layers_total.clone())],
+        vec![Some(layers_total.clone())],
+    ]
+    .into_iter()
+    .map(|fields| fields.into_iter().flatten().collect())
+    .collect();
 
     for fields in variants {
         let line = fields.join(&format!(" {sep} "));
@@ -239,9 +241,10 @@ fn render_compact(
         lines.push(summary_line(summary, blocks.len(), false, term));
     }
 
-    // The sparkline column is a fixed width across families so a single-value
-    // family's number lines up with the other families' sparklines.
-    let spark_width = term
+    // The sparkline column is capped at the number of blocks so each block
+    // gets at most one glyph; the available width is a ceiling, never a target
+    // to interpolate more columns up to.
+    let spark_width_cap = term
         .width
         .saturating_sub(2 + COMPACT_FAMILY_W + 2 + 2 + LAYERS_W);
 
@@ -255,6 +258,7 @@ fn render_compact(
                 .then(a.label.cmp(&b.label))
         });
         let values: Vec<f64> = ordered.iter().map(|row| row.mean).collect();
+        let spark_width = spark_width_cap.min(ordered.len());
         let spark = if distinct_count(&values) < 2 {
             term.pad_left(&fmt_value(values[0]), spark_width)
         } else {
@@ -521,31 +525,33 @@ fn peak_annotations(
 fn footer_lines(report: &Report, term: &Terminal) -> Vec<String> {
     let mut lines = Vec::new();
 
-    if report.ungrouped.layers > 0 {
-        let count = count_noun(report.ungrouped.layers, "layer", "layers");
-        let short = format!("{count} ungrouped");
-        let full = if report.ungrouped.prefixes.is_empty() {
-            short.clone()
-        } else {
-            format!(
-                "{count} ungrouped ({})",
-                report.ungrouped.prefixes.join(", ")
-            )
-        };
-        lines.push(pick_fit(term, full, short));
+    if let Some(ungrouped) = &report.ungrouped {
+        if ungrouped.layers > 0 {
+            let count = count_noun(ungrouped.layers, "layer", "layers");
+            let short = format!("{count} ungrouped");
+            let full = if ungrouped.prefixes.is_empty() {
+                short.clone()
+            } else {
+                format!("{count} ungrouped ({})", ungrouped.prefixes.join(", "))
+            };
+            lines.push(pick_fit(term, full, short));
+        }
     }
 
-    if report.skipped.layers > 0 {
-        let count = count_noun(report.skipped.layers, "layer", "layers");
-        let reason = report
-            .skipped
-            .reason
-            .as_deref()
-            .unwrap_or(SKIPPED_FALLBACK_REASON);
-        let dash = if term.unicode { "—" } else { "-" };
-        let full = format!("{count} skipped: {reason} {dash} pass --slow to include");
-        let short = format!("{count} skipped; --slow includes them");
-        lines.push(pick_fit(term, full, short));
+    if let Some(skipped) = &report.skipped {
+        if skipped.layers > 0 {
+            let count = count_noun(skipped.layers, "layer", "layers");
+            let reason = skipped.reason.as_deref().unwrap_or(SKIPPED_FALLBACK_REASON);
+            let dash = if term.unicode { "—" } else { "-" };
+            // The `--slow` hint survives until it no longer fits, then the
+            // bare `N layers have no 2D low-rank factor` is the floor.
+            let candidates = [
+                format!("{count} have {reason} {dash} pass --slow to include"),
+                format!("{count} have {reason}; --slow includes them"),
+                format!("{count} have {reason}"),
+            ];
+            lines.push(pick_first_fit(term, &candidates));
+        }
     }
 
     lines
@@ -705,8 +711,12 @@ fn times(term: &Terminal) -> &'static str {
     }
 }
 
-fn fmt_f64(value: f64) -> String {
-    format!("{value}")
+fn join_f64_1dp(values: &[f64]) -> String {
+    values
+        .iter()
+        .map(|value| format!("{value:.1}"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Format a block-weight value for display: fixed two decimal places so the
@@ -761,15 +771,6 @@ fn join_usize(values: &[usize]) -> String {
     values
         .iter()
         .map(usize::to_string)
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn join_f64(values: &[f64]) -> String {
-    values
-        .iter()
-        .copied()
-        .map(fmt_f64)
         .collect::<Vec<_>>()
         .join(", ")
 }

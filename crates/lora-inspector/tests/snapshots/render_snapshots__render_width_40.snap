@@ -3,9 +3,9 @@ source: crates/lora-inspector/tests/render_snapshots.rs
 expression: "render(& report, & meta, & terminal(40, false), & opts())"
 ---
 fixture.safetensors               3.7 KB
-unknown · - · 4, 8 · 4, 8 · 7 layers
+rank 4, 8 · alpha 4.0, 8.0 · 7 layers
 
 UNet 2 blocks  med 3.15  peak IN00 6.00
 TextEncoder 1 block  med 2.00
 1 layer ungrouped (txtfusion_projector)
-1 layer skipped; --slow includes them
+1 layer have no 2D low-rank factor

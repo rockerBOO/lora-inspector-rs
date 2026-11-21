@@ -150,20 +150,23 @@ fn header_prints_every_rank_and_alpha_when_there_are_several() {
     assert_eq!(report.network.alpha, vec![4.0, 8.0]);
 
     let header = render_header(&report, &meta, &terminal(200, false));
-    assert_eq!(
-        header.matches("4, 8").count(),
-        2,
-        "header must print the full rank list and the full alpha list"
+    assert!(
+        header.contains("rank 4, 8"),
+        "header must print the labelled rank list: {header}"
+    );
+    assert!(
+        header.contains("alpha 4.0, 8.0"),
+        "header must print the labelled alpha list: {header}"
     );
 }
 
 #[test]
 fn skipped_layers_are_reported_with_the_slow_hint() {
     let (mut report, meta, _fixture) = build();
-    report.skipped.layers = 3;
+    report.skipped.as_mut().expect("skipped computed").layers = 3;
 
     let out = render(&report, &meta, &terminal(80, false), &opts());
-    assert!(out.contains("3 layers skipped"));
+    assert!(out.contains("3 layers have no 2D low-rank factor"));
     assert!(out.contains("--slow"));
 }
 
