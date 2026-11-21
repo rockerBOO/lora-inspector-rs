@@ -23,7 +23,7 @@ test("parses second text encoder self attention block", (t) => {
 	t.is(result.idx, 5);
 	t.is(result.blockId, "5");
 	t.is(result.blockType, "self_attn");
-	t.is(result.name, "TE2-05");
+	t.is(result.name, "TE05");
 	t.true(result.isAttention);
 });
 
