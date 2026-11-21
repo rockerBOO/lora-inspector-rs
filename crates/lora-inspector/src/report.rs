@@ -13,7 +13,8 @@ use inspector::blocks::{parse_block_key, BlockFamily, BlockGroup};
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
 use inspector::network::NetworkType;
-use inspector::svd::RankHealth;
+use inspector::svd::{RankHealth, RankMetrics};
+use rayon::prelude::*;
 use serde::Serialize;
 
 pub const SCHEMA_VERSION: u32 = 1;
@@ -326,6 +327,143 @@ pub fn build_blocks(
     Ok((blocks, ungrouped, skipped, summary))
 }
 
+/// One layer's raw rank-pass values before outlier flagging and rounding.
+struct RankRaw {
+    base_name: String,
+    group: BlockGroup,
+    index: Option<usize>,
+    metrics: RankMetrics,
+    eff_scale: Option<f64>,
+}
+
+/// Parallel effective-rank pass over every base name.
+///
+/// Each layer's metrics are computed independently, so no cross-layer float
+/// depends on scheduling. The collected rows are sorted by `base_name` before
+/// the summary is derived, which is what makes the output byte-identical for
+/// any thread count.
+pub fn build_rank(
+    file: &LoRAFile,
+    jobs: usize,
+) -> inspector::Result<(Vec<RankLayer>, RankSummary)> {
+    let start = std::time::Instant::now();
+
+    let mut base_names = file.base_names();
+    base_names.sort();
+
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(rank_threads(jobs))
+        .build()
+        .map_err(|err| inspector::InspectorError::Msg(err.to_string()))?;
+
+    let mut raw: Vec<RankRaw> = pool
+        .install(|| {
+            base_names
+                .par_iter()
+                .map(|base_name| -> inspector::Result<Option<RankRaw>> {
+                    let Some(metrics) = file.rank_metrics(base_name)? else {
+                        return Ok(None);
+                    };
+                    let key = parse_block_key(base_name);
+                    let eff_scale = file.low_rank_effective_scale(base_name)?;
+                    Ok(Some(RankRaw {
+                        base_name: base_name.clone(),
+                        group: key.group,
+                        index: key.block_index,
+                        metrics,
+                        eff_scale,
+                    }))
+                })
+                .collect::<inspector::Result<Vec<Option<RankRaw>>>>()
+        })?
+        .into_iter()
+        .flatten()
+        .collect();
+
+    raw.sort_by(|a, b| a.base_name.cmp(&b.base_name));
+
+    // The layer outlier rule compares each layer's scale to the median layer
+    // scale (not the block median), matching `LoRAFile::effective_scales_all`.
+    let scales: Vec<f64> = raw.iter().filter_map(|row| row.eff_scale).collect();
+    let median_scale = median(&scales);
+    let threshold = if median_scale < 1e-10 {
+        1e-10
+    } else {
+        1.5 * median_scale
+    };
+
+    let mut by_health = BTreeMap::from([
+        ("Collapsed".to_string(), 0usize),
+        ("Good".to_string(), 0usize),
+        ("Ok".to_string(), 0usize),
+        ("Weak".to_string(), 0usize),
+        ("Poor".to_string(), 0usize),
+    ]);
+    let mut weak_or_worse = 0usize;
+    let balances: Vec<f64> = raw.iter().map(|row| row.metrics.balance).collect();
+
+    let mut layers = Vec::with_capacity(raw.len());
+    for row in &raw {
+        let word = rank_health_word(&row.metrics.health);
+        *by_health.get_mut(word).expect("health word present") += 1;
+        if matches!(
+            row.metrics.health,
+            RankHealth::Weak | RankHealth::Poor | RankHealth::Collapsed
+        ) {
+            weak_or_worse += 1;
+        }
+
+        layers.push(RankLayer {
+            base_name: row.base_name.clone(),
+            group: row.group,
+            label: row.group.tag(row.index),
+            index: row.index,
+            nominal_rank: row.metrics.nominal_rank,
+            effective_rank: round_sig(row.metrics.effective_rank, 6),
+            balance: round_sig(row.metrics.balance, 6),
+            top1_energy: round_sig(row.metrics.top1_energy, 6),
+            dominance: row.metrics.dominance.map(|d| round_sig(d, 6)),
+            health: row.metrics.health.clone(),
+            eff_scale: row.eff_scale.map(|scale| round_sig(scale, 6)),
+            outlier: row.eff_scale.is_some_and(|scale| scale > threshold),
+        });
+    }
+
+    let summary = RankSummary {
+        layers: layers.len(),
+        by_health,
+        median_balance: round_sig(median(&balances), 6),
+        weak_or_worse,
+        elapsed_ms: start.elapsed().as_millis(),
+    };
+
+    Ok((layers, summary))
+}
+
+/// Resolve `--jobs`: `0` means the available core count, falling back to one
+/// thread when the platform cannot report parallelism.
+fn rank_threads(jobs: usize) -> usize {
+    if jobs == 0 {
+        std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1)
+    } else {
+        jobs
+    }
+}
+
+/// The JSON health word for a [`RankHealth`], matching the enum's `Serialize`
+/// spelling (`Good`, `Ok`, `Weak`, `Poor`, `Collapsed`).
+fn rank_health_word(health: &RankHealth) -> &'static str {
+    match health {
+        RankHealth::Collapsed => "Collapsed",
+        RankHealth::Good => "Good",
+        RankHealth::Ok => "Ok",
+        RankHealth::Weak => "Weak",
+        RankHealth::Poor => "Poor",
+    }
+}
+
 pub fn build_network_info(
     file: &LoRAFile,
     meta: &Metadata,
@@ -415,10 +553,12 @@ pub fn build_report(
         )
     };
 
-    // The rank pass is built by a later task; until then the key is always
-    // present and `null`, never absent or an empty list.
-    let rank: Option<Vec<RankLayer>> = None;
-    let rank_summary: Option<RankSummary> = None;
+    let (rank, rank_summary) = if opts.rank {
+        let (layers, summary) = build_rank(file, opts.jobs)?;
+        (Some(layers), Some(summary))
+    } else {
+        (None, None)
+    };
 
     Ok(Report {
         schema_version: SCHEMA_VERSION,
