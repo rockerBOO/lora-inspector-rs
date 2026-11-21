@@ -400,9 +400,11 @@ GOOD ███████████████░░░  78%    median balan
 Health colors: `Good` green, `Ok` default, `Weak` yellow, `Poor` red,
 `Collapsed` bold red. Color is decoration only — **every rank row carries its health word, and
 that word is never truncated or dropped at any width** — so `--color never` and screenshots
-remain unambiguous. The aggregate health *distribution* line and the numeric columns
-(`balance`, `top1`, `dominance`) are droppable at narrow widths, in that order, because the
-per-row word already carries the verdict. Numeric columns are formatted and padded through
+remain unambiguous. The aggregate health *distribution* line and the numeric columns are
+droppable at narrow widths — `dominance` first, then `top1`, then `balance`, then
+`effective rank`, then `nominal rank` — because the per-row word already carries the
+verdict. Dropping is whole-column: a numeric column is never shown half-width, and no line
+may exceed the tier width even at the 20-column floor. Numeric columns are formatted and padded through
 `Terminal`, never with `fmt!` of a raw f64, so an unrounded value cannot overflow a column.
 
 ### JSON
