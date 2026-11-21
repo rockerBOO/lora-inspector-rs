@@ -479,7 +479,7 @@ With `--rank`, `rank` becomes a flat array and `summary.rank` appears:
     "block_weight": { "median": 0.41, "peak": { "…": 0 }, "outliers": 3 },
     "rank": {
       "layers": 114,
-      "by_health": { "Good": 78, "Ok": 30, "Weak": 4, "Poor": 2, "Collapsed": 0 },
+      "by_health": { "Collapsed": 0, "Good": 78, "Ok": 30, "Poor": 2, "Weak": 4 },
       "median_balance": 0.81, "weak_or_worse": 6, "elapsed_ms": 2400
     }
   }
@@ -516,7 +516,7 @@ Field reference — this table is the contract and is copied verbatim into the C
 | `rank[].outlier` | bool | layer scale exceeds 1.5× the median **layer** scale |
 | `rank[].health` | string | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed` |
 | `summary.block_weight` | object | `{median, peak: {label, value, ratio_to_median}, outliers}` |
-| `summary.rank` | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}` |
+| `summary.rank` | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}`; `by_health` keys are alphabetical |
 
 ### Performance work
 
