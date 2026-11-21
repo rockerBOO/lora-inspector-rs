@@ -13,7 +13,9 @@ package = {version = "1.6.3", authors = ['Dave Lage (rockerBOO)'], edition = "20
 dependencies = {candle-core = {version = "0.3.2"}, getrandom = {version = "0.2", features = ['js']}, num = "0.4.1", pest = "2.6", pest_derive = "2.6", safetensors = "0.3.1", serde = {version = "1.0", features = ['derive']}, serde_json = "1.0.108", serde_with = "3.4.0"}
 
 # Native release builds optimize for speed. The size profile (opt-level = "z")
-# belongs to the wasm build only; that build passes its own flags via the Makefile.
+# belongs to the wasm build only: it must never be the native release default, and
+# a wasm size profile has to be pinned in the wasm crate's wasm-pack metadata
+# rather than inherited from this workspace profile.
 [profile.release]
 opt-level = 3
 lto = true
