@@ -39,7 +39,7 @@ pub struct LoRAFile {
 // const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
 
 /// Reshape a LoRA factor to its 2D matrix form when it is a matrix with any
-/// number of trailing singleton (size-1) dimensions — e.g. a 1×1 convolution
+/// number of singleton (size-1) dimensions in any position — e.g. a 1×1 convolution
 /// stored as `[out, rank, 1, 1]`. The surviving dimensions keep their original
 /// element order. Returns `Ok(None)` when the factor is not a matrix (a real
 /// convolution kernel, a rank-0/1 tensor, or a fully-unit shape), in which case
@@ -272,7 +272,7 @@ impl LoRAFile {
     /// dimension (e.g. DiT modulation/projection layers), the full product can be
     /// hundreds of MB to reconstruct just to throw away everything but its norm, which
     /// can exhaust the wasm heap. A matrix is accepted whether it is stored flat or
-    /// with trailing singleton dimensions (e.g. a 1×1 convolution's
+    /// with singleton dimensions in any position (e.g. a 1×1 convolution's
     /// `[out, rank, 1, 1]` factors); any other shape (a real convolution kernel,
     /// tucker or other decomposition) returns `Ok(None)` and falls back to full
     /// materialization, since this identity doesn't directly apply to them.
