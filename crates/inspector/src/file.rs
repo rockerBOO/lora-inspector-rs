@@ -229,7 +229,7 @@ impl LoRAFile {
         match self.weights.as_ref() {
             None => Ok(None),
             Some(_) => {
-                if let Some(norm) = self.lora_frobenius_norm(base_name)? {
+                if let Some(norm) = self.low_rank_effective_scale(base_name)? {
                     return Ok(Some(norm));
                 }
 
@@ -255,7 +255,10 @@ impl LoRAFile {
     /// can exhaust the wasm heap. Returns `Ok(None)` when the layer isn't a plain 2D
     /// LoRA up/down pair (conv/tucker/other decompositions fall back to full
     /// materialization since this identity doesn't directly apply to them).
-    fn lora_frobenius_norm(&self, base_name: &str) -> Result<Option<f64>> {
+    ///
+    /// This is the only path that is safe for large layers, because it never
+    /// materializes `up @ down`.
+    pub fn low_rank_effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
         let weights = match self.weights.as_ref() {
             Some(weights) => weights,
             None => return Ok(None),
@@ -660,6 +663,31 @@ mod tests {
         // rounding, not bit-for-bit.
         assert!((eff - l2).abs() / l2.abs() < 1e-5, "eff={eff} l2={l2}");
         Ok(())
+    }
+
+    #[test]
+    fn low_rank_effective_scale_returns_none_for_hada_layers() {
+        // `edgWar40KAdeptaSororitas.safetensors` has only plain `lora_up`/`lora_down`
+        // pairs, so the LoHA fixture supplies a decomposition this Gram-matrix path
+        // cannot evaluate. Key used:
+        // `lora_unet_down_blocks_0_attentions_0_proj_in.hada_w1_a`.
+        let file = "loha.safetensors";
+        let buffer = load_file(file).unwrap();
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let hada_key = lora_file
+            .keys()
+            .into_iter()
+            .find(|k| k.contains("hada_w1_a"))
+            .expect("fixture has hada layers");
+        let hada_base = weight::get_base_name(&hada_key);
+
+        assert_eq!(
+            lora_file.low_rank_effective_scale(&hada_base).unwrap(),
+            None
+        );
+        // The fallback path still resolves it, so the `None` above comes from the
+        // cheap path declining the decomposition, not from an unresolvable layer.
+        assert!(lora_file.effective_scale(&hada_base).unwrap().is_some());
     }
 
     #[test]
