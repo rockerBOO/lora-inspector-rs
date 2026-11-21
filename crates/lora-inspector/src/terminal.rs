@@ -66,8 +66,9 @@ impl Terminal {
     }
 
     /// Truncate `s` to at most `max` columns, replacing the middle with an
-    /// ellipsis (`…`, or `~` in ASCII mode). The result is exactly `max`
-    /// columns wide (unless `s` already fits), and never splits a grapheme.
+    /// ellipsis (`…`, or `~` in ASCII mode). The result never exceeds `max`
+    /// columns and never splits a grapheme, but an all-wide-character input can
+    /// under-fill the target; callers compensate with [`Terminal::pad_right`].
     pub fn truncate_middle(&self, s: &str, max: usize) -> String {
         if self.text_width(s) <= max {
             return s.to_string();
@@ -209,11 +210,18 @@ fn resolve_color(choice: ColorChoice) -> bool {
     resolve_color_with(
         choice,
         std::io::stdout().is_terminal(),
-        std::env::var_os("NO_COLOR").is_some(),
+        no_color_set(std::env::var_os("NO_COLOR")),
         std::env::var("TERM")
             .map(|term| term == "dumb")
             .unwrap_or(false),
     )
+}
+
+/// `NO_COLOR` disables colour only when it is present and non-empty, per
+/// no-color.org (an empty value is a common accidental export and must not
+/// turn colour off).
+fn no_color_set(value: Option<std::ffi::OsString>) -> bool {
+    value.is_some_and(|v| !v.is_empty())
 }
 
 /// Pure decision table for `--color`, separated from the environment reads so
@@ -435,6 +443,13 @@ mod tests {
     }
 
     #[test]
+    fn no_color_is_honored_only_when_non_empty() {
+        assert!(!no_color_set(None));
+        assert!(!no_color_set(Some(std::ffi::OsString::new())));
+        assert!(no_color_set(Some(std::ffi::OsString::from("1"))));
+    }
+
+    #[test]
     fn ascii_sparkline_uses_eight_level_ramp() {
         let t = Terminal {
             width: 40,
@@ -445,6 +460,21 @@ mod tests {
             t.sparkline(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], 8),
             ".:-=+*#@"
         );
+    }
+
+    #[test]
+    fn bars_and_sparklines_fill_zero_and_one_column_widths() {
+        let t = Terminal {
+            width: 80,
+            color: false,
+            unicode: true,
+        };
+        for x in [0.0, 0.5, 1.0, f64::NAN] {
+            assert_eq!(t.text_width(&t.bar(x, 0)), 0);
+            assert_eq!(t.text_width(&t.bar(x, 1)), 1);
+        }
+        assert_eq!(t.text_width(&t.sparkline(&[1.0, 2.0], 1)), 1);
+        assert_eq!(t.text_width(&t.sparkline(&[], 0)), 0);
     }
 
     #[test]
