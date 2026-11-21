@@ -286,14 +286,9 @@ pub fn build_blocks(
             peak = Peak {
                 label: agg.group.tag(agg.index),
                 value: round_sig(agg.mean, 6),
-                ratio_to_median: round_sig(
-                    if median_block_mean > 0.0 {
-                        agg.mean / median_block_mean
-                    } else {
-                        0.0
-                    },
-                    6,
-                ),
+                // Same floored denominator as the outlier threshold, so a
+                // flagged block never reads `ratio_to_median: 0.0`.
+                ratio_to_median: round_sig(agg.mean / median_block_mean.max(1e-10), 6),
             };
         }
 

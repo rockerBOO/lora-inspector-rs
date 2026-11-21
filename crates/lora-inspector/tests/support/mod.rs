@@ -33,6 +33,14 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// Write the zero-median fixture: one positive block mean and two zero
+    /// block means, exercising the floored `ratio_to_median` denominator.
+    pub fn write_zero_median() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, zero_median_fixture_bytes()).expect("write zero-median fixture");
+        Fixture { path }
+    }
+
     /// Path of the written file.
     pub fn path(&self) -> &Path {
         &self.path
@@ -135,8 +143,30 @@ fn fixture_bytes() -> Vec<u8> {
     // A LoHA layer the cheap Gram path declines.
     push_hada(&mut tensors, "down_blocks.1.attn.proj_in");
 
+    // A noisy f32 scale (0.1 + 0.2) so the rounding guard has real float noise
+    // to catch: raw ~0.30000001192092896, rounded to 0.3.
+    push_lora(
+        &mut tensors,
+        "down_blocks.2.attn.proj_in",
+        4,
+        4.0,
+        0.1_f32 + 0.2,
+    );
+
     // A plain LoRA layer whose key matches no family pattern.
     push_lora(&mut tensors, "txtfusion_projector", 4, 4.0, 2.5);
+
+    to_safetensors(tensors)
+}
+
+/// One block mean of 1.0 and two zero block means, so the median block mean is
+/// exactly 0.0.
+fn zero_median_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 1.0);
+    push_lora(&mut tensors, "down_blocks.1.attn.proj_in", 4, 4.0, 0.0);
+    push_lora(&mut tensors, "down_blocks.2.attn.proj_in", 4, 4.0, 0.0);
 
     to_safetensors(tensors)
 }

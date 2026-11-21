@@ -43,6 +43,19 @@ fn build_outlier() -> (Report, support::Fixture) {
     (report, fixture)
 }
 
+fn build_zero_median() -> (Report, support::Fixture) {
+    let fixture = support::Fixture::write_zero_median();
+    let bytes = fixture.bytes();
+    let file = LoRAFile::new_from_buffer(
+        &bytes,
+        fixture.path().to_str().expect("utf-8 temp path"),
+        &Device::Cpu,
+    );
+    let meta = Metadata::new_from_buffer(&bytes).expect("fixture metadata");
+    let report = build_report(fixture.path(), &file, &meta, &opts(true)).expect("build report");
+    (report, fixture)
+}
+
 #[test]
 fn block_means_average_the_layers_in_each_block() {
     let (report, _fixture) = build(true);
@@ -86,6 +99,24 @@ fn block_outlier_uses_block_mean_median_not_layer_median() {
     // 4.0 and the block rule does flag it.
     assert!(1.5 * 3.0 >= in00.mean);
     assert!(1.5 * 2.0 < in00.mean);
+}
+
+#[test]
+fn peak_ratio_uses_the_same_floored_denominator_as_the_outlier_flag() {
+    let (report, _fixture) = build_zero_median();
+    let blocks = report.blocks.expect("blocks computed");
+    let in00 = blocks.iter().find(|b| b.label == "IN00").expect("IN00 row");
+
+    // The median block mean is 0.0, so the threshold is floored to 1e-10 and
+    // the single positive block is an outlier...
+    assert!(in00.outlier);
+
+    // ...and its ratio must use that same floor, not collapse to 0.0.
+    let summary = report.summary.block_weight.expect("block summary");
+    assert_eq!(summary.peak.label, "IN00");
+    assert_eq!(summary.peak.value, 1.0);
+    assert_eq!(summary.peak.ratio_to_median, round_sig(1.0 / 1e-10, 6));
+    assert!(summary.peak.ratio_to_median > 0.0);
 }
 
 #[test]
@@ -176,19 +207,20 @@ fn layer_counts_come_from_block_families_not_name_substrings() {
 
     // The substring helpers see none of these keys (there is no `lora_unet` or
     // `lora_te` prefix), so they are empty even though family-based counting is
-    // not. The hada layer and the ungroupable key are part of the walk, so the
-    // totals are 6/3/2, not the 4/2/2 a plain four-layer fixture would give.
+    // not. The hada layer, the noisy down-block layer and the ungroupable key
+    // are all part of the walk, so the totals are 7/4/2, not the 4/2/2 a plain
+    // four-layer fixture would give.
     assert!(file.unet_keys().is_empty());
     assert!(file.text_encoder_keys().is_empty());
 
-    assert_eq!(report.network.layers.total, 6);
-    assert_eq!(report.network.layers.unet, 3);
+    assert_eq!(report.network.layers.total, 7);
+    assert_eq!(report.network.layers.unet, 4);
     assert_eq!(report.network.layers.text_encoder, 2);
 }
 
 #[test]
 fn every_float_is_rounded_to_six_significant_digits() {
-    let (report, _fixture) = build(true);
+    let (report, fixture) = build(true);
     let json = serde_json::to_string_pretty(&report).expect("serialize report");
     let value: serde_json::Value = serde_json::from_str(&json).expect("parse report");
 
@@ -203,13 +235,31 @@ fn every_float_is_rounded_to_six_significant_digits() {
             "{float} is not rounded to six significant digits"
         );
     }
+
+    // The noisy fixture layer proves the sweep actually bites: without
+    // `round_sig` its raw scale would leak as 0.30000001192092896.
+    let file = LoRAFile::new_from_buffer(
+        &fixture.bytes(),
+        fixture.path().to_str().expect("utf-8 temp path"),
+        &Device::Cpu,
+    );
+    let raw = file
+        .low_rank_effective_scale("down_blocks.2.attn.proj_in")
+        .expect("cheap path")
+        .expect("noisy scale");
+    assert_ne!(raw, 0.3);
+    assert!(!json.contains(&raw.to_string()));
+
+    let blocks = report.blocks.expect("blocks computed");
+    let noisy = blocks.iter().find(|b| b.label == "IN02").expect("IN02 row");
+    assert_eq!(noisy.mean, 0.3);
 }
 
 #[test]
 fn rows_repeat_group_and_family_so_no_join_is_needed() {
     let (report, _fixture) = build(true);
     let blocks = report.blocks.expect("blocks computed");
-    assert_eq!(blocks.len(), 2);
+    assert_eq!(blocks.len(), 3);
 
     for block in &blocks {
         assert!(!block.label.is_empty());
@@ -220,10 +270,11 @@ fn rows_repeat_group_and_family_so_no_join_is_needed() {
         }
     }
 
-    // The flat rows carry their own group/family/label; display order is
-    // group rank first, so Down (IN00) precedes TextEncoder (TE00).
+    // The flat rows carry their own group/family/label; display order is group
+    // rank first, then index, so Down (IN00, IN02) precedes TextEncoder (TE00).
     assert_eq!(blocks[0].label, "IN00");
-    assert_eq!(blocks[1].label, "TE00");
+    assert_eq!(blocks[1].label, "IN02");
+    assert_eq!(blocks[2].label, "TE00");
 }
 
 #[test]
