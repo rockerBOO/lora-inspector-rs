@@ -6,7 +6,7 @@
 //! metadata and is therefore a hint, not evidence.
 
 /// A network format identified purely from tensor key names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum StructureFormat {
     LoRa,
     LoHa,
@@ -82,8 +82,8 @@ fn marker_format(token: &str) -> Option<StructureFormat> {
 
 #[cfg(test)]
 mod tests {
-    use super::StructureFormat::{Glora, LoHa, LoKr, LoRa, Oft};
     use super::classify;
+    use super::StructureFormat::{Glora, LoHa, LoKr, LoRa, Oft};
 
     fn keys(names: &[&str]) -> Vec<String> {
         names.iter().map(|s| s.to_string()).collect()

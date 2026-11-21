@@ -252,3 +252,37 @@ fn a_bad_file_is_an_error_not_a_partial_report() {
         serde_json::from_str(stderr.trim()).expect("stderr is one JSON error object");
     assert_eq!(value["error"]["kind"], "format");
 }
+
+#[test]
+fn structure_reports_key_derived_formats() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &[]);
+
+    let structure = &doc["network"]["structure"];
+    assert_eq!(structure["primary"], "LoRA");
+    assert_eq!(structure["by_format"]["LoRA"], 2);
+    assert_eq!(structure["by_format"]["LoHa"], 1);
+    assert_eq!(
+        structure["formats"],
+        serde_json::json!(["LoHa", "LoRA"]),
+        "formats must be sorted"
+    );
+    assert_eq!(structure["has_conv"], false);
+    assert_eq!(structure["has_dora"], false);
+}
+
+#[test]
+fn structure_is_present_in_header_only_mode() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--no-blocks"]);
+
+    assert_eq!(doc["load"], "header_only");
+    assert_eq!(doc["network"]["structure"]["primary"], "LoRA");
+}
+
+#[test]
+fn structure_has_conv_for_conv_factors() {
+    let fixture = support::Fixture::write_conv();
+    let doc = run_json(&fixture, &[]);
+    assert_eq!(doc["network"]["structure"]["has_conv"], true);
+}

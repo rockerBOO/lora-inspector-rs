@@ -41,6 +41,14 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// A file whose layers use two different structural formats, with no
+    /// `__metadata__` at all: two plain LoRA layers and one LoHa layer.
+    pub fn write_mixed_structure() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, mixed_structure_fixture_bytes()).expect("write mixed fixture");
+        Fixture { path }
+    }
+
     /// Write a fixture whose only key matches no block family, so `blocks` is
     /// an empty array rather than `null`.
     pub fn write_ungroupable() -> Fixture {
@@ -235,6 +243,15 @@ fn outlier_fixture_bytes() -> Vec<u8> {
 fn ungroupable_fixture_bytes() -> Vec<u8> {
     let mut tensors = Vec::new();
     push_lora(&mut tensors, "txtfusion_projector", 4, 4.0, 2.5);
+    to_safetensors(tensors)
+}
+
+/// Two plain LoRA layers and one LoHa layer, no `__metadata__`.
+fn mixed_structure_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 1.0);
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_out", 4, 4.0, 1.0);
+    push_hada(&mut tensors, "down_blocks.1.attn.proj_in");
     to_safetensors(tensors)
 }
 

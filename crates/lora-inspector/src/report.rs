@@ -13,6 +13,7 @@ use inspector::blocks::{parse_block_key, BlockFamily, BlockGroup};
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
 use inspector::network::NetworkType;
+use inspector::structure::{classify, StructureFormat};
 use inspector::svd::{RankHealth, RankMetrics};
 use rayon::prelude::*;
 use serde::Serialize;
@@ -76,6 +77,25 @@ pub struct NetworkInfo {
     pub rank: Vec<usize>,
     pub alpha: Vec<f64>,
     pub layers: LayerCounts,
+    /// What the tensor keys say. `network_type` above is what the metadata
+    /// claims; this is what a loader acts on, so the two are reported
+    /// separately rather than merged.
+    pub structure: StructureInfo,
+}
+
+/// Key-derived network format evidence, aggregated over every layer.
+#[derive(Debug, Clone, Serialize)]
+pub struct StructureInfo {
+    /// The format with the most layers; `"Unknown"` when no layer classified.
+    pub primary: String,
+    /// Layer count per format, sorted by format name.
+    pub by_format: BTreeMap<String, usize>,
+    /// The distinct format names present, sorted. Empty when none classified.
+    pub formats: Vec<String>,
+    /// A convolution-style factor is present (the LoCon distinction).
+    pub has_conv: bool,
+    /// Any layer carries a `dora_scale` (the DoRA modifier).
+    pub has_dora: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -513,7 +533,76 @@ pub fn build_network_info(
             unet,
             text_encoder,
         },
+        structure: build_structure(file),
     }
+}
+
+/// Aggregate the key-derived format of every layer.
+///
+/// Header-only, unlike the block and rank passes: `tensor_info` comes from the
+/// safetensors header, so `structure` is populated even under `--no-blocks`.
+///
+/// A tensor belongs to a base name when it is that base name or starts with it
+/// followed by a dot. That is a prefix test rather than a re-strip of the marker
+/// suffixes, deliberately: the marker vocabulary lives in [`inspector::structure`]
+/// and duplicating it here would let the two drift apart.
+pub fn build_structure(file: &LoRAFile) -> StructureInfo {
+    let tensor_info = file.tensor_info();
+
+    let mut counts: HashMap<StructureFormat, usize> = HashMap::new();
+    let mut has_conv = false;
+    let mut has_dora = false;
+
+    for base_name in file.base_names() {
+        let mut keys: Vec<String> = Vec::new();
+        let dotted = format!("{base_name}.");
+        for info in &tensor_info {
+            if info.name == base_name || info.name.starts_with(&dotted) {
+                if is_conv_factor(&info.name, &info.shape) {
+                    has_conv = true;
+                }
+                if info.name.split('.').any(|token| token == "dora_scale") {
+                    has_dora = true;
+                }
+                keys.push(info.name.clone());
+            }
+        }
+
+        if let Some(format) = classify(&keys) {
+            *counts.entry(format).or_insert(0) += 1;
+        }
+    }
+
+    let by_format: BTreeMap<String, usize> = counts
+        .iter()
+        .map(|(format, count)| (format.as_str().to_string(), *count))
+        .collect();
+
+    // Highest count wins; ties break by `precedence`, so the answer never
+    // depends on `HashMap` iteration order.
+    let primary = counts
+        .iter()
+        .max_by(|(fa, ca), (fb, cb)| ca.cmp(cb).then(fb.precedence().cmp(&fa.precedence())))
+        .map_or("Unknown", |(format, _)| format.as_str())
+        .to_string();
+
+    StructureInfo {
+        primary,
+        formats: by_format.keys().cloned().collect(),
+        by_format,
+        has_conv,
+        has_dora,
+    }
+}
+
+/// A factor with more than two dimensions is a convolution kernel rather than a
+/// matrix. A 1×1 convolution presents as four-dimensional with singleton
+/// trailing dims and still counts.
+fn is_conv_factor(name: &str, shape: &[usize]) -> bool {
+    shape.len() > 2
+        && name
+            .split('.')
+            .any(|token| matches!(token, "lora_down" | "lora_up" | "lora_A" | "lora_B"))
 }
 
 /// The only constructor of [`Report`].
