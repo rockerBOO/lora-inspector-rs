@@ -13,4 +13,4 @@ block weight  median 2.00  peak IN00 6.00 (3.0×)
   TE00          2.00    2 layers
   IN02          0.30     1 layer
 1 layer ungrouped (txtfusion_projector)
-1 layer have no 2D low-rank factor — pass --slow to include
+1 layer have no low-rank factor — pass --slow to include

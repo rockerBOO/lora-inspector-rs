@@ -32,13 +32,7 @@ impl Metadata {
     }
     pub fn network_args(&self) -> Option<NetworkArgs> {
         match &self.metadata.as_ref().map(|v| v.get("ss_network_args")) {
-            Some(Some(network_args)) => match serde_json::from_str::<NetworkArgs>(network_args) {
-                Ok(network_args) => Some(network_args),
-                Err(e) => {
-                    println!("{:#?}", e);
-                    None
-                }
-            },
+            Some(Some(network_args)) => serde_json::from_str::<NetworkArgs>(network_args).ok(),
             _ => None,
         }
     }

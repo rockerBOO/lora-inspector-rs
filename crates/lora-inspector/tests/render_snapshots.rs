@@ -166,7 +166,7 @@ fn skipped_layers_are_reported_with_the_slow_hint() {
     report.skipped.as_mut().expect("skipped computed").layers = 3;
 
     let out = render(&report, &meta, &terminal(80, false), &opts());
-    assert!(out.contains("3 layers have no 2D low-rank factor"));
+    assert!(out.contains("3 layers have no low-rank factor"));
     assert!(out.contains("--slow"));
 }
 

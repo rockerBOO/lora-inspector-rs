@@ -38,6 +38,25 @@ pub struct LoRAFile {
 
 // const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
 
+/// Reshape a LoRA factor to its 2D matrix form when it is a matrix with any
+/// number of trailing singleton (size-1) dimensions — e.g. a 1×1 convolution
+/// stored as `[out, rank, 1, 1]`. The surviving dimensions keep their original
+/// element order. Returns `Ok(None)` when the factor is not a matrix (a real
+/// convolution kernel, a rank-0/1 tensor, or a fully-unit shape), in which case
+/// the Gram identity below does not apply.
+fn flatten_matrix(tensor: &candle_core::Tensor) -> Result<Option<candle_core::Tensor>> {
+    let non_unit: Vec<usize> = tensor
+        .dims()
+        .iter()
+        .copied()
+        .filter(|&dim| dim != 1)
+        .collect();
+    if non_unit.len() != 2 {
+        return Ok(None);
+    }
+    Ok(Some(tensor.reshape((non_unit[0], non_unit[1]))?))
+}
+
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: &str, device: &Device) -> LoRAFile {
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
@@ -252,9 +271,11 @@ impl LoRAFile {
     /// `rank x rank` Gram matrices of `up` and `down`. For layers with a huge output
     /// dimension (e.g. DiT modulation/projection layers), the full product can be
     /// hundreds of MB to reconstruct just to throw away everything but its norm, which
-    /// can exhaust the wasm heap. Returns `Ok(None)` when the layer isn't a plain 2D
-    /// LoRA up/down pair (conv/tucker/other decompositions fall back to full
-    /// materialization since this identity doesn't directly apply to them).
+    /// can exhaust the wasm heap. A matrix is accepted whether it is stored flat or
+    /// with trailing singleton dimensions (e.g. a 1×1 convolution's
+    /// `[out, rank, 1, 1]` factors); any other shape (a real convolution kernel,
+    /// tucker or other decomposition) returns `Ok(None)` and falls back to full
+    /// materialization, since this identity doesn't directly apply to them.
     ///
     /// This is the only path that is safe for large layers, because it never
     /// materializes `up @ down`.
@@ -279,9 +300,12 @@ impl LoRAFile {
             Err(e) => return Err(InspectorError::from(e)),
         };
 
-        if up.dims().len() != 2 || down.dims().len() != 2 {
+        let Some(up) = flatten_matrix(&up)? else {
             return Ok(None);
-        }
+        };
+        let Some(down) = flatten_matrix(&down)? else {
+            return Ok(None);
+        };
 
         let alpha = weights.alpha(base_name)?;
         let rank = down.dims()[0] as f64;
@@ -688,6 +712,45 @@ mod tests {
         // The fallback path still resolves it, so the `None` above comes from the
         // cheap path declining the decomposition, not from an unresolvable layer.
         assert!(lora_file.effective_scale(&hada_base).unwrap().is_some());
+    }
+
+    #[test]
+    fn low_rank_effective_scale_handles_1x1_conv() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_proj_in";
+
+        let cheap = lora_file
+            .low_rank_effective_scale(base_name)?
+            .expect("1x1 conv must not be skipped");
+
+        // The materialising path reconstructs the full 1x1 conv delta
+        // (`up @ down`) before taking its norm; the cheap Gram path must agree,
+        // otherwise the reshape is silently producing a plausible-but-wrong
+        // number from a mismatched element order.
+        let scaled = lora_file.scale_weight(base_name)?;
+        let dense = lora_file.l2_norm::<f64>(&scaled)?;
+        assert!((cheap - dense).abs() < 1e-6, "cheap={cheap} dense={dense}");
+
+        Ok(())
+    }
+
+    #[test]
+    fn low_rank_effective_scale_rejects_real_conv() -> crate::Result<()> {
+        // `lora_unet_down_blocks_1_resnets_1_conv2.safetensors` is a plain LoRA
+        // with a 3x3 convolution kernel: down `[1, 640, 3, 3]`, up
+        // `[640, 1, 1, 1]`. Neither factor is a matrix, so the cheap Gram path
+        // declines it and the materialising fallback still resolves it.
+        let file = "lora_unet_down_blocks_1_resnets_1_conv2.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_1_resnets_1_conv2";
+
+        assert_eq!(lora_file.low_rank_effective_scale(base_name).unwrap(), None);
+        assert!(lora_file.effective_scale(base_name).unwrap().is_some());
+
+        Ok(())
     }
 
     #[test]

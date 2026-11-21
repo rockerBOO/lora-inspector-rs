@@ -19,7 +19,7 @@ use serde::Serialize;
 
 pub const SCHEMA_VERSION: u32 = 1;
 
-const SKIPPED_REASON: &str = "no 2D low-rank factor";
+const SKIPPED_REASON: &str = "no low-rank factor";
 const UNGROUPED_PREFIX_CAP: usize = 10;
 /// Near-zero floor for outlier thresholds and the peak ratio denominator.
 const OUTLIER_FLOOR: f64 = 1e-10;

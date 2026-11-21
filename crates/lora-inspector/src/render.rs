@@ -21,7 +21,7 @@ use crate::terminal::{Style, Terminal};
 const WIDE_MIN: usize = 100;
 const COMPACT_MIN: usize = 60;
 
-const SKIPPED_FALLBACK_REASON: &str = "no 2D low-rank factor";
+const SKIPPED_FALLBACK_REASON: &str = "no low-rank factor";
 
 const WIDE_LABEL_W: usize = 8;
 const WIDE_MEAN_W: usize = 8;
@@ -544,7 +544,7 @@ fn footer_lines(report: &Report, term: &Terminal) -> Vec<String> {
             let reason = skipped.reason.as_deref().unwrap_or(SKIPPED_FALLBACK_REASON);
             let dash = if term.unicode { "—" } else { "-" };
             // The `--slow` hint survives until it no longer fits, then the
-            // bare `N layers have no 2D low-rank factor` is the floor.
+            // bare `N layers have no low-rank factor` is the floor.
             let candidates = [
                 format!("{count} have {reason} {dash} pass --slow to include"),
                 format!("{count} have {reason}; --slow includes them"),
