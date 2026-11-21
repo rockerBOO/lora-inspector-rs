@@ -14,6 +14,7 @@ fn opts(blocks: bool, rank: bool, jobs: usize) -> ReportOptions {
     ReportOptions {
         blocks,
         rank,
+        layers: false,
         top: 8,
         jobs,
         slow: false,
@@ -148,6 +149,7 @@ fn rank_eff_scale_obeys_slow_like_the_block_pass() {
     let fast_opts = ReportOptions {
         blocks: true,
         rank: true,
+        layers: false,
         top: 8,
         jobs: 1,
         slow: false,

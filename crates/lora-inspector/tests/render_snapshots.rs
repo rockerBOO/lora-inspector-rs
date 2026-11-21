@@ -19,6 +19,7 @@ fn opts() -> ReportOptions {
     ReportOptions {
         blocks: true,
         rank: false,
+        layers: false,
         top: 8,
         jobs: 1,
         slow: false,

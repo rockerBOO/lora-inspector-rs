@@ -310,3 +310,129 @@ fn slow_path_uses_keys_when_metadata_disagrees() {
     assert_eq!(doc["skipped"]["layers"], 0);
     assert_eq!(doc["blocks"].as_array().expect("blocks array").len(), 1);
 }
+
+fn doc_schema_version(doc: &serde_json::Value) -> u64 {
+    doc["schema_version"]
+        .as_u64()
+        .expect("schema_version is an integer")
+}
+
+/// The `layers` array from a `--json` document.
+fn layers_of(doc: &serde_json::Value) -> &Vec<serde_json::Value> {
+    doc["layers"].as_array().expect("layers array")
+}
+
+#[test]
+fn layers_covers_every_base_name() {
+    // The shared fixture has 6 LoRA layers plus 1 partial LoHa layer the cheap
+    // Gram path declines, so `skipped.layers` is 1 and `layers` must still have
+    // 7 rows.
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    assert_eq!(doc["network"]["layers"]["total"], 7);
+    assert_eq!(layers_of(&doc).len(), 7);
+}
+
+#[test]
+fn layers_null_scale_matches_skipped_count() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    let null_scale = layers_of(&doc)
+        .iter()
+        .filter(|row| row["eff_scale"].is_null())
+        .count();
+    assert_eq!(
+        null_scale as u64,
+        doc["skipped"]["layers"].as_u64().unwrap()
+    );
+    assert_eq!(null_scale, 1);
+}
+
+#[test]
+fn layers_health_present_matches_rank_length() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    let with_health = layers_of(&doc)
+        .iter()
+        .filter(|row| !row["health"].is_null())
+        .count();
+    assert_eq!(
+        with_health,
+        doc["rank"].as_array().expect("rank array").len()
+    );
+    assert_eq!(with_health, 6);
+}
+
+#[test]
+fn layers_records_the_structural_format_per_layer() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--layers"]);
+
+    let rows = layers_of(&doc);
+    let loha = rows.iter().filter(|row| row["format"] == "LoHa").count();
+    let lora = rows.iter().filter(|row| row["format"] == "LoRA").count();
+    assert_eq!((lora, loha), (2, 1));
+}
+
+#[test]
+fn layers_is_null_unless_requested_and_does_not_change_rank() {
+    let fixture = support::Fixture::write();
+    let without = run_json(&fixture, &["--rank"]);
+    let with = run_json(&fixture, &["--rank", "--layers"]);
+
+    assert!(without["layers"].is_null());
+    assert_eq!(without["rank"], with["rank"]);
+    assert_eq!(
+        without["summary"]["block_weight"],
+        with["summary"]["block_weight"]
+    );
+
+    // `elapsed_ms` is wall-clock and differs between any two runs, so the rank
+    // summary is compared field by field rather than as a whole.
+    let before = &without["summary"]["rank"];
+    let after = &with["summary"]["rank"];
+    assert_eq!(before["layers"], after["layers"]);
+    assert_eq!(before["by_health"], after["by_health"]);
+    assert_eq!(before["median_balance"], after["median_balance"]);
+    assert_eq!(before["weak_or_worse"], after["weak_or_worse"]);
+    assert_eq!(doc_schema_version(&with), 1);
+}
+
+#[test]
+fn layers_with_no_blocks_keeps_full_load() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--no-blocks"]);
+
+    assert_eq!(doc["load"], "full");
+    assert!(doc["blocks"].is_null());
+    assert_eq!(layers_of(&doc).len(), 7);
+}
+
+#[test]
+fn layers_on_a_factorless_file_is_all_nulls_and_does_not_panic() {
+    // A dense-only file: no low-rank factors anywhere, so every layer row is
+    // null-valued. This is the shape a full checkpoint presents.
+    let fixture = support::Fixture::write_dense_only();
+    let doc = run_json(&fixture, &["--layers"]);
+
+    let rows = layers_of(&doc);
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().all(|row| row["nominal_rank"].is_null()));
+    assert!(rows.iter().all(|row| row["eff_scale"].is_null()));
+    assert!(rows.iter().all(|row| row["health"].is_null()));
+}
+
+#[test]
+fn layers_row_shape() {
+    // Pins the field names of a `layers` row. Values are already covered by the
+    // assertions above; this guards the key set against accidental renaming.
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+    // `insta` is built without its `json` feature here, so the value is
+    // pretty-printed and snapshotted as text.
+    let pretty = serde_json::to_string_pretty(&doc["layers"]).expect("pretty json");
+    insta::assert_snapshot!("layers_row_shape", pretty);
+}

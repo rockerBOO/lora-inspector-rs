@@ -76,6 +76,10 @@ struct InspectArgs {
     #[clap(long)]
     rank: bool,
 
+    /// Emit one row per layer in --json, including layers with no resolvable factors
+    #[clap(long)]
+    layers: bool,
+
     /// Emit a single machine-readable JSON object instead of the terminal report
     #[clap(long)]
     json: bool,
@@ -230,11 +234,12 @@ fn run_inspect(args: InspectArgs) -> Result<(), CliError> {
     // Load rule: `--no-blocks` without `--rank` is the one header-only load;
     // every other combination needs the tensor payload for the block or rank
     // pass.
-    let header_only = args.no_blocks && !args.rank;
+    let header_only = args.no_blocks && !args.rank && !args.layers;
 
     let opts = ReportOptions {
         blocks: !args.no_blocks,
         rank: args.rank,
+        layers: args.layers,
         top: args.top,
         jobs: args.jobs,
         slow: args.slow,
@@ -347,6 +352,7 @@ fn run_block_weights(file: PathBuf, output_format: &str) -> Result<(), CliError>
     let opts = ReportOptions {
         blocks: true,
         rank: false,
+        layers: false,
         top: 8,
         jobs: 0,
         slow: false,

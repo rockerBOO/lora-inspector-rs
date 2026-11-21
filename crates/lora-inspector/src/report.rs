@@ -30,6 +30,7 @@ const OUTLIER_FLOOR: f64 = 1e-10;
 pub struct ReportOptions {
     pub blocks: bool,
     pub rank: bool,
+    pub layers: bool,
     pub top: usize,
     pub jobs: usize,
     pub slow: bool,
@@ -58,6 +59,9 @@ pub struct Report {
     pub ungrouped: Option<Ungrouped>,
     pub skipped: Option<Skipped>,
     pub rank: Option<Vec<RankLayer>>,
+    /// One row per base name, including layers with no resolvable factors.
+    /// `None` unless `--layers`; `[]` when the file has no layers at all.
+    pub layers: Option<Vec<Layer>>,
     pub summary: Summary,
 }
 
@@ -145,6 +149,32 @@ pub struct RankLayer {
     pub top1_energy: f64,
     pub dominance: Option<f64>,
     pub health: RankHealth,
+    pub eff_scale: Option<f64>,
+    pub outlier: bool,
+}
+
+/// One row per base name, as emitted by `--layers`.
+///
+/// A superset of [`RankLayer`]: every rank field is optional here, because a
+/// layer can carry a scale with no rank metrics (a LyCORIS layer with no
+/// low-rank pair), rank metrics with no scale (a convolution factor the Gram
+/// path declines), or neither. The nulls are the evidence — they are how a
+/// consumer distinguishes "no factors by nature" from "failed to parse".
+#[derive(Debug, Clone, Serialize)]
+pub struct Layer {
+    pub base_name: String,
+    pub group: BlockGroup,
+    pub family: BlockFamily,
+    pub label: String,
+    pub index: Option<usize>,
+    /// Key-derived format for this layer, when a marker was recognised.
+    pub format: Option<String>,
+    pub nominal_rank: Option<usize>,
+    pub effective_rank: Option<f64>,
+    pub balance: Option<f64>,
+    pub top1_energy: Option<f64>,
+    pub dominance: Option<f64>,
+    pub health: Option<RankHealth>,
     pub eff_scale: Option<f64>,
     pub outlier: bool,
 }
@@ -360,25 +390,33 @@ pub fn build_blocks(
 struct RankRaw {
     base_name: String,
     group: BlockGroup,
+    family: BlockFamily,
     index: Option<usize>,
-    metrics: RankMetrics,
+    /// `None` for layers with no low-rank up/down pair. Only reachable when
+    /// [`rank_rows`] is asked for all layers; the `--rank` path drops them.
+    metrics: Option<RankMetrics>,
     eff_scale: Option<f64>,
+    /// Key-derived format, filled only when the caller asked for all layers.
+    format: Option<StructureFormat>,
 }
 
-/// Parallel effective-rank pass over every base name.
+/// Parallel pass over every base name, collecting per-layer rows.
+///
+/// `include_all` decides whether layers without rank metrics are kept. The
+/// `--rank` output drops them, so a report that also asks for `--layers` reuses
+/// this one pass and filters, keeping both views consistent by construction.
 ///
 /// Each layer's metrics are computed independently, so no cross-layer float
 /// depends on scheduling. The collected rows are sorted by `base_name` before
-/// the summary is derived, which is what makes the output byte-identical for
-/// any thread count. The `eff_scale` field uses the same cheap/materializing
-/// rule as the block pass: the Gram path unless `slow` is set.
-pub fn build_rank(
+/// any summary is derived, which is what makes the output byte-identical for
+/// any thread count. `eff_scale` uses the same cheap/materializing rule as the
+/// block pass: the Gram path unless `slow` is set.
+fn rank_rows(
     file: &LoRAFile,
     jobs: usize,
     slow: bool,
-) -> inspector::Result<(Vec<RankLayer>, RankSummary)> {
-    let start = std::time::Instant::now();
-
+    include_all: bool,
+) -> inspector::Result<Vec<RankRaw>> {
     let mut base_names = file.base_names();
     base_names.sort();
 
@@ -392,21 +430,36 @@ pub fn build_rank(
             base_names
                 .par_iter()
                 .map(|base_name| -> inspector::Result<Option<RankRaw>> {
-                    let Some(metrics) = file.rank_metrics(base_name)? else {
+                    let metrics = file.rank_metrics(base_name)?;
+                    if metrics.is_none() && !include_all {
                         return Ok(None);
-                    };
+                    }
+
                     let key = parse_block_key(base_name);
                     let eff_scale = if slow {
                         file.effective_scale(base_name)?
                     } else {
                         file.low_rank_effective_scale(base_name)?
                     };
+                    let format = include_all.then(|| {
+                        let keys: Vec<String> = file
+                            .keys()
+                            .into_iter()
+                            .filter(|key| {
+                                key == base_name || key.starts_with(&format!("{base_name}."))
+                            })
+                            .collect();
+                        classify(&keys)
+                    });
+
                     Ok(Some(RankRaw {
                         base_name: base_name.clone(),
                         group: key.group,
+                        family: key.family(),
                         index: key.block_index,
                         metrics,
                         eff_scale,
+                        format: format.flatten(),
                     }))
                 })
                 .collect::<inspector::Result<Vec<Option<RankRaw>>>>()
@@ -416,12 +469,26 @@ pub fn build_rank(
         .collect();
 
     raw.sort_by(|a, b| a.base_name.cmp(&b.base_name));
+    Ok(raw)
+}
 
-    // The layer outlier rule compares each layer's scale to the median layer
-    // scale (not the block median), matching `LoRAFile::effective_scales_all`.
-    let scales: Vec<f64> = raw.iter().filter_map(|row| row.eff_scale).collect();
-    let median_scale = median(&scales);
-    let threshold = outlier_threshold(median_scale);
+/// Layer outlier threshold, derived from the metric-bearing rows only.
+///
+/// Deliberately not computed over every row: the `--layers` array must not
+/// change the `outlier` flags the `--rank` array reports, and those are pinned
+/// to the rank pass's own median.
+fn layer_outlier_threshold(rows: &[RankRaw]) -> f64 {
+    let scales: Vec<f64> = rows
+        .iter()
+        .filter(|row| row.metrics.is_some())
+        .filter_map(|row| row.eff_scale)
+        .collect();
+    outlier_threshold(median(&scales))
+}
+
+/// Build the `--rank` array and its summary from pre-collected rows.
+fn rank_layers(rows: &[RankRaw], elapsed_ms: u128) -> (Vec<RankLayer>, RankSummary) {
+    let threshold = layer_outlier_threshold(rows);
 
     let mut by_health = BTreeMap::from([
         ("Collapsed".to_string(), 0usize),
@@ -431,30 +498,36 @@ pub fn build_rank(
         ("Poor".to_string(), 0usize),
     ]);
     let mut weak_or_worse = 0usize;
-    let balances: Vec<f64> = raw.iter().map(|row| row.metrics.balance).collect();
 
-    let mut layers = Vec::with_capacity(raw.len());
-    for row in &raw {
-        let word = rank_health_word(&row.metrics.health);
+    let mut layers = Vec::new();
+    let mut balances: Vec<f64> = Vec::new();
+
+    for row in rows.iter().filter(|row| row.metrics.is_some()) {
+        let Some(metrics) = row.metrics.as_ref() else {
+            continue;
+        };
+
+        let word = rank_health_word(&metrics.health);
         *by_health.get_mut(word).expect("health word present") += 1;
         if matches!(
-            row.metrics.health,
+            metrics.health,
             RankHealth::Weak | RankHealth::Poor | RankHealth::Collapsed
         ) {
             weak_or_worse += 1;
         }
+        balances.push(metrics.balance);
 
         layers.push(RankLayer {
             base_name: row.base_name.clone(),
             group: row.group,
             label: row.group.tag(row.index),
             index: row.index,
-            nominal_rank: row.metrics.nominal_rank,
-            effective_rank: round_sig(row.metrics.effective_rank, 6),
-            balance: round_sig(row.metrics.balance, 6),
-            top1_energy: round_sig(row.metrics.top1_energy, 6),
-            dominance: row.metrics.dominance.map(|d| round_sig(d, 6)),
-            health: row.metrics.health.clone(),
+            nominal_rank: metrics.nominal_rank,
+            effective_rank: round_sig(metrics.effective_rank, 6),
+            balance: round_sig(metrics.balance, 6),
+            top1_energy: round_sig(metrics.top1_energy, 6),
+            dominance: metrics.dominance.map(|d| round_sig(d, 6)),
+            health: metrics.health.clone(),
             eff_scale: row.eff_scale.map(|scale| round_sig(scale, 6)),
             outlier: row.eff_scale.is_some_and(|scale| scale > threshold),
         });
@@ -465,10 +538,51 @@ pub fn build_rank(
         by_health,
         median_balance: round_sig(median(&balances), 6),
         weak_or_worse,
-        elapsed_ms: start.elapsed().as_millis(),
+        elapsed_ms,
     };
 
-    Ok((layers, summary))
+    (layers, summary)
+}
+
+/// One row per layer that has rank metrics.
+pub fn build_rank(
+    file: &LoRAFile,
+    jobs: usize,
+    slow: bool,
+) -> inspector::Result<(Vec<RankLayer>, RankSummary)> {
+    let start = std::time::Instant::now();
+    let rows = rank_rows(file, jobs, slow, false)?;
+    Ok(rank_layers(&rows, start.elapsed().as_millis()))
+}
+
+/// One row per base name, including layers with no resolvable factors.
+pub fn build_layers(file: &LoRAFile, jobs: usize, slow: bool) -> inspector::Result<Vec<Layer>> {
+    let rows = rank_rows(file, jobs, slow, true)?;
+    let threshold = layer_outlier_threshold(&rows);
+
+    Ok(rows
+        .iter()
+        .map(|row| Layer {
+            base_name: row.base_name.clone(),
+            group: row.group,
+            family: row.family,
+            label: row.group.tag(row.index),
+            index: row.index,
+            format: row.format.map(|format| format.as_str().to_string()),
+            nominal_rank: row.metrics.as_ref().map(|m| m.nominal_rank),
+            effective_rank: row.metrics.as_ref().map(|m| round_sig(m.effective_rank, 6)),
+            balance: row.metrics.as_ref().map(|m| round_sig(m.balance, 6)),
+            top1_energy: row.metrics.as_ref().map(|m| round_sig(m.top1_energy, 6)),
+            dominance: row
+                .metrics
+                .as_ref()
+                .and_then(|m| m.dominance)
+                .map(|d| round_sig(d, 6)),
+            health: row.metrics.as_ref().map(|m| m.health.clone()),
+            eff_scale: row.eff_scale.map(|scale| round_sig(scale, 6)),
+            outlier: row.eff_scale.is_some_and(|scale| scale > threshold),
+        })
+        .collect())
 }
 
 /// Resolve `--jobs`: `0` means the available core count, falling back to one
@@ -640,10 +754,10 @@ pub fn build_report(
         None
     };
 
-    // The header-only path is exactly `--no-blocks` without `--rank`: neither
-    // the block pass nor the rank pass runs, so nothing payload-derived is
+    // The header-only path is exactly `--no-blocks` without `--rank` or
+    // `--layers`: none of the three passes runs, so nothing payload-derived is
     // computed. Every other combination loads the tensor payload.
-    let load = if !opts.blocks && !opts.rank {
+    let load = if !opts.blocks && !opts.rank && !opts.layers {
         Load::HeaderOnly
     } else {
         Load::Full
@@ -665,6 +779,12 @@ pub fn build_report(
         (None, None)
     };
 
+    let layers = if opts.layers {
+        Some(build_layers(file, opts.jobs, opts.slow)?)
+    } else {
+        None
+    };
+
     Ok(Report {
         schema_version: SCHEMA_VERSION,
         load,
@@ -679,6 +799,7 @@ pub fn build_report(
         ungrouped,
         skipped,
         rank,
+        layers,
         summary: Summary {
             block_weight,
             rank: rank_summary,

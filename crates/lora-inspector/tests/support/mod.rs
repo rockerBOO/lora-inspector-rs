@@ -49,6 +49,14 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// A dense, factor-free file: the shape the `*-proj.safetensors` artifacts
+    /// in the real training tree present (two unmarked tensors, no metadata).
+    pub fn write_dense_only() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, dense_only_fixture_bytes()).expect("write dense fixture");
+        Fixture { path }
+    }
+
     /// LoHa keys under metadata that declares `networks.lora`. The declared type
     /// and the structural type disagree; nothing in the pre-existing output
     /// reveals it.
@@ -277,6 +285,14 @@ fn mixed_structure_fixture_bytes() -> Vec<u8> {
     push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 1.0);
     push_lora(&mut tensors, "down_blocks.0.attn.proj_out", 4, 4.0, 1.0);
     push_hada(&mut tensors, "down_blocks.1.attn.proj_in");
+    to_safetensors(tensors)
+}
+
+/// Two unmarked tensors with no low-rank factors anywhere.
+fn dense_only_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    tensors.push(tensor("0.weight", &[2, 3, 4], 1.0));
+    tensors.push(tensor("2.weight", &[2, 3, 4], 1.0));
     to_safetensors(tensors)
 }
 
