@@ -10,6 +10,7 @@ use wasm_bindgen::JsValue;
 #[grammar = "key.pest"]
 pub struct KeyParser;
 
+pub mod blocks;
 pub mod file;
 mod header;
 pub mod metadata;
