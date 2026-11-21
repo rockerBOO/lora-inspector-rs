@@ -4,12 +4,15 @@
 
 mod support;
 
+use std::collections::BTreeMap;
+
 use candle_core::Device;
-use inspector::blocks::BlockFamily;
+use inspector::blocks::{BlockFamily, BlockGroup};
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
+use inspector::svd::RankHealth;
 use lora_inspector::render::{render, render_header};
-use lora_inspector::report::{build_report, Peak, Report, ReportOptions};
+use lora_inspector::report::{build_report, Peak, RankLayer, RankSummary, Report, ReportOptions};
 use lora_inspector::terminal::Terminal;
 
 fn opts() -> ReportOptions {
@@ -162,4 +165,109 @@ fn skipped_layers_are_reported_with_the_slow_hint() {
     let out = render(&report, &meta, &terminal(80, false), &opts());
     assert!(out.contains("3 layers skipped"));
     assert!(out.contains("--slow"));
+}
+
+/// Build a report with a populated rank section: four rows, one per health
+/// class, with long base names and noisy float values so the renderer's
+/// rounding and width degradation are actually exercised.
+fn build_rank_report() -> (Report, Metadata, support::Fixture) {
+    let (mut report, meta, fixture) = build();
+
+    report.rank = Some(vec![
+        RankLayer {
+            base_name: "lora_unet_down_blocks_3_attentions_0_transformer_blocks_0_ff_net_0_proj"
+                .to_string(),
+            group: BlockGroup::Down,
+            label: "IN03".to_string(),
+            index: Some(3),
+            nominal_rank: 64,
+            effective_rank: 51.234_567,
+            balance: 0.801_234,
+            top1_energy: 0.112_345,
+            dominance: Some(2.345_678),
+            health: RankHealth::Good,
+            eff_scale: Some(1.02),
+            outlier: false,
+        },
+        RankLayer {
+            base_name: "lora_te_text_model_encoder_layers_7_self_attn_o_proj".to_string(),
+            group: BlockGroup::TextEncoder,
+            label: "TE07".to_string(),
+            index: Some(7),
+            nominal_rank: 16,
+            effective_rank: 9.876_543,
+            balance: 0.617_283,
+            top1_energy: 0.456_789,
+            dominance: Some(5.432_109),
+            health: RankHealth::Ok,
+            eff_scale: Some(0.9),
+            outlier: false,
+        },
+        RankLayer {
+            base_name: "lora_unet_up_blocks_1_attentions_1_proj_out".to_string(),
+            group: BlockGroup::Up,
+            label: "OUT11".to_string(),
+            index: Some(1),
+            nominal_rank: 8,
+            effective_rank: 1.987_654,
+            balance: 0.248_765,
+            top1_energy: 0.654_321,
+            dominance: None,
+            health: RankHealth::Weak,
+            eff_scale: Some(3.1),
+            outlier: true,
+        },
+        RankLayer {
+            base_name: "lora_unet_mid_block_attentions_0_proj_in".to_string(),
+            group: BlockGroup::Mid,
+            label: "MID".to_string(),
+            index: None,
+            nominal_rank: 4,
+            effective_rank: 1.001_234,
+            balance: 0.123_456,
+            top1_energy: 0.987_654,
+            dominance: None,
+            health: RankHealth::Poor,
+            eff_scale: Some(0.1),
+            outlier: false,
+        },
+    ]);
+
+    report.summary.rank = Some(RankSummary {
+        layers: 4,
+        by_health: BTreeMap::from([
+            ("Good".to_string(), 1),
+            ("Ok".to_string(), 1),
+            ("Weak".to_string(), 1),
+            ("Poor".to_string(), 1),
+            ("Collapsed".to_string(), 0),
+        ]),
+        median_balance: 0.5,
+        weak_or_worse: 2,
+        elapsed_ms: 2400,
+    });
+
+    (report, meta, fixture)
+}
+
+#[test]
+fn rank_rows_stay_within_width_and_keep_health_words() {
+    let (report, meta, _fixture) = build_rank_report();
+
+    for width in [40, 60, 120] {
+        let term = terminal(width, false);
+        let out = render(&report, &meta, &term, &opts());
+
+        for line in out.lines() {
+            let used = term.text_width(line);
+            assert!(used <= width, "width {width}: {used} columns in {line:?}");
+        }
+
+        for health in ["Good", "Ok", "Weak", "Poor"] {
+            assert!(
+                out.contains(health),
+                "width {width}: health word {health} missing"
+            );
+        }
+    }
 }

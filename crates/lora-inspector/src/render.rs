@@ -28,6 +28,13 @@ const WIDE_MEAN_W: usize = 8;
 const LAYERS_W: usize = 10;
 const COMPACT_FAMILY_W: usize = 12;
 
+/// Fixed width of a rank row's numeric value column (two decimals).
+const RANK_VALUE_W: usize = 6;
+
+/// Minimum columns a rank row's base name must be given before the next
+/// numeric column is dropped instead.
+const MIN_BASE_NAME: usize = 8;
+
 /// Family display order for the compact and minimal tiers. `BlockFamily::Other`
 /// is deliberately absent: `build_blocks` routes `BlockGroup::Other` layers into
 /// `ungrouped`, never into `blocks`, so no block row can carry that family.
@@ -323,21 +330,22 @@ fn render_rank_section(report: &Report, term: &Terminal, opts: &ReportOptions) -
         nominal
     };
     let layers = summary.map(|s| s.layers).unwrap_or(rank.len());
+    let layer_count = count_noun(layers, "layer", "layers");
     let elapsed_s = summary.map(|s| s.elapsed_ms).unwrap_or(0) as f64 / 1000.0;
     let threads = if opts.jobs == 0 {
-        "auto".to_string()
+        "auto threads".to_string()
     } else {
-        opts.jobs.to_string()
+        count_noun(opts.jobs, "thread", "threads")
     };
 
     // Prose degrades by dropping whole fields (elapsed/jobs, then the layer
-    // count), never by middle-ellipsizing.
+    // count, then the rank list), never by middle-ellipsizing. The bare title
+    // is the width-bounded floor.
     let title_candidates = [
-        format!(
-            "effective rank   r={nominal}, {layers} layers, {elapsed_s:.1} s ({threads} threads)"
-        ),
-        format!("effective rank   r={nominal}, {layers} layers"),
+        format!("effective rank   r={nominal}, {layer_count}, {elapsed_s:.1} s ({threads})"),
+        format!("effective rank   r={nominal}, {layer_count}"),
         format!("effective rank   r={nominal}"),
+        "effective rank".to_string(),
     ];
     lines.push(pick_first_fit(term, &title_candidates));
 
@@ -370,21 +378,88 @@ fn rank_summary_line(summary: &RankSummary) -> String {
         .join("  ");
     format!(
         "{counts}  median balance {}  {} weak or worse",
-        fmt_f64(summary.median_balance),
-        summary.weak_or_worse
+        fmt_2dp(summary.median_balance),
+        count_noun(summary.weak_or_worse, "layer", "layers")
     )
 }
 
+/// One rank row. The health word is never dropped or truncated; numeric
+/// columns degrade by dropping whole columns in the order `dominance`, `top1`,
+/// `balance`, `effective_rank`, then `nominal_rank`, leaving `label`,
+/// `base_name` and the health word.
 fn rank_row(term: &Terminal, row: &RankLayer) -> String {
+    let label = term.pad_right(&row.label, WIDE_LABEL_W);
     let health = term.paint(health_style(&row.health), health_label(&row.health));
-    format!(
-        "  {}  r{}  eff {}  bal {}  {}",
-        term.pad_right(&row.label, WIDE_LABEL_W),
-        row.nominal_rank,
-        fmt_f64(row.effective_rank),
-        fmt_f64(row.balance),
-        health
-    )
+
+    // Display order; the first element of each pair is the drop order (1 =
+    // dropped first, larger = kept longer).
+    let numeric: [(usize, String); 5] = [
+        (5, format!("r{}", row.nominal_rank)),
+        (4, numeric_column(term, "eff", &fmt_2dp(row.effective_rank))),
+        (3, numeric_column(term, "bal", &fmt_2dp(row.balance))),
+        (2, numeric_column(term, "top1", &fmt_2dp(row.top1_energy))),
+        (
+            1,
+            numeric_column(
+                term,
+                "dom",
+                &row.dominance
+                    .map(fmt_2dp)
+                    .unwrap_or_else(|| "-".to_string()),
+            ),
+        ),
+    ];
+
+    for level in 0..=5 {
+        let kept: Vec<&str> = numeric
+            .iter()
+            .filter(|(drop_order, _)| *drop_order > level)
+            .map(|(_, text)| text.as_str())
+            .collect();
+        if let Some(line) =
+            try_rank_row(term, &label, &health, &kept, &row.base_name, MIN_BASE_NAME)
+        {
+            return line;
+        }
+    }
+
+    // Pathological width: keep label + base_name + health even if the base
+    // name has to collapse below the usual minimum.
+    try_rank_row(term, &label, &health, &[], &row.base_name, 0)
+        .unwrap_or_else(|| format!("  {label}  {health}"))
+}
+
+/// Build `  label  [numeric]  base_name  health` with the base name truncated
+/// and padded to fill the remaining width. Returns `None` when the fixed
+/// columns alone exceed the width or the base name would fall below `min_base`.
+fn try_rank_row(
+    term: &Terminal,
+    label: &str,
+    health: &str,
+    numeric: &[&str],
+    base_name: &str,
+    min_base: usize,
+) -> Option<String> {
+    let leading = format!("  {label}  ");
+    let numeric_block = if numeric.is_empty() {
+        String::new()
+    } else {
+        format!("{}  ", numeric.join("  "))
+    };
+    let trailing = format!("  {health}");
+
+    let fixed =
+        term.text_width(&leading) + term.text_width(&numeric_block) + term.text_width(&trailing);
+    if fixed > term.width {
+        return None;
+    }
+    let base_width = term.width - fixed;
+    if base_width < min_base {
+        return None;
+    }
+
+    let base_cell = term.pad_right(&term.truncate_middle(base_name, base_width), base_width);
+    Some(format!("{leading}{numeric_block}{base_cell}{trailing}"))
 }
 
 /// Summary line carrying the headline block numbers. The compact tier folds
@@ -637,6 +712,16 @@ fn fmt_value(value: f64) -> String {
 /// Format a peak ratio with one decimal place.
 fn fmt_ratio(value: f64) -> String {
     format!("{value:.1}")
+}
+
+/// Format a rank-metric value to a fixed two decimal places.
+fn fmt_2dp(value: f64) -> String {
+    format!("{value:.2}")
+}
+
+/// A rank row's numeric column: a short prefix plus a right-aligned value.
+fn numeric_column(term: &Terminal, prefix: &str, value: &str) -> String {
+    format!("{prefix} {}", term.pad_left(value, RANK_VALUE_W))
 }
 
 /// `count` followed by the correctly pluralized noun.
