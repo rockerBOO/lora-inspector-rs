@@ -48,14 +48,14 @@ network modules, from evidence in the file — and stop reporting
 
 ## Evidence
 
-| file | metadata signal | correct answer |
-|---|---|---|
-| `mj-base-test-moss-1` | `ss_network_module=networks.lora_generic`, `ss_sd_scripts_commit_hash`, `implementation_version=sd-scripts/<sha>` | kohya · `lora_generic` |
-| `pony-style-hardstuck-v1` | no `ss_network_module`; `modelspec.implementation=.../diffusers` | diffusers · unknown module |
-| `JN_Kurashiki_Reika` | `ss_network_module=networks.lora` | kohya · `lora` |
-| `BoobsgamesLycoXL` | `ss_network_module=lycoris.kohya` | lycoris · `kohya` |
-| `Aether_Ghost_v1.1_LoRA` | none | unknown |
-| `MiniMax H3` PEFT keys | none; `lora_A`/`lora_B` | peft |
+| file                      | metadata signal                                                                                                   | correct answer             |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `mj-base-test-moss-1`     | `ss_network_module=networks.lora_generic`, `ss_sd_scripts_commit_hash`, `implementation_version=sd-scripts/<sha>` | kohya · `lora_generic`     |
+| `pony-style-hardstuck-v1` | no `ss_network_module`; `modelspec.implementation=.../diffusers`                                                  | diffusers · unknown module |
+| `JN_Kurashiki_Reika`      | `ss_network_module=networks.lora`                                                                                 | kohya · `lora`             |
+| `BoobsgamesLycoXL`        | `ss_network_module=lycoris.kohya`                                                                                 | lycoris · `kohya`          |
+| `Aether_Ghost_v1.1_LoRA`  | none                                                                                                              | unknown                    |
+| `MiniMax H3` PEFT keys    | none; `lora_A`/`lora_B`                                                                                           | peft                       |
 
 `networks/lora_generic.py` was confirmed present in `kohya-ss/sd-scripts`
 alongside 15+ sibling modules.

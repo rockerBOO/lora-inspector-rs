@@ -40,18 +40,20 @@
 ### Task 0: Upgrade candle and safetensors
 
 **Files:**
+
 - Modify: `Cargo.toml` (workspace `dependencies`)
 - Modify: `Cargo.lock`
 - Modify: `crates/inspector/src/*.rs` and `crates/lora-inspector-wasm/src/*.rs` only where the new APIs force it
 - Modify: `crates/inspector/src/snapshots/*.snap` only for real value changes, with each change explained
 
 **Interfaces:**
+
 - Consumes: the existing public API of `inspector` (must survive intact).
 - Produces: `candle-core 0.11`, `safetensors 0.8`, and a workspace that compiles against them. Later tasks are written once against these APIs.
 
 - [ ] **Step 1: Record the baseline**
 
-Run: `cargo test --workspace 2>&1 | grep -E "^test result" ` and `ls -l crates/lora-inspector-wasm/pkg/*.wasm`
+Run: `cargo test --workspace 2>&1 | grep -E "^test result"` and `ls -l crates/lora-inspector-wasm/pkg/*.wasm`
 Expected baseline to record in the report: the per-target test counts, plus `lora-inspector_bg.wasm` = 7 737 686 B and `lora-inspector-simd_bg.wasm` = 7 757 294 B.
 
 - [ ] **Step 2: Bump the pins and find the breakage**
@@ -81,8 +83,9 @@ Expected: either it builds (report the resulting `cudarc` version) or it fails a
 
 ```bash
 git add Cargo.toml Cargo.lock crates/
-git commit -m "build: upgrade candle to 0.11 and safetensors to 0.8" 
+git commit -m "build: upgrade candle to 0.11 and safetensors to 0.8"
 ```
+
 The commit body lists any `inspector` signature that had to change, the new wasm sizes, and the cuda result.
 
 ---
@@ -90,11 +93,13 @@ The commit body lists any `inspector` signature that had to change, the new wasm
 ### Task 1: Fix the release profile and record the measurement
 
 **Files:**
+
 - Modify: `Cargo.toml` (root, `[profile]` block at the end)
 - Modify: `crates/lora-inspector/Cargo.toml` (keep `cuda` feature as is)
 - Modify: `Makefile` — pin the wasm release size profile, which this task removes from the workspace default
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: a release build where `candle-core` and `inspector` are compiled at `opt-level=3`, unblocking every later task's performance budget.
 
@@ -138,6 +143,7 @@ git commit -m "build: use a real [profile.release] so candle and inspector are o
 ### Task 2: Key-list fixtures for block grouping
 
 **Files:**
+
 - Create: `crates/inspector/tests/fixtures/blocks/sd15.txt`
 - Create: `crates/inspector/tests/fixtures/blocks/sdxl.txt`
 - Create: `crates/inspector/tests/fixtures/blocks/flux.txt`
@@ -152,6 +158,7 @@ git commit -m "build: use a real [profile.release] so candle and inspector are o
 - Create: `crates/inspector/tests/fixtures/blocks/gemma3.txt`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: plain-text fixture files, one base name per line (suffixes like `.lora_up.weight` already stripped with the existing `inspector::get_base_name`), loaded with `include_str!` by Task 3's tests. No safetensors and no `/mnt` dependency.
 
@@ -176,10 +183,12 @@ git commit -m "test: add per-architecture block-key fixtures"
 ### Task 3: `inspector::blocks` grouping
 
 **Files:**
+
 - Create: `crates/inspector/src/blocks.rs`
 - Modify: `crates/inspector/src/lib.rs:14-21` (add `pub mod blocks;` beside the other module declarations)
 
 **Interfaces:**
+
 - Consumes: `crate::get_base_name` (existing) only in tests for producing fixture-ready names.
 - Produces, for Tasks 5–7:
   - `pub enum BlockGroup { Down, Input, Mid, Middle, Up, Output, Double, Single, SingleTransformer, Transformer, Refiner, TokenRefiner, TxtFusion, Blocks, Layers, TextEncoder, Other }` — `#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]`, serde variant names as written.
@@ -274,10 +283,12 @@ git commit -m "feat(inspector): add shared block-key grouping"
 ### Task 4: Expose the cheap (non-materializing) per-layer norm
 
 **Files:**
+
 - Modify: `crates/inspector/src/file.rs:253` (`fn lora_frobenius_norm`) and `:228` (`pub fn effective_scale`)
 - Modify: `crates/inspector/src/file.rs` test module (append one test)
 
 **Interfaces:**
+
 - Consumes: existing private `lora_frobenius_norm(base_name) -> Result<Option<f64>>`, which computes `||up @ down||_F × |alpha / rank|` from rank×rank Gram matrices and returns `Ok(None)` for anything that is not a plain 2D `up`/`down` pair.
 - Produces, for Task 5:
   - `pub fn low_rank_effective_scale(&self, base_name: &str) -> Result<Option<f64>>` — the Gram path only, never falls back to `scale_weight`.
@@ -331,11 +342,13 @@ git commit -m "feat(inspector): expose the non-materializing effective-scale pat
 ### Task 5: `Terminal` layout primitives
 
 **Files:**
+
 - Create: `crates/lora-inspector/src/terminal.rs`
 - Modify: `crates/lora-inspector/src/lib.rs` (declare `pub mod terminal;`; `main.rs` imports it from the library rather than declaring its own copy)
 - Modify: `crates/lora-inspector/Cargo.toml` (add `unicode-width = "0.2"`, `terminal_size = "0.4"`)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces, for Tasks 6–8:
   - `pub struct Terminal { pub width: usize, pub color: bool, pub unicode: bool }`
@@ -419,10 +432,12 @@ git commit -m "feat(cli): add width- and unicode-aware terminal primitives"
 ### Task 6: `report` data model and block aggregation
 
 **Files:**
+
 - Create: `crates/lora-inspector/src/report.rs`
 - Create: `crates/lora-inspector/src/lib.rs` — the shared surface (`pub mod report; pub mod terminal;` and, in Task 7, `pub mod render;`), so integration tests can link these modules. `main.rs` imports them from the library (`use lora_inspector::report;`) and must NOT also declare `mod report;`: compiling the same file in both targets produces two distinct sets of types and doubles the build.
 
 **Interfaces:**
+
 - Consumes: `inspector::blocks::{parse_block_key, BlockGroup, BlockFamily}`, `LoRAFile::{base_names, low_rank_effective_scale, effective_scale, precision, dims, alphas, format}`, `Metadata::{new_from_header_buffer, network_module_display, network_family, network_type}`, `inspector::LayerScale`.
 - Produces, for Tasks 7–9: the serde-shaped structs from the spec's JSON section —
   - `pub struct ReportOptions { pub blocks: bool, pub rank: bool, pub top: usize, pub jobs: usize, pub slow: bool }`
@@ -490,12 +505,14 @@ git commit -m "feat(cli): build the block-weight report without materializing we
 ### Task 7: `render` — three width tiers
 
 **Files:**
+
 - Create: `crates/lora-inspector/src/render.rs`
 - Modify: `crates/lora-inspector/src/lib.rs` (add `pub mod render;`) and `crates/lora-inspector/src/main.rs` (import it)
 - Modify: `crates/lora-inspector/Cargo.toml` (`[dev-dependencies] insta = "1.34.0"`)
 - Create: `crates/lora-inspector/tests/render_snapshots.rs`
 
 **Interfaces:**
+
 - Consumes: `Report`, `BlockStat`, `Ungrouped`, `Skipped`, `Summary`, `Terminal`, `Style` from Tasks 5–6.
 - Produces, for Task 9: `pub fn render(report: &Report, meta: &Metadata, term: &Terminal, opts: &ReportOptions) -> String` (single string with trailing newline; sections separated by one blank line) and `pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> String`. `meta` is passed separately on purpose: the header prints `modelspec.architecture` and `modelspec.trigger_phrase` even when `--metadata` is off, and `Report.metadata` stays `null` in that case.
 
@@ -559,11 +576,13 @@ git commit -m "feat(cli): render the report at three width tiers"
 ### Task 8: Rank pass with rayon
 
 **Files:**
+
 - Modify: `crates/lora-inspector/src/report.rs` (add `pub fn build_rank` and wire `summary.rank`; the `RankLayer`/`RankSummary` types already exist from Task 6)
 - Modify: `crates/lora-inspector/Cargo.toml` (add `rayon = "1.12"`)
 - Create: `crates/lora-inspector/tests/rank.rs`
 
 **Interfaces:**
+
 - Consumes: `LoRAFile::rank_metrics(base_name) -> Result<Option<RankMetrics>>`, `inspector::svd::RankMetrics` fields `nominal_rank, effective_rank, balance, top1_energy, dominance, health`.
 - Produces, for Tasks 9:
   - `pub fn build_rank(file: &LoRAFile, jobs: usize) -> Result<(Vec<RankLayer>, RankSummary)>` — `group`/`label`/`index` for each row come from `inspector::blocks::parse_block_key(base_name)`, not from the block stats, so the rank pass has no ordering dependency on the block pass. — builds a rayon pool of `jobs` threads, `par_iter` over the sorted base names, collects, sorts by `base_name`, then computes the summary. Deterministic by construction.
@@ -613,11 +632,13 @@ git commit -m "feat(cli): parallel effective-rank pass"
 ### Task 9: Wire the CLI surface
 
 **Files:**
+
 - Modify: `crates/lora-inspector/src/main.rs` (new `Inspect` subcommand, remove the CUDA probe, progress to stderr)
 - Modify: `crates/lora-inspector/README.md`
 - Modify: `crates/lora-inspector/src/render.rs` (rank section, if not already in Task 7)
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 3–8.
 - Produces: the user-facing command; no new library interfaces.
 
@@ -691,11 +712,13 @@ git commit -m "feat(cli): add the inspect command with block and rank sections"
 ### Task 9.1: Fold 1×1 conv layers into the cheap path
 
 **Files:**
+
 - Modify: `crates/inspector/src/file.rs` (`low_rank_effective_scale`, and the test module)
 - Modify: `crates/lora-inspector/src/report.rs` (skipped-layer reason text)
 - Test: `crates/inspector/src/file.rs` tests, `crates/lora-inspector/tests/report.rs`
 
 **Interfaces:**
+
 - Consumes: `LoRAFile::low_rank_effective_scale(&self, base_name) -> Result<Option<f64>>` (Task 4).
 - Produces: the same signature, now returning `Some` for 1×1 convolutions.
 
@@ -752,11 +775,13 @@ git commit -m "fix(inspector): include 1x1 convolution layers in the cheap effec
 ### Task 10: Docs, version bump, cleanup
 
 **Files:**
+
 - Modify: `crates/lora-inspector/README.md`
 - Modify: `README.md` (link line only, if the CLI description changes)
 - Delete: `crates/lora-inspector/examples/bench_tmp.rs`, `crates/lora-inspector/examples/cudacheck_tmp.rs`
 
 **Interfaces:**
+
 - Consumes: the finished command.
 - Produces: nothing downstream.
 

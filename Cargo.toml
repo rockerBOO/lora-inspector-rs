@@ -9,8 +9,8 @@ description = "Inspect and analyze LoRA files for diffusion models (UNet and DiT
 [workspace]
 members = ['crates/*']
 resolver = "2"
-package = {version = "1.6.3", authors = ['Dave Lage (rockerBOO)'], edition = "2021", license = "MIT", repository = "https://github.com/rockerBOO/lora-inspector-rs", description = "Inspect and analyze LoRA files for diffusion models (UNet and DiT architectures like Stable Diffusion, Flux, and Krea), including network type, weight norms, rank health, and metadata, via CLI and WebAssembly."}
-dependencies = {candle-core = {version = "0.11"}, getrandom = {version = "0.2", features = ['js']}, num = "0.4.1", pest = "2.6", pest_derive = "2.6", safetensors = "0.8", serde = {version = "1.0", features = ['derive']}, serde_json = "1.0.108", serde_with = "3.4.0"}
+package = { version = "1.6.3", authors = ['Dave Lage (rockerBOO)'], edition = "2021", license = "MIT", repository = "https://github.com/rockerBOO/lora-inspector-rs", description = "Inspect and analyze LoRA files for diffusion models (UNet and DiT architectures like Stable Diffusion, Flux, and Krea), including network type, weight norms, rank health, and metadata, via CLI and WebAssembly." }
+dependencies = { candle-core = { version = "0.11" }, getrandom = { version = "0.2", features = ['js'] }, num = "0.4.1", pest = "2.6", pest_derive = "2.6", safetensors = "0.8", serde = { version = "1.0", features = ['derive'] }, serde_json = "1.0.108", serde_with = "3.4.0" }
 
 # Native release builds optimize for speed. The size profile (opt-level = "z")
 # belongs to the wasm release bundle only: it is pinned via RUSTFLAGS in the
@@ -28,4 +28,3 @@ opt-level = 3
 # insta's snapshot diffing is slow when left unoptimized.
 [profile.dev.package.insta]
 opt-level = 3
-

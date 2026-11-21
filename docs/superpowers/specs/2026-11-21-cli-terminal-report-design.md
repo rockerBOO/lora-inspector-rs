@@ -39,7 +39,7 @@ Measured on this machine (Ryzen 7 5800X, 8 cores, release build):
    uses the cheap path and the CLI does not.
 4. **The release profile puts the size profile in the wrong place.** Root `Cargo.toml`
    wrote `[profile]` with `dev = {...}` / `release = {...}` inside it instead of
-   `[profile.release]`. Cargo still applied the inner `opt-level = "z"` as the *global*
+   `[profile.release]`. Cargo still applied the inner `opt-level = "z"` as the _global_
    release profile — to the binary and to every dependency — while the per-package
    overrides did take effect (`inspector` at 3, `insta` at 3). On a fully clean release
    build that is 78 crates at `opt-level=z` and 1 at 3; after the fix, 79 at 3 and none
@@ -56,20 +56,20 @@ Measured on this machine (Ryzen 7 5800X, 8 cores, release build):
 With `opt-level=3` and `-C target-cpu=x86-64-v3`, single core, using the cheap
 `effective_scale` path over every layer:
 
-| file | layers | current CLI | cheap path, opt-level=z | cheap path, opt-level=3 + AVX2 |
-| --- | --- | --- | --- | --- |
-| `boo.safetensors` (SD1.5, r4) | 264 | 13.3 s | 0.67 s | **0.14 s** |
-| `h3/H3_Motion_BoosterV2` (r16) | 208 | >600 s | 0.21 s | 0.16 s |
-| `wan2.2/14b/…` (r32) | 400 | — | 0.55 s | 0.41 s |
+| file                           | layers | current CLI | cheap path, opt-level=z | cheap path, opt-level=3 + AVX2 |
+| ------------------------------ | ------ | ----------- | ----------------------- | ------------------------------ |
+| `boo.safetensors` (SD1.5, r4)  | 264    | 13.3 s      | 0.67 s                  | **0.14 s**                     |
+| `h3/H3_Motion_BoosterV2` (r16) | 208    | >600 s      | 0.21 s                  | 0.16 s                         |
+| `wan2.2/14b/…` (r32)           | 400    | —           | 0.55 s                  | 0.41 s                         |
 
 Rank/SVD pass (hand-rolled f64 Jacobi in `inspector/src/svd.rs`), per layer:
 
-| file | layers | ms/layer | whole file, 1 core |
-| --- | --- | --- | --- |
-| `wan2.2/14b/…` | 400 | 2.2 | 0.9 s |
-| `flux/urban_decay_v20_rank64` | 114 | 9.0 | 1.0 s |
-| `qwen-image` (r64) | 720 | 8.0 | 5.8 s |
-| `ltx2.3/DR34ML4Y_LT3X_V3` (r128) | 1440 | 51.2 | **74 s** |
+| file                             | layers | ms/layer | whole file, 1 core |
+| -------------------------------- | ------ | -------- | ------------------ |
+| `wan2.2/14b/…`                   | 400    | 2.2      | 0.9 s              |
+| `flux/urban_decay_v20_rank64`    | 114    | 9.0      | 1.0 s              |
+| `qwen-image` (r64)               | 720    | 8.0      | 5.8 s              |
+| `ltx2.3/DR34ML4Y_LT3X_V3` (r128) | 1440   | 51.2     | **74 s**           |
 
 CUDA was tested and rejected for this workload: on the rank×rank Gram shapes the
 report needs, `cuda` is **4.3× slower** than CPU (84.2 ms vs 19.6 ms for 20 matmuls
@@ -83,7 +83,7 @@ not use candle's SVD at all — it is its own code. See [Non-goals](#non-goals).
    second for every file in `/mnt/900/lora`, computing only what it prints.
 2. `--rank` adds the effective-rank section, parallelised across layers.
 3. Block grouping has one implementation, in `inspector`, reused by the CLI today and
-   by wasm later — and it is *better* than the JS version, not a copy of it.
+   by wasm later — and it is _better_ than the JS version, not a copy of it.
 4. Output is legible at 40, 60, 80, 120 and 200 columns; bars, labels and numbers
    stay aligned for CJK and other double-width filenames.
 5. `--json` emits a flat, self-describing schema that an agent can interpret from the
@@ -97,7 +97,7 @@ not use candle's SVD at all — it is its own code. See [Non-goals](#non-goals).
 - No new metrics beyond what `inspector` already computes.
 - No change to the frontend UI in this project. Only the shared grouper lands in
   `inspector`, ready for wasm to re-export; switching the frontend over is later work.
-- No candle upgrade *inside the feature work* — but the upgrade itself is now in scope as
+- No candle upgrade _inside the feature work_ — but the upgrade itself is now in scope as
   Phase 0, done first, on this branch (see below). It is a build/dependency change with
   its own gates, kept out of the CLI tasks so neither diff reviews through the other.
 - No CUDA acceleration of the default report, and no `--device` flag. The report is
@@ -273,20 +273,20 @@ pub struct BlockKey {
 Family table, scanned left-to-right (3-token patterns before 2 before 1 at the same
 position), checked after text-encoder detection:
 
-| tokens | group |
-| --- | --- |
-| `double blocks` | Double |
-| `single transformer blocks` | SingleTransformer |
-| `single blocks` | Single |
-| `transformer blocks` | Transformer |
-| `down blocks` / `input blocks` | Down / Input |
-| `mid block` / `middle block` | Mid / Middle (see below — `mid_block` carries no index) |
-| `up blocks` / `output blocks` | Up / Output |
-| `txtfusion layerwise blocks` / `txtfusion refiner blocks` | TxtFusion |
-| `token refiner refiner blocks`, `token refiner blocks`, `refiner blocks` | TokenRefiner |
-| `noise refiner` / `context refiner` | Refiner |
-| `blocks` (bare, e.g. `diffusion_model.blocks.3`, `lora_unet_blocks_3`) | Blocks |
-| `layers` | Layers |
+| tokens                                                                   | group                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `double blocks`                                                          | Double                                                  |
+| `single transformer blocks`                                              | SingleTransformer                                       |
+| `single blocks`                                                          | Single                                                  |
+| `transformer blocks`                                                     | Transformer                                             |
+| `down blocks` / `input blocks`                                           | Down / Input                                            |
+| `mid block` / `middle block`                                             | Mid / Middle (see below — `mid_block` carries no index) |
+| `up blocks` / `output blocks`                                            | Up / Output                                             |
+| `txtfusion layerwise blocks` / `txtfusion refiner blocks`                | TxtFusion                                               |
+| `token refiner refiner blocks`, `token refiner blocks`, `refiner blocks` | TokenRefiner                                            |
+| `noise refiner` / `context refiner`                                      | Refiner                                                 |
+| `blocks` (bare, e.g. `diffusion_model.blocks.3`, `lora_unet_blocks_3`)   | Blocks                                                  |
+| `layers`                                                                 | Layers                                                  |
 
 A key with no family pattern is `Other`, whether or not it contains a number — there is no
 separate "modules" bucket. krea2's `first`, `last_linear`, `txtfusion_projector`, `tmlp_*`
@@ -305,7 +305,7 @@ the remainder with `_` preserved between two non-numeric tokens (`self_attn_o_pr
 `self_attn.o_proj`; one mechanical rule, applied uniformly, beats a hand-written mapping).
 The number is not required to be trailing. This is
 what collapses 216 SD1.5 TE layers into 12 TE blocks instead of one, and it is why
-detection runs on the *normalized* token stream — PEFT writes `text_model.encoder.layers.11`
+detection runs on the _normalized_ token stream — PEFT writes `text_model.encoder.layers.11`
 with dots, which only matches `text model encoder` after normalization.
 
 Any key that matches nothing becomes `Other` — grouped by its longest common prefix
@@ -333,7 +333,7 @@ of rows sorted by value descending (see Rendering).
   delta, computed from the rank×rank Gram matrices), averaged per block. The block's
   `max` sublayer value is kept for the outlier annotation.
 - **Outlier, block rows** = `block.mean > 1.5 × median of the block means`. Comparing a
-  *block mean* against the *layer* median would be a category error: averaging a block's
+  _block mean_ against the _layer_ median would be a category error: averaging a block's
   layers pulls every block toward the layer median, so almost nothing would ever be
   flagged and `summary.block_weight.outliers` would sit at 0 on healthy files. The block
   section asks "which block is carrying disproportionate weight", and that is a
@@ -400,7 +400,7 @@ GOOD ███████████████░░░  78%    median balan
 Health colors: `Good` green, `Ok` default, `Weak` yellow, `Poor` red,
 `Collapsed` bold red. Color is decoration only — **every rank row carries its health word, and
 that word is never truncated or dropped at any width** — so `--color never` and screenshots
-remain unambiguous. The aggregate health *distribution* line and the numeric columns are
+remain unambiguous. The aggregate health _distribution_ line and the numeric columns are
 droppable at narrow widths — `dominance` first, then `top1`, then `balance`, then
 `effective rank`, then `nominal rank` — because the per-row word already carries the
 verdict. Dropping is whole-column: a numeric column is never shown half-width, and no line
@@ -427,7 +427,7 @@ Rules that hold everywhere:
   only `8 + header_len` bytes, and alpha tensors live in the payload, so `network.alpha` is
   necessarily `[]` there. Without this field a consumer would read "no alpha declared" when
   the truth is "alpha not loaded" — the exact confusion the `null` vs `[]` rule exists to
-  prevent. Any field that is empty *because* of the header-only load is covered by `load`,
+  prevent. Any field that is empty _because_ of the header-only load is covered by `load`,
   not by per-field sentinels.
 - **Numbers are canonical JSON floats rounded to 6 significant digits.** Human output and
   JSON show the same value — no `0.4000000000000001`.
@@ -477,55 +477,55 @@ Rules that hold everywhere:
 With `--rank`, `rank` becomes a flat array and `summary.rank` appears:
 
 ```json
-  "rank": [
-    { "base_name": "lora_unet_double_blocks_3_img_attn_proj", "group": "Double",
-      "label": "DB03", "index": 3, "nominal_rank": 64, "effective_rank": 51.2,
-      "balance": 0.8, "top1_energy": 0.11, "dominance": 2.3, "health": "Good",
-      "eff_scale": 1.02, "outlier": false }
-  ],
-  "summary": {
-    "block_weight": { "median": 0.41, "peak": { "…": 0 }, "outliers": 3 },
-    "rank": {
-      "layers": 114,
-      "by_health": { "Collapsed": 0, "Good": 78, "Ok": 30, "Poor": 2, "Weak": 4 },
-      "median_balance": 0.81, "weak_or_worse": 6, "elapsed_ms": 2400
-    }
+"rank": [
+  { "base_name": "lora_unet_double_blocks_3_img_attn_proj", "group": "Double",
+    "label": "DB03", "index": 3, "nominal_rank": 64, "effective_rank": 51.2,
+    "balance": 0.8, "top1_energy": 0.11, "dominance": 2.3, "health": "Good",
+    "eff_scale": 1.02, "outlier": false }
+],
+"summary": {
+  "block_weight": { "median": 0.41, "peak": { "…": 0 }, "outliers": 3 },
+  "rank": {
+    "layers": 114,
+    "by_health": { "Collapsed": 0, "Good": 78, "Ok": 30, "Poor": 2, "Weak": 4 },
+    "median_balance": 0.81, "weak_or_worse": 6, "elapsed_ms": 2400
   }
+}
 ```
 
 Field reference — this table is the contract and is copied verbatim into the CLI README:
 
-| field | type | meaning |
-| --- | --- | --- |
-| `schema_version` | int | contract version; `1` for this shape |
-| `load` | string | `full` or `header_only`; under `header_only`, payload-derived fields (`network.alpha`, `blocks`, `ungrouped`, `skipped`) are `[]` or `null` by construction |
-| `file.path` | string | path as given on the command line |
-| `file.size_bytes` | int | file length |
-| `file.precision` | string\|null | `fp16`, `bf16`, `fp32`, … of the weight tensors |
-| `network.module` | string | resolved module, e.g. `kohya-ss/lora`, `peft` |
-| `network.type` | string\|null | `LoRA`, `LoCon`, `LoHA`, `LoKr`, `OFT`, … |
-| `network.family` | string | `UNet`, `TextEncoder`, or `Unknown` |
-| `network.rank` | int[] | declared ranks, sorted; `[]` when not declared |
-| `network.alpha` | float[] | declared alphas, sorted; `[]` when not declared |
-| `network.layers.total` | int | base names walked |
-| `network.layers.unet` / `.text_encoder` | int | base names per group family, not substring matching |
-| `metadata` | object\|null | raw `__metadata__`; only with `--metadata` |
-| `blocks[]` | row[] | one row per (group, index), display order; `null` with `--no-blocks` |
-| `blocks[].group` | string | `Down`, `Input`, `Mid`, `Middle`, `Up`, `Output`, `Double`, `Single`, `SingleTransformer`, `Transformer`, `Refiner`, `TokenRefiner`, `TxtFusion`, `Blocks`, `Layers`, `TextEncoder`, `Other` |
-| `blocks[].family` | string | `UNet` \| `TextEncoder` \| `Other` |
-| `blocks[].label` | string | short display tag: `IN04`, `DB03`, `TE11`; bare (`MID`) when there is no index |
-| `blocks[].index` | int\|null | block index taken from the key |
-| `blocks[].layers` | int | base names in this block |
-| `blocks[].mean` / `.median` / `.max` | float | of the per-layer block weight |
-| `blocks[].outlier` | bool | mean exceeds 1.5× the median **block** mean |
-| `ungrouped` | object\|null | `{layers, prefixes}` for keys matching no family; `null` when not computed |
-| `skipped` | object\|null | `{layers, reason}` for layers without a low-rank factor; `null` when not computed |
-| `rank[]` | row[] | one row per layer, sorted by `base_name`; `null` unless `--rank` |
-| `rank[].eff_scale` | float\|null | the same metric as `blocks[].mean`, per layer |
-| `rank[].outlier` | bool | layer scale exceeds 1.5× the median **layer** scale |
-| `rank[].health` | string | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed` |
-| `summary.block_weight` | object | `{median, peak: {label, value, ratio_to_median}, outliers}` |
-| `summary.rank` | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}`; `by_health` keys are alphabetical |
+| field                                   | type         | meaning                                                                                                                                                                                      |
+| --------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version`                        | int          | contract version; `1` for this shape                                                                                                                                                         |
+| `load`                                  | string       | `full` or `header_only`; under `header_only`, payload-derived fields (`network.alpha`, `blocks`, `ungrouped`, `skipped`) are `[]` or `null` by construction                                  |
+| `file.path`                             | string       | path as given on the command line                                                                                                                                                            |
+| `file.size_bytes`                       | int          | file length                                                                                                                                                                                  |
+| `file.precision`                        | string\|null | `fp16`, `bf16`, `fp32`, … of the weight tensors                                                                                                                                              |
+| `network.module`                        | string       | resolved module, e.g. `kohya-ss/lora`, `peft`                                                                                                                                                |
+| `network.type`                          | string\|null | `LoRA`, `LoCon`, `LoHA`, `LoKr`, `OFT`, …                                                                                                                                                    |
+| `network.family`                        | string       | `UNet`, `TextEncoder`, or `Unknown`                                                                                                                                                          |
+| `network.rank`                          | int[]        | declared ranks, sorted; `[]` when not declared                                                                                                                                               |
+| `network.alpha`                         | float[]      | declared alphas, sorted; `[]` when not declared                                                                                                                                              |
+| `network.layers.total`                  | int          | base names walked                                                                                                                                                                            |
+| `network.layers.unet` / `.text_encoder` | int          | base names per group family, not substring matching                                                                                                                                          |
+| `metadata`                              | object\|null | raw `__metadata__`; only with `--metadata`                                                                                                                                                   |
+| `blocks[]`                              | row[]        | one row per (group, index), display order; `null` with `--no-blocks`                                                                                                                         |
+| `blocks[].group`                        | string       | `Down`, `Input`, `Mid`, `Middle`, `Up`, `Output`, `Double`, `Single`, `SingleTransformer`, `Transformer`, `Refiner`, `TokenRefiner`, `TxtFusion`, `Blocks`, `Layers`, `TextEncoder`, `Other` |
+| `blocks[].family`                       | string       | `UNet` \| `TextEncoder` \| `Other`                                                                                                                                                           |
+| `blocks[].label`                        | string       | short display tag: `IN04`, `DB03`, `TE11`; bare (`MID`) when there is no index                                                                                                               |
+| `blocks[].index`                        | int\|null    | block index taken from the key                                                                                                                                                               |
+| `blocks[].layers`                       | int          | base names in this block                                                                                                                                                                     |
+| `blocks[].mean` / `.median` / `.max`    | float        | of the per-layer block weight                                                                                                                                                                |
+| `blocks[].outlier`                      | bool         | mean exceeds 1.5× the median **block** mean                                                                                                                                                  |
+| `ungrouped`                             | object\|null | `{layers, prefixes}` for keys matching no family; `null` when not computed                                                                                                                   |
+| `skipped`                               | object\|null | `{layers, reason}` for layers without a low-rank factor; `null` when not computed                                                                                                            |
+| `rank[]`                                | row[]        | one row per layer, sorted by `base_name`; `null` unless `--rank`                                                                                                                             |
+| `rank[].eff_scale`                      | float\|null  | the same metric as `blocks[].mean`, per layer                                                                                                                                                |
+| `rank[].outlier`                        | bool         | layer scale exceeds 1.5× the median **layer** scale                                                                                                                                          |
+| `rank[].health`                         | string       | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed`                                                                                                                                                    |
+| `summary.block_weight`                  | object       | `{median, peak: {label, value, ratio_to_median}, outliers}`                                                                                                                                  |
+| `summary.rank`                          | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}`; `by_health` keys are alphabetical                                                                                          |
 
 ### Performance work
 
