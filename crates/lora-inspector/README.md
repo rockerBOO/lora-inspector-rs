@@ -33,28 +33,38 @@ depends on width or TTY.
 Progress is written to stderr, never stdout, and only while `--rank` runs on a
 TTY (suppress it with `--quiet`).
 
+The other two shipped subcommands:
+
+```bash
+lora-inspector block-weights --file model.safetensors --output-format text
+lora-inspector compare-metadata --file1 model1.safetensors --file2 model2.safetensors
+```
+
+`block-weights` is deprecated (see Compatibility); `compare-metadata` is
+unchanged.
+
 ## Flags
 
-| Flag             | Default       | Description                                                                                                       |
-| ---------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `--rank`         | off           | Compute and render the effective-rank section (off by default).                                                   |
-| `--json`         | off           | Print a single machine-readable JSON object instead of the terminal report; no ANSI, no progress, no width logic. |
-| `--no-blocks`    | off           | Skip the block section. Without `--rank` this loads only the file header, never the tensor payload.               |
-| `--metadata`     | off           | Include the raw safetensors metadata map in `--json` output.                                                      |
-| `--slow`         | off           | Allow the materialising fallback for layers without an up/down pair (LoHA/LoKr/OFT/BOFT); much slower.            |
-| `--width <N>`    | detected      | Override the detected terminal width in columns.                                                                  |
-| `--top <N>`      | 8             | Rows in the "most loaded blocks" table.                                                                           |
-| `--jobs <N>`     | 0 (all cores) | Worker threads for the rank pass; `0` means available cores.                                                      |
-| `--ascii`        | off           | Use ASCII glyphs only, no Unicode bars or sparklines.                                                             |
-| `--color <mode>` | auto          | When to use ANSI colour: `auto`, `always`, or `never`.                                                            |
-| `--quiet`        | off           | Suppress the rank-progress spinner on stderr.                                                                     |
+| Flag             | Default       | Description                                                                                                                                                                                                               |
+| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--rank`         | off           | Compute and render the effective-rank section (off by default).                                                                                                                                                           |
+| `--json`         | off           | Print a single machine-readable JSON object instead of the terminal report; no ANSI, no progress, no width logic.                                                                                                         |
+| `--no-blocks`    | off           | Skip the block section. Without `--rank` this loads only the file header, never the tensor payload.                                                                                                                       |
+| `--metadata`     | off           | Include the raw safetensors metadata map in `--json` output.                                                                                                                                                              |
+| `--slow`         | off           | Allow the materialising fallback for layers without a plain 2-D up/down pair — missing pairs (LoHA/LoKr/OFT/BOFT) or factors that are not 2-D after singleton collapse (convolution kernels, LoCon, tucker); much slower. |
+| `--width <N>`    | detected      | Override the detected terminal width in columns.                                                                                                                                                                          |
+| `--top <N>`      | 8             | Rows in the "most loaded blocks" table in the wide (100+ column) tier; the compact tier shows a fixed top 3.                                                                                                              |
+| `--jobs <N>`     | 0 (all cores) | Worker threads for the rank pass; `0` means available cores.                                                                                                                                                              |
+| `--ascii`        | off           | Use ASCII glyphs only, no Unicode bars or sparklines.                                                                                                                                                                     |
+| `--color <mode>` | auto          | When to use ANSI colour: `auto`, `always`, or `never`.                                                                                                                                                                    |
+| `--quiet`        | off           | Suppress the rank-progress spinner on stderr.                                                                                                                                                                             |
 
 ## JSON
 
 With `--json`, `inspect` prints exactly one object on stdout. A failure prints
-exactly one object `{"error": {"kind": "io|format|unsupported|usage", "message": "..."}}`
-on stderr and exits `1`; usage errors from the argument parser exit `2`.
-Exit code `0` means success.
+exactly one object `{"error": {"kind": "io|format|unsupported", "message": "..."}}`
+on stderr and exits `1`. clap's usage errors (exit `2`) bypass this contract
+entirely and print plain text. Exit code `0` means success.
 
 ### Field reference
 
@@ -93,8 +103,10 @@ Exit code `0` means success.
 ### Rules for reading it
 
 - **Flat arrays in display order.** `blocks` and `rank` are flat lists of rows;
-  every row repeats its own `group`/`family`/`label`, so `jq '.blocks[] | select(.mean > 1)'` needs no join. `blocks` are in display order (group rank,
-  then index, then label); `rank` rows are sorted by `base_name`.
+  `blocks` rows repeat their own `group`/`family`/`label` and `rank` rows repeat
+  their own `group`/`label`, so `jq '.blocks[] | select(.mean > 1)'` needs no
+  join. `blocks` are in display order (group rank, then index, then label);
+  `rank` rows are sorted by `base_name`.
 - **`null` means not computed; `[]` means computed and nothing found.** With
   `--no-blocks`, `blocks`, `ungrouped` and `skipped` are `null`; without
   `--rank`, `rank` is `null`. A file that grouped nothing gives `"blocks": []`.
@@ -108,7 +120,8 @@ Exit code `0` means success.
   covered by `load`, not by per-field sentinels.
 - **Errors are one object on stderr with exit 1.** Under `--json`, a failure
   emits `{"error": {"kind": "…", "message": "…"}}` and no partial report;
-  `kind` is one of `io`, `format`, `unsupported`, `usage`. Usage errors exit `2`.
+  `kind` is one of `io`, `format`, `unsupported`. Usage errors exit `2` as
+  plain text, not as this object.
 - **`schema_version` bumps only on rename, retype or removal.** Additive fields
   do not bump it.
 
@@ -123,32 +136,30 @@ Exit code `0` means success.
   distribution of the layer. `effective_rank` is the Shannon-entropy effective
   rank (`exp(H)`), `balance` is `effective_rank / nominal_rank` (1.0 means
   fully balanced), `top1_energy` is the energy fraction in the top singular
-  value, and `dominance` is `s[0]/s[1]`. The health word is `Good`
-  (balance ≥ 0.75), `Ok` (≥ 0.50), `Weak` (≥ 0.25), `Poor` (< 0.25), or
-  `Collapsed` (effectively a single direction).
+  value, and `dominance` is `s[0]/s[1]`. The `Collapsed` test (near-total
+  energy in one direction) runs before the balance bands, so a layer can read
+  `Collapsed` even with a high balance; otherwise the bands are `Good`
+  (balance ≥ 0.75), `Ok` (≥ 0.50), `Weak` (≥ 0.25), `Poor` (< 0.25).
 - **`--slow`** switches the block pass to the materialising fallback for layers
-  without a plain up/down pair, and is far slower; without it those layers are
-  skipped and counted as `skipped`.
+  without a plain 2-D up/down pair (see the flag table), and is far slower;
+  without it those layers are skipped and counted as `skipped`.
 - **`--rank`** is CPU-bound (the Jacobi SVD is the project's own code, not a GPU
   path) and parallelised across layers with `--jobs`.
 
 ## Performance
 
-Measured on this machine (Ryzen 7 5800X, 8 cores, release build with
-`opt-level=3` + LTO):
+Measured end-to-end with `inspect` on this machine (Ryzen 7 5800X, 8 cores,
+release build, `opt-level=3` + LTO, warm page cache), `time` wall-clock:
 
-| command                                  | file                              | wall time |
-| ---------------------------------------- | --------------------------------- | --------- |
-| `inspect boo.safetensors`                | SD1.5, rank 4, 264 layers         | 0.16 s    |
-| `inspect boo.safetensors --rank`         | same                              | 0.20 s    |
-| `inspect urban_decay_v20_rank64… --rank` | Flux, rank 64, 114 layers, 269 MB | 1.75 s    |
+| file                                                     | size   | rank | layers | `inspect` | `inspect --rank` |
+| -------------------------------------------------------- | ------ | ---- | ------ | --------- | ---------------- |
+| `boo.safetensors` (SD1.5)                                | 4.8 MB | 4    | 264    | 0.17 s    | 0.20 s           |
+| `h3/H3_Motion_BoosterV2.safetensors`                     | 155 MB | 16   | 208    | 0.44 s    | 0.55 s           |
+| `wan2.2/14b/23High noise-Cumshot Aesthetics.safetensors` | 307 MB | 32   | 400    | 0.99 s    | 1.25 s           |
+| `flux/urban_decay_v20_rank64_bf16-step02016.safetensors` | 269 MB | 64   | 114    | 1.09 s    | 1.44 s           |
 
-The block section (header + per-layer effective scale) runs in 0.14–0.41 s for
-the whole file on this class of machine; the rank pass runs 2–9 ms per layer at
-typical ranks and ~51 ms/layer at rank 128 (≈74 s single-threaded, ≈10 s at 8
-threads on a 1440-layer LTX file). For large files the wall time is dominated
-by reading the payload into memory — the 269 MB Flux file above spends about a
-second of its 1.75 s just loading before the report runs.
+Wall time is dominated by reading the payload into memory for the larger files;
+the block and rank passes themselves are the difference between the two modes.
 
 ## Building for speed
 
@@ -169,8 +180,10 @@ Release builds already use `opt-level=3` + LTO. The size profile
   renders the block section only and keeps `--output-format json|text`. In this
   release its `--output-format json` shape changed — it now emits the same
   `schema_version: 1` object as `inspect --json` instead of the old
-  `norms`/`base_names`/`blocks` map keyed by `unknown_N`. This is a breaking
-  CLI output change.
+  `norms`/`base_names`/`non_block_weights`/`blocks` map keyed by `unknown_N`.
+  This is a breaking CLI output change; the release bump is
+  `scripts/bump_release.py minor`, which defaults to `1.7.0-beta.1` (per
+  `CLAUDE.md`).
 - `compare-metadata` is unchanged.
 
 ## Optional Features
