@@ -48,10 +48,24 @@ const MOSS_IMAGE_ATTENTION_MODULES = new Set([
 const GEMMA =
 	/.*te.*(?<block_type>layers).*_(?<block_id>\d+)_(?<type>self_attn_q_proj|self_attn_k_proj|self_attn_v_proj|self_attn_o_proj|mlp_down_proj|mlp_up_proj|mlp_gate_proj)/;
 
+// Stable Diffusion XL / SGM (Stability) U-Net naming used by kohya and
+// LyCORIS checkpoints: input_blocks_{0-8}, middle_block_{0-2}, output_blocks_{0-8}.
+// The block name follows the outer index only; the inner index addresses
+// resnet/attention sub-blocks within it.
 const SDXL_RE =
-	/.*(?<block_type>input|output|middle)_blocks?_(?<block_id>\d+).*_(\d+_)?((?<type>transformer_blocks)_(?<subblock_id>\d+)_(?<subtype>attn\d+|ff)?_(?<subblock_type>to_k|to_out_0|to_q|to_v|net_0_proj|net_2).*|proj_in|proj_out)/;
+	/(?<block_type>input|output|middle)_blocks?_(?<block_id>\d+)(?:_(?<subblock_id>\d+))?_(?<subblock_type>transformer_blocks|in_layers|emb_layers|out_layers|skip_connection|op|conv|proj_in|proj_out)/;
 
-const SDXL_NUM_OF_BLOCKS = 26;
+// Resnet bodies (the conv side of a block) versus its attention half.
+const SDXL_RESNET_MODULES = new Set([
+	"in_layers",
+	"emb_layers",
+	"out_layers",
+	"skip_connection",
+]);
+
+const SDXL_NUM_OF_INPUT_BLOCKS = 9;
+// MID follows IN00-IN08, then OUT00-OUT08.
+const SDXL_MID_BLOCK_IDX = SDXL_NUM_OF_INPUT_BLOCKS + 1;
 
 // Krea 2 (musubi-tuner networks.lora_krea2) DiT block naming. Covers both
 // the underscore-joined "lora_unet_"-prefixed keys and the dot-separated
@@ -430,38 +444,47 @@ function parseSDKey(key) {
 		}
 
 		const groups = matches.groups;
-		let idx = -1;
-		const blockId = groups.block_id;
-		const subBlockId = groups.subblock_id;
+		const outerId = Number.parseInt(groups.block_id);
+		const subblockType = groups.subblock_type;
 
-		// Update result with extracted values
-		result.type = groups.type;
 		result.blockType = groups.block_type;
-		result.blockId = blockId;
-		result.subBlockId = subBlockId;
+		result.blockId = `${outerId}`;
+		result.subBlockId = groups.subblock_id ?? "";
 
-		// Set idx and isAttention based on subtype
-		if (
-			groups.subtype === "attn1" ||
-			groups.subtype === "attn2" ||
-			groups.subtype === "ff"
-		) {
-			idx = 3 * Number.parseInt(blockId) + Number.parseInt(subBlockId);
+		if (subblockType === "transformer_blocks") {
+			result.type = "attentions";
+			result.isAttention = true;
+		} else if (SDXL_RESNET_MODULES.has(subblockType)) {
+			result.type = "resnets";
+			result.isConv = true;
+		} else if (subblockType === "op") {
+			// Downsampler convolution: input_blocks_{3,6}_0_op
+			result.type = "downsamplers";
+			result.isSampler = true;
+		} else if (subblockType === "conv") {
+			// Upsampler convolution: output_blocks_{2,5}_*_conv
+			result.type = "upsamplers";
+			result.isSampler = true;
+		} else {
+			// proj_in / proj_out attention projections
+			result.type = "attentions";
 			result.isAttention = true;
 		}
 
-		// Set blockIdx and name based on block_type
+		result.idx = outerId;
+
 		if (groups.block_type === "input") {
-			result.blockIdx = 1 + idx;
-			result.name = `IN${padTwo(idx)}`;
+			result.blockIdx = 1 + outerId;
+			result.name = `IN${padTwo(outerId)}`;
 		} else if (groups.block_type === "output") {
-			result.blockIdx = SDXL_NUM_OF_BLOCKS + 1 + idx;
-			result.name = `OUT${padTwo(idx)}`;
-		} else if (groups.block_type === "middle") {
-			result.blockIdx = SDXL_NUM_OF_BLOCKS;
+			result.blockIdx = SDXL_MID_BLOCK_IDX + 1 + outerId;
+			result.name = `OUT${padTwo(outerId)}`;
+		} else {
+			// middle_block_0-2 are all one chart point
+			result.blockIdx = SDXL_MID_BLOCK_IDX;
+			result.name = "MID00";
 		}
 
-		result.idx = idx;
 		return result;
 	}
 
@@ -474,6 +497,11 @@ function parseSDKey(key) {
 
 		const groups = matches.groups;
 		const idx = Number.parseInt(groups.block_id);
+		// SDXL ships two text encoders (CLIP-L and CLIP-G), so keys carry a
+		// lora_te1_/lora_te2_ prefix. Keep them apart instead of collapsing
+		// both into one TE00-TE31 series; SD1.x has a single lora_te_ encoder.
+		const encoder = groups.encoder;
+		const name = encoder ? `TE${encoder}-${padTwo(idx)}` : `TE${padTwo(idx)}`;
 
 		return {
 			...result,
@@ -481,7 +509,7 @@ function parseSDKey(key) {
 			idx: idx,
 			blockId: `${idx}`,
 			blockType: groups.block_type,
-			name: `TE${padTwo(idx)}`,
+			name: name,
 			isAttention: groups.block_type === "self_attn",
 		};
 	}
