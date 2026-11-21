@@ -744,7 +744,10 @@ mod tests {
             Some("kohya".to_string())
         );
         assert_eq!(meta(&[]).network_module_name(), None);
-        assert_eq!(meta(&[("ss_network_module", "")]).network_module_name(), None);
+        assert_eq!(
+            meta(&[("ss_network_module", "")]).network_module_name(),
+            None
+        );
     }
 
     #[test]
@@ -794,7 +797,8 @@ mod tests {
         use crate::weight::LoRAFormat;
 
         assert_eq!(
-            meta(&[("ss_network_module", "networks.lora")]).network_module_display(&LoRAFormat::Kohya),
+            meta(&[("ss_network_module", "networks.lora")])
+                .network_module_display(&LoRAFormat::Kohya),
             "kohya-ss/lora"
         );
         assert_eq!(
@@ -803,7 +807,8 @@ mod tests {
             "musubi-tuner/lora_krea2"
         );
         assert_eq!(
-            meta(&[("ss_network_module", "lycoris.kohya")]).network_module_display(&LoRAFormat::Lycoris),
+            meta(&[("ss_network_module", "lycoris.kohya")])
+                .network_module_display(&LoRAFormat::Lycoris),
             "lycoris"
         );
         assert_eq!(
