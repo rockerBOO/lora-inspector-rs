@@ -2,7 +2,7 @@
 source: crates/lora-inspector/tests/render_snapshots.rs
 expression: "render(& report, & meta, & terminal(120, false), & opts())"
 ---
-fixture.safetensors  3.7 KB
+fixture.safetensors                                                                                               3.7 KB
 unknown · - · 4, 8 · 4, 8 · fp32 · 7 layers (4 unet, 2 te)
 
 block weight

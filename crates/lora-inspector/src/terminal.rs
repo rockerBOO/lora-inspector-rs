@@ -103,6 +103,23 @@ impl Terminal {
         out
     }
 
+    /// Pad `s` on the left with spaces until it is exactly `width` columns
+    /// wide (using display width). Returns `s` unchanged when it already fills
+    /// `width` columns.
+    pub fn pad_left(&self, s: &str, width: usize) -> String {
+        let used = self.text_width(s);
+        if used >= width {
+            return s.to_string();
+        }
+
+        let mut out = String::with_capacity(s.len() + (width - used));
+        for _ in used..width {
+            out.push(' ');
+        }
+        out.push_str(s);
+        out
+    }
+
     /// Render a fraction as a horizontal bar exactly `width` columns wide.
     ///
     /// The fraction is clamped to `0.0..=1.0` (`NaN` becomes `0`); the filled

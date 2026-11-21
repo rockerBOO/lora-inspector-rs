@@ -3,9 +3,10 @@
 //! Three tiers pick the layout from the detected width: wide (>= 100) is one
 //! flat table of the top blocks sorted by value, compact (60..=99) shows one
 //! sparkline per display family plus a top-3 table, and minimal (< 60) shows
-//! one terse line per family with no bars. Every float is already rounded to
-//! six significant digits by [`crate::report::round_sig`], so formatting here
-//! is plain `{}` and the human output and `--json` show the same value.
+//! one terse line per family with no bars. The `--json` output keeps every
+//! float at six significant digits via [`crate::report::round_sig`]; the
+//! human view re-formats block-weight values to two decimals for alignment
+//! (`6.00`, `0.30`, `<0.01`), which is presentation only.
 
 use std::path::Path;
 
@@ -27,12 +28,10 @@ const WIDE_MEAN_W: usize = 8;
 const LAYERS_W: usize = 10;
 const COMPACT_FAMILY_W: usize = 12;
 
-/// Family display order for the compact and minimal tiers.
-const FAMILY_ORDER: [BlockFamily; 3] = [
-    BlockFamily::Unet,
-    BlockFamily::TextEncoder,
-    BlockFamily::Other,
-];
+/// Family display order for the compact and minimal tiers. `BlockFamily::Other`
+/// is deliberately absent: `build_blocks` routes `BlockGroup::Other` layers into
+/// `ungrouped`, never into `blocks`, so no block row can carry that family.
+const FAMILY_ORDER: [BlockFamily; 2] = [BlockFamily::Unet, BlockFamily::TextEncoder];
 
 /// Render the whole report as a single string with one trailing newline.
 ///
@@ -68,7 +67,7 @@ pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> Strin
     let filename_max = term.width.saturating_sub(term.text_width(&size) + 2);
     lines.push(format!(
         "{}  {}",
-        term.truncate_middle(&filename, filename_max),
+        term.pad_right(&term.truncate_middle(&filename, filename_max), filename_max),
         size
     ));
 
@@ -210,8 +209,8 @@ fn render_wide(
         };
         let label = term.pad_right(&row.label, WIDE_LABEL_W);
         let bar = term.bar(frac, bar_width);
-        let mean = pad_left(term, &fmt_value(row.mean), WIDE_MEAN_W);
-        let layers = pad_left(term, &count_noun(row.layers, "layer", "layers"), LAYERS_W);
+        let mean = term.pad_left(&fmt_value(row.mean), WIDE_MEAN_W);
+        let layers = term.pad_left(&count_noun(row.layers, "layer", "layers"), LAYERS_W);
         lines.push(format!("  {label}  {bar}  {mean}  {layers}"));
     }
 
@@ -246,7 +245,7 @@ fn render_compact(
         });
         let values: Vec<f64> = ordered.iter().map(|row| row.mean).collect();
         let spark = if distinct_count(&values) < 2 {
-            pad_left(term, &fmt_value(values[0]), spark_width)
+            term.pad_left(&fmt_value(values[0]), spark_width)
         } else {
             term.sparkline(&values, spark_width)
         };
@@ -273,8 +272,8 @@ fn render_compact(
 
 fn compact_table_row(term: &Terminal, row: &BlockStat) -> String {
     let label = term.pad_right(&row.label, WIDE_LABEL_W);
-    let mean = pad_left(term, &fmt_value(row.mean), WIDE_MEAN_W);
-    let layers = pad_left(term, &count_noun(row.layers, "layer", "layers"), LAYERS_W);
+    let mean = term.pad_left(&fmt_value(row.mean), WIDE_MEAN_W);
+    let layers = term.pad_left(&count_noun(row.layers, "layer", "layers"), LAYERS_W);
     format!("  {label}  {mean}  {layers}")
 }
 
@@ -330,21 +329,29 @@ fn render_rank_section(report: &Report, term: &Terminal, opts: &ReportOptions) -
     } else {
         opts.jobs.to_string()
     };
-    lines.push(fit(
-        term,
-        &format!(
+
+    // Prose degrades by dropping whole fields (elapsed/jobs, then the layer
+    // count), never by middle-ellipsizing.
+    let title_candidates = [
+        format!(
             "effective rank   r={nominal}, {layers} layers, {elapsed_s:.1} s ({threads} threads)"
         ),
-    ));
+        format!("effective rank   r={nominal}, {layers} layers"),
+        format!("effective rank   r={nominal}"),
+    ];
+    lines.push(pick_first_fit(term, &title_candidates));
 
     if let Some(summary) = summary {
-        lines.push(fit(term, &rank_summary_line(summary)));
+        let health = rank_summary_line(summary);
+        if term.text_width(&health) <= term.width {
+            lines.push(health);
+        }
     }
 
     lines.push(String::new());
 
     for row in rank {
-        lines.push(fit(term, &rank_row(term, row)));
+        lines.push(rank_row(term, row));
     }
 
     Some(lines.join("\n"))
@@ -468,6 +475,16 @@ fn pick_fit(term: &Terminal, full: String, short: String) -> String {
     }
 }
 
+/// Pick the first candidate (longest first) that fits, falling back to the
+/// last (shortest) one. Used where prose degrades by dropping whole fields.
+fn pick_first_fit(term: &Terminal, candidates: &[String]) -> String {
+    candidates
+        .iter()
+        .find(|candidate| term.text_width(candidate) <= term.width)
+        .cloned()
+        .unwrap_or_else(|| candidates.last().cloned().unwrap_or_default())
+}
+
 fn families_in_order(blocks: &[BlockStat]) -> Vec<(BlockFamily, Vec<&BlockStat>)> {
     let mut out = Vec::new();
     for family in FAMILY_ORDER {
@@ -528,6 +545,8 @@ fn family_label(family: BlockFamily) -> &'static str {
     match family {
         BlockFamily::Unet => "UNet",
         BlockFamily::TextEncoder => "TextEncoder",
+        // Unreachable in the compact/minimal tiers: `build_blocks` routes
+        // `BlockGroup::Other` into `ungrouped`, never into `blocks`.
         BlockFamily::Other => "Other",
     }
 }
@@ -598,30 +617,6 @@ fn times(term: &Terminal) -> &'static str {
     } else {
         "x"
     }
-}
-
-/// Middle-truncate a free-text line when it would exceed the terminal width.
-fn fit(term: &Terminal, s: &str) -> String {
-    if term.text_width(s) > term.width {
-        term.truncate_middle(s, term.width)
-    } else {
-        s.to_string()
-    }
-}
-
-/// Right-align `s` in `width` columns; the mirror of [`Terminal::pad_right`]
-/// for numeric columns (which are always single-column ASCII digits).
-fn pad_left(term: &Terminal, s: &str, width: usize) -> String {
-    let used = term.text_width(s);
-    if used >= width {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(s.len() + width - used);
-    for _ in used..width {
-        out.push(' ');
-    }
-    out.push_str(s);
-    out
 }
 
 fn fmt_f64(value: f64) -> String {
