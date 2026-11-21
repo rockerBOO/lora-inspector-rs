@@ -19,8 +19,8 @@ pub struct Terminal {
     pub unicode: bool,
 }
 
-/// The `--color` flag. `Auto` enables colour only on a TTY; `Always` skips the
-/// TTY check but still honours `NO_COLOR` and `TERM=dumb`; `Never` is always off.
+/// The `--color` flag. `Auto` enables colour only on a clean TTY; `Always`
+/// emits colour unconditionally; `Never` is always off.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum ColorChoice {
     Auto,
@@ -145,7 +145,7 @@ impl Terminal {
         let glyphs: [char; 8] = if self.unicode {
             ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
         } else {
-            ['.', ':', '-', '=', '=', '#', '#', '#']
+            ['.', ':', '-', '=', '+', '*', '#', '@']
         };
 
         let mut out = String::with_capacity(width * 4);
@@ -202,22 +202,33 @@ fn resolve_width(flag_width: Option<usize>) -> usize {
     width.max(MIN_WIDTH)
 }
 
-/// `Auto` requires a TTY; `Always` skips only that TTY check. Both honour
-/// `NO_COLOR` (present means no colour) and `TERM=dumb`, so explicit
-/// environmental "no ANSI" signals always win.
+/// `Never` is always off; `Always` is unconditionally on (an explicit user
+/// request outranks `NO_COLOR` and `TERM=dumb`); `Auto` needs a TTY and a clean
+/// environment.
 fn resolve_color(choice: ColorChoice) -> bool {
-    match choice {
-        ColorChoice::Never => false,
-        ColorChoice::Always => color_environment_allows(),
-        ColorChoice::Auto => std::io::stdout().is_terminal() && color_environment_allows(),
-    }
+    resolve_color_with(
+        choice,
+        std::io::stdout().is_terminal(),
+        std::env::var_os("NO_COLOR").is_some(),
+        std::env::var("TERM")
+            .map(|term| term == "dumb")
+            .unwrap_or(false),
+    )
 }
 
-fn color_environment_allows() -> bool {
-    std::env::var_os("NO_COLOR").is_none()
-        && std::env::var("TERM")
-            .map(|term| term != "dumb")
-            .unwrap_or(true)
+/// Pure decision table for `--color`, separated from the environment reads so
+/// every branch is testable without mutating process-global environment.
+fn resolve_color_with(
+    choice: ColorChoice,
+    is_tty: bool,
+    no_color_set: bool,
+    term_is_dumb: bool,
+) -> bool {
+    match choice {
+        ColorChoice::Never => false,
+        ColorChoice::Always => true,
+        ColorChoice::Auto => is_tty && !no_color_set && !term_is_dumb,
+    }
 }
 
 /// The finite min/max of `values`, or `None` when there is no finite value or
@@ -400,6 +411,40 @@ mod tests {
     fn color_is_off_when_not_auto_or_not_tty() {
         let t = Terminal::detect(None, ColorChoice::Never, false);
         assert_eq!(t.paint(Style::Good, "x"), "x");
+    }
+
+    #[test]
+    fn color_never_is_always_off() {
+        assert!(!resolve_color_with(ColorChoice::Never, true, false, false));
+        assert!(!resolve_color_with(ColorChoice::Never, false, true, true));
+    }
+
+    #[test]
+    fn color_always_overrides_environment() {
+        // An explicit `Always` wins over a non-TTY, `NO_COLOR`, and `TERM=dumb`.
+        assert!(resolve_color_with(ColorChoice::Always, false, true, true));
+        assert!(Terminal::detect(None, ColorChoice::Always, false).color);
+    }
+
+    #[test]
+    fn color_auto_requires_tty_and_clean_environment() {
+        assert!(resolve_color_with(ColorChoice::Auto, true, false, false));
+        assert!(!resolve_color_with(ColorChoice::Auto, false, false, false)); // non-TTY
+        assert!(!resolve_color_with(ColorChoice::Auto, true, true, false)); // NO_COLOR
+        assert!(!resolve_color_with(ColorChoice::Auto, true, false, true)); // TERM=dumb
+    }
+
+    #[test]
+    fn ascii_sparkline_uses_eight_level_ramp() {
+        let t = Terminal {
+            width: 40,
+            color: false,
+            unicode: false,
+        };
+        assert_eq!(
+            t.sparkline(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], 8),
+            ".:-=+*#@"
+        );
     }
 
     #[test]
