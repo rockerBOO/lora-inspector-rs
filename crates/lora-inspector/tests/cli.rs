@@ -298,3 +298,15 @@ fn declared_type_and_structural_type_can_disagree() {
     assert_eq!(doc["network"]["structure"]["primary"], "LoHa");
     assert_eq!(doc["network"]["structure"]["by_format"]["LoHa"], 2);
 }
+
+#[test]
+fn slow_path_uses_keys_when_metadata_disagrees() {
+    // LoHa keys under metadata declaring networks.lora. Without structure-first
+    // dispatch the LoRA formula cannot find lora_up/lora_down, the layer is
+    // swallowed into `skipped`, and `blocks` comes back empty.
+    let fixture = support::Fixture::write_declared_lora_actual_loha();
+    let doc = run_json(&fixture, &["--slow"]);
+
+    assert_eq!(doc["skipped"]["layers"], 0);
+    assert_eq!(doc["blocks"].as_array().expect("blocks array").len(), 1);
+}

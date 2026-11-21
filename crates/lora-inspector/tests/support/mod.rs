@@ -152,9 +152,25 @@ fn push_lora(tensors: &mut Vec<Tensor>, base: &str, rank: usize, alpha: f32, dow
 
 /// Add a LoHA layer. The cheap Gram path has no plain 2-D up/down pair here,
 /// so `low_rank_effective_scale` returns `None` (skipped, never materialized).
+///
+/// Only the `w1` factors are written, so this layer is also *unscalable* even by
+/// the materialising path: `scale_hada_weight` needs `w2` as well. That is what
+/// makes it a stable "declined" fixture. Use [`push_hada_complete`] when the
+/// layer must actually be reconstructible.
 fn push_hada(tensors: &mut Vec<Tensor>, base: &str) {
     tensors.push(tensor(&format!("{base}.hada_w1_a"), &[4, 4], 1.0));
     tensors.push(tensor(&format!("{base}.hada_w1_b"), &[4, 4], 1.0));
+    tensors.push(tensor(&format!("{base}.alpha"), &[], 4.0));
+}
+
+/// Add a complete LoHa layer: both `w1` and `w2` factor pairs plus alpha, so
+/// `scale_hada_weight` can rebuild it. Still not a low-rank up/down pair, so
+/// `low_rank_effective_scale` declines it and the materialising path is used.
+fn push_hada_complete(tensors: &mut Vec<Tensor>, base: &str) {
+    tensors.push(tensor(&format!("{base}.hada_w1_a"), &[4, 4], 1.0));
+    tensors.push(tensor(&format!("{base}.hada_w1_b"), &[4, 4], 1.0));
+    tensors.push(tensor(&format!("{base}.hada_w2_a"), &[4, 4], 1.0));
+    tensors.push(tensor(&format!("{base}.hada_w2_b"), &[4, 4], 1.0));
     tensors.push(tensor(&format!("{base}.alpha"), &[], 4.0));
 }
 
@@ -267,8 +283,8 @@ fn mixed_structure_fixture_bytes() -> Vec<u8> {
 /// LoHa keys carrying metadata that declares a plain Kohya LoRA.
 fn declared_mismatch_fixture_bytes() -> Vec<u8> {
     let mut tensors = Vec::new();
-    push_hada(&mut tensors, "down_blocks.0.attn.proj_in");
-    push_hada(&mut tensors, "down_blocks.0.attn.proj_out");
+    push_hada_complete(&mut tensors, "down_blocks.0.attn.proj_in");
+    push_hada_complete(&mut tensors, "down_blocks.0.attn.proj_out");
     to_safetensors_with_metadata(
         tensors,
         serde_json::json!({

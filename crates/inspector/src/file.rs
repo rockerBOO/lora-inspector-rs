@@ -7,6 +7,7 @@ use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
+    structure::{classify, StructureFormat},
     svd,
     weight::{self, BufferedLoRAWeight, Weight},
     InspectorError, Result,
@@ -221,27 +222,60 @@ impl LoRAFile {
         //     return Ok(tensor.clone());
         // }
 
-        match self.weights.as_ref() {
-            Some(weights) => match self
-                .metadata
-                .as_ref()
-                .and_then(|metadata| metadata.network_type())
-            {
-                Some(NetworkType::LoRA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::DyLoRA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::GLoRA) => Ok(weights.scale_glora_weights(base_name)?),
-                Some(NetworkType::LoKr) => Ok(weights.scale_lokr_weight(base_name)?),
-                Some(NetworkType::LoHA) => Ok(weights.scale_hada_weight(base_name)?),
-                Some(NetworkType::BOFT) => Ok(weights.scale_boft_weight(base_name)?),
-                Some(NetworkType::DiagOFT) => Ok(weights.scale_diag_oft_weight(base_name)?),
-                Some(_) => Err(InspectorError::UnsupportedNetworkType),
-                None => Ok(weights.scale_lora_weight(base_name)?),
-            },
-            None => Err(InspectorError::Msg(
+        let Some(weights) = self.weights.as_ref() else {
+            return Err(InspectorError::Msg(
                 "Weight not loaded. Load the weight first.".to_string(),
-            )),
+            ));
+        };
+
+        // The keys decide the formula, because they are what a loader acts on.
+        // Metadata is the fallback: a file can declare `networks.lora` while its
+        // keys carry `hada_w1_a`, and picking the declared formula there would
+        // fail to find the factors and silently drop the layer.
+        let keys = self.keys_of(base_name);
+        if let Some(format) = classify(&keys) {
+            let uses_oft_diag = keys
+                .iter()
+                .any(|key| key.split('.').any(|token| token == "oft_diag"));
+            return match format {
+                StructureFormat::LoRa => Ok(weights.scale_lora_weight(base_name)?),
+                StructureFormat::LoHa => Ok(weights.scale_hada_weight(base_name)?),
+                StructureFormat::LoKr => Ok(weights.scale_lokr_weight(base_name)?),
+                StructureFormat::Oft if uses_oft_diag => {
+                    Ok(weights.scale_diag_oft_weight(base_name)?)
+                }
+                StructureFormat::Oft => Ok(weights.scale_boft_weight(base_name)?),
+                StructureFormat::Glora => Ok(weights.scale_glora_weights(base_name)?),
+            };
         }
+
+        match self
+            .metadata
+            .as_ref()
+            .and_then(|metadata| metadata.network_type())
+        {
+            Some(NetworkType::LoRA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::DyLoRA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::GLoRA) => Ok(weights.scale_glora_weights(base_name)?),
+            Some(NetworkType::LoKr) => Ok(weights.scale_lokr_weight(base_name)?),
+            Some(NetworkType::LoHA) => Ok(weights.scale_hada_weight(base_name)?),
+            Some(NetworkType::BOFT) => Ok(weights.scale_boft_weight(base_name)?),
+            Some(NetworkType::DiagOFT) => Ok(weights.scale_diag_oft_weight(base_name)?),
+            Some(_) => Err(InspectorError::UnsupportedNetworkType),
+            None => Ok(weights.scale_lora_weight(base_name)?),
+        }
+    }
+
+    /// The tensor keys belonging to `base_name`: the name itself, or anything
+    /// under it. A prefix test rather than re-stripping the marker suffixes,
+    /// so the marker vocabulary stays in one place (`crate::structure`).
+    fn keys_of(&self, base_name: &str) -> Vec<String> {
+        let dotted = format!("{base_name}.");
+        self.keys()
+            .into_iter()
+            .filter(|key| key == base_name || key.starts_with(&dotted))
+            .collect()
     }
 
     pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
