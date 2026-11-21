@@ -688,6 +688,67 @@ git commit -m "feat(cli): add the inspect command with block and rank sections"
 
 ---
 
+### Task 9.1: Fold 1×1 conv layers into the cheap path
+
+**Files:**
+- Modify: `crates/inspector/src/file.rs` (`low_rank_effective_scale`, and the test module)
+- Modify: `crates/lora-inspector/src/report.rs` (skipped-layer reason text)
+- Test: `crates/inspector/src/file.rs` tests, `crates/lora-inspector/tests/report.rs`
+
+**Interfaces:**
+- Consumes: `LoRAFile::low_rank_effective_scale(&self, base_name) -> Result<Option<f64>>` (Task 4).
+- Produces: the same signature, now returning `Some` for 1×1 convolutions.
+
+**Why:** running `inspect boo.safetensors` reports `32 layers skipped` on a plain kohya SD1.5 LoRA. Those 32 layers are `lora_down.weight` of shape `[4, 320, 1, 1]` — 1×1 convolutions, which are matrices with two trailing singleton dimensions. The frontend included them (through the materialising fallback); the CLI silently drops 12% of the file's layers from the block chart, and the message blames LoHA/LoKr/OFT/BOFT, which is wrong for this file.
+
+- [ ] **Step 1: Write the failing test**
+
+```rust
+#[test]
+fn low_rank_effective_scale_handles_1x1_conv() {
+    let mut f = File::open("boo.safetensors").unwrap();
+    let mut buffer = vec![];
+    f.read_to_end(&mut buffer).unwrap();
+    let lora_file = LoRAFile::new_from_buffer(&buffer, "boo.safetensors", &Device::Cpu);
+    let base = "lora_unet_down_blocks_0_attentions_0_proj_in";
+    let scale = lora_file.low_rank_effective_scale(base).unwrap();
+    assert!(scale.is_some(), "1x1 conv must not be skipped");
+    // Same value as the materialising path gives for the same layer.
+    let dense = lora_file.effective_scale(base).unwrap();
+    assert!((scale.unwrap() - dense.unwrap()).abs() < 1e-6);
+}
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run: `cargo test -p inspector low_rank_effective_scale_handles_1x1_conv`
+Expected: FAIL — `scale.is_some()` is false (the layer is skipped today).
+
+- [ ] **Step 3: Implement flattening**
+
+In `low_rank_effective_scale`, replace the `up.dims().len() != 2 || down.dims().len() != 2` early return with a reshape: accept any rank where at least two dimensions are non-unit and every other dimension is `1`, then `reshape` the tensor to 2D using the same element order (`up` → `(out, rank)`, `down` → `(rank, in)`). Reject anything else (e.g. genuine 3×3 convs, which are not a matrix product) with `Ok(None)` as today. Keep the Gram identity and the `alpha/rank` scaling untouched.
+
+- [ ] **Step 4: Fix the skip reason wording**
+
+In `report.rs`, the `skipped.reason` string currently says `no low-rank factor (LoHA/LoKr/OFT/BOFT)`. After this change a skip means genuinely-not-a-matrix — convolutions with a kernel larger than 1, or a non-LoRA decomposition. Say `no low-rank factor` and name the hint generically; keep the `--slow` mention. Update the corresponding test expectation.
+
+- [ ] **Step 5: Verify against the real file**
+
+Run: `cargo run -q --release -p lora-inspector -- inspect boo.safetensors`
+Expected: `skipped` is 0 (or drops sharply), block layer counts rise (IN00/IN01/IN02 each gain their `proj_in`/`proj_out`/`attn` conv layers), and the block means shift slightly.
+
+- [ ] **Step 6: Run the suites and commit**
+
+Run: `cargo test -p inspector && cargo test -p lora-inspector`
+Expected: PASS. Snapshot changes are expected only where block means/layer counts moved; read each changed snapshot before accepting it.
+
+```bash
+git add crates/inspector/src/file.rs crates/lora-inspector/src/report.rs crates/lora-inspector/tests
+git commit -m "fix(inspector): include 1x1 convolution layers in the cheap effective-scale path"
+```
+
+---
+
 ### Task 10: Docs, version bump, cleanup
 
 **Files:**

@@ -420,8 +420,15 @@ Rules that hold everywhere:
 - **Stable keys.** A key is always present with the same type. It is never omitted and
   never changes type between files.
 - **`null` means "not computed"; `[]` means "computed, nothing found".** `--no-blocks`
-  gives `"blocks": null`; a file that grouped nothing gives `"blocks": []`. An agent can
-  always tell the difference, which it cannot if the key simply disappears.
+  gives `"blocks": null`, `"ungrouped": null` and `"skipped": null`; a file that grouped
+  nothing gives `"blocks": []`. An agent can always tell the difference, which it cannot if
+  the key simply disappears.
+- **`load` says which path ran.** `"full"` or `"header_only"`. The header-only path reads
+  only `8 + header_len` bytes, and alpha tensors live in the payload, so `network.alpha` is
+  necessarily `[]` there. Without this field a consumer would read "no alpha declared" when
+  the truth is "alpha not loaded" — the exact confusion the `null` vs `[]` rule exists to
+  prevent. Any field that is empty *because* of the header-only load is covered by `load`,
+  not by per-field sentinels.
 - **Numbers are canonical JSON floats rounded to 6 significant digits.** Human output and
   JSON show the same value — no `0.4000000000000001`.
 - **Arrays are in display order** (group rank, then index, then name), so printing the
@@ -442,6 +449,7 @@ Rules that hold everywhere:
 ```json
 {
   "schema_version": 1,
+  "load": "full",
   "file": { "path": "boo.safetensors", "size_bytes": 13164512, "precision": "fp16" },
   "network": {
     "module": "kohya-ss/lora", "type": "LoRA", "family": "UNet",
@@ -490,6 +498,7 @@ Field reference — this table is the contract and is copied verbatim into the C
 | field | type | meaning |
 | --- | --- | --- |
 | `schema_version` | int | contract version; `1` for this shape |
+| `load` | string | `full` or `header_only`; under `header_only`, payload-derived fields (`network.alpha`, `blocks`, `ungrouped`, `skipped`) are `[]` or `null` by construction |
 | `file.path` | string | path as given on the command line |
 | `file.size_bytes` | int | file length |
 | `file.precision` | string\|null | `fp16`, `bf16`, `fp32`, … of the weight tensors |
@@ -509,8 +518,8 @@ Field reference — this table is the contract and is copied verbatim into the C
 | `blocks[].layers` | int | base names in this block |
 | `blocks[].mean` / `.median` / `.max` | float | of the per-layer block weight |
 | `blocks[].outlier` | bool | mean exceeds 1.5× the median **block** mean |
-| `ungrouped` | object | `{layers, prefixes}` for keys matching no family |
-| `skipped` | object | `{layers, reason}` for layers without a low-rank factor |
+| `ungrouped` | object\|null | `{layers, prefixes}` for keys matching no family; `null` when not computed |
+| `skipped` | object\|null | `{layers, reason}` for layers without a low-rank factor; `null` when not computed |
 | `rank[]` | row[] | one row per layer, sorted by `base_name`; `null` unless `--rank` |
 | `rank[].eff_scale` | float\|null | the same metric as `blocks[].mean`, per layer |
 | `rank[].outlier` | bool | layer scale exceeds 1.5× the median **layer** scale |
