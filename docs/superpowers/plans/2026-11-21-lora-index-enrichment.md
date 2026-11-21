@@ -498,13 +498,13 @@ Expected: PASS with no snapshot changes. If any `.snap` file changes, the refact
 ```rust
 #[test]
 fn layers_covers_every_base_name() {
-    // The shared fixture has 4 LoRA layers plus 1 LoHa layer the cheap Gram path
-    // declines, so `skipped.layers` is 1 and `layers` must still have 5 rows.
+    // The shared fixture has 6 LoRA layers plus 1 LoHa layer the cheap Gram path
+    // declines, so `skipped.layers` is 1 and `layers` must still have 7 rows.
     let fixture = support::Fixture::write();
     let doc = run_json(&fixture, &["--layers", "--rank"]);
 
-    assert_eq!(doc["network"]["layers"]["total"], 5);
-    assert_eq!(doc["layers"].as_array().expect("layers array").len(), 5);
+    assert_eq!(doc["network"]["layers"]["total"], 7);
+    assert_eq!(doc["layers"].as_array().expect("layers array").len(), 7);
 }
 
 #[test]
@@ -613,7 +613,6 @@ fn dense_only_fixture_bytes() -> Vec<u8> {
 
 Run: `cargo test -p lora-inspector --test cli layers 2>&1 | tail -30`
 Expected: FAIL — unknown argument `--layers`.
-
 - [ ] **Step 4: Implement**
 
 In `main.rs`, add to `InspectArgs`:
