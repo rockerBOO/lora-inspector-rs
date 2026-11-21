@@ -24,7 +24,6 @@ pub enum BlockGroup {
     TxtFusion,
     Blocks,
     Layers,
-    Modules,
     TextEncoder,
     Other,
 }
@@ -83,9 +82,8 @@ impl BlockGroup {
             BlockGroup::TxtFusion => 12,
             BlockGroup::Blocks => 13,
             BlockGroup::Layers => 14,
-            BlockGroup::Modules => 15,
-            BlockGroup::TextEncoder => 16,
-            BlockGroup::Other => 17,
+            BlockGroup::TextEncoder => 15,
+            BlockGroup::Other => 16,
         }
     }
 
@@ -100,7 +98,6 @@ impl BlockGroup {
             BlockGroup::Refiner => "RF",
             BlockGroup::TokenRefiner => "TR",
             BlockGroup::TxtFusion => "TF",
-            BlockGroup::Modules => "MD",
             BlockGroup::TextEncoder => "TE",
             BlockGroup::Other => "OT",
         }
