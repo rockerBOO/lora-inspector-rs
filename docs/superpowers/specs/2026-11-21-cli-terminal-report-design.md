@@ -398,8 +398,12 @@ GOOD ███████████████░░░  78%    median balan
 ```
 
 Health colors: `Good` green, `Ok` default, `Weak` yellow, `Poor` red,
-`Collapsed` bold red. Color is decoration only — every row carries its health word, so
-`--color never` and screenshots remain unambiguous.
+`Collapsed` bold red. Color is decoration only — **every rank row carries its health word, and
+that word is never truncated or dropped at any width** — so `--color never` and screenshots
+remain unambiguous. The aggregate health *distribution* line and the numeric columns
+(`balance`, `top1`, `dominance`) are droppable at narrow widths, in that order, because the
+per-row word already carries the verdict. Numeric columns are formatted and padded through
+`Terminal`, never with `fmt!` of a raw f64, so an unrounded value cannot overflow a column.
 
 ### JSON
 
