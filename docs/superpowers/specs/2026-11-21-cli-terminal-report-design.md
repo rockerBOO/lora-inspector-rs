@@ -94,10 +94,9 @@ not use candle's SVD at all — it is its own code. See [Non-goals](#non-goals).
 - No new metrics beyond what `inspector` already computes.
 - No change to the frontend UI in this project. Only the shared grouper lands in
   `inspector`, ready for wasm to re-export; switching the frontend over is later work.
-- No candle upgrade. Current is 0.3.2; latest is 0.11.1 and it drags
-  safetensors 0.3.3 → 0.8.0 through the whole crate and the wasm build. Separate
-  project, sequenced after this one. A candle upgrade is what would make a
-  GPU-accelerated `--full-stats` mode possible, which is why it is worth doing later.
+- No candle upgrade *inside the feature work* — but the upgrade itself is now in scope as
+  Phase 0, done first, on this branch (see below). It is a build/dependency change with
+  its own gates, kept out of the CLI tasks so neither diff reviews through the other.
 - No CUDA acceleration of the default report, and no `--device` flag. The report is
   CPU-only. The `cuda` feature keeps compiling (verified on the Blackwell card) so a
   future GPU path stays reachable, but `inspect` will not probe or select a GPU. The
@@ -117,6 +116,46 @@ These make the project a failure even if it technically works:
   vanish, `null` and `[]` used interchangeably, or full float precision noise.
 - Metrics that disagree with the browser for the same file, without that gap being
   an explicit, documented decision.
+
+## Phase 0: dependency upgrade
+
+Authorised by the project owner after the design was approved. Current pins are
+`candle-core 0.3.2` and `safetensors 0.3.3`; the current releases are `0.11.1` and
+`0.8.0`, and the toolchain is rustc 1.95.0.
+
+**Why now rather than later:** the CLI work is about to be written against candle's
+`Tensor`/`DType`/`Error` and safetensors' `TensorView`. Writing that code against 0.3.2
+and rewriting it after an 8-minor-version jump is the expensive order. Doing the upgrade
+first means every later task is written once, against the API that ships.
+
+**What it buys, concretely:**
+
+- `safetensors` 0.8 and `candle` 0.11 are the versions that get fixes and are what the
+  ecosystem's tooling assumes.
+- candle 0.11 ships `MmapedSafetensors`, which is the zero-copy loader the dropped
+  `memmap2` item was looking for. It is **not** adopted in this project (the loader
+  abstraction in `inspector` would have to change shape), but it is now reachable.
+- The `cuda` feature can be exercised against a current `cudarc`, which matters for the
+  Blackwell card even though the report stays CPU-only.
+
+**What it does not buy:** GPU SVD (still CPU in candle, and `inspector`'s SVD is its own
+Jacobi implementation), and any change to the metrics.
+
+**Gates — the upgrade is only acceptable if all of these hold:**
+
+1. `cargo test --workspace` green. Snapshot changes are only acceptable when the diff is a
+   real numeric change, and each changed value must be explained in the report.
+2. `cargo check --target wasm32-unknown-unknown -p lora-inspector-wasm` green, and
+   `make build-wasm-dev` produces a wasm no more than 10% larger than the recorded
+   baseline (`lora-inspector_bg.wasm` 7 737 686 B, `lora-inspector-simd_bg.wasm`
+   7 757 294 B). A bigger jump is reported, not absorbed.
+3. `inspector`'s public API does not change shape (same function names and signatures)
+   except where a dependency forced it — those cases are listed in the commit message.
+4. `cargo build --release -p lora-inspector --features cuda` is attempted; if a current
+   `cudarc` cannot build for `sm_120`, that is reported as a finding, not worked around.
+
+**Out of scope for Phase 0:** adopting `MmapedSafetensors`, changing the SVD algorithm,
+touching the wasm frontend's JS, or any CLI behaviour.
 
 ## Approaches
 
@@ -444,9 +483,10 @@ Field reference — this table is the contract and is copied verbatim into the C
    `RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release` (or a
    `make build-cli-native` target). Default builds stay portable.
 3. ~~`memmap2`~~ — dropped. `LoRAFile::new_from_buffer` immediately does
-   `buffer.to_vec()` (`file.rs:66-70`) and candle 0.3.2's `BufferedSafetensors::new`
-   only accepts a `Vec<u8>`, so an mmap would still produce one full heap copy. It buys
-   nothing without a candle change, which the non-goals exclude. `fs::read` stays.
+   `buffer.to_vec()` (`file.rs:66-70`) and candle's `BufferedSafetensors::new` only
+   accepts a `Vec<u8>`, so an mmap would still produce one full heap copy. Phase 0 makes
+   `MmapedSafetensors` reachable, but adopting it would change the loader's shape, so
+   `fs::read` stays for this project and zero-copy is a follow-up.
 4. `rayon` in the **CLI crate only** (not `inspector`; wasm must not grow). The rank
    pass is a `par_iter` over base names; results are collected and sorted before
    rendering so output stays deterministic. `--jobs` sets the pool.

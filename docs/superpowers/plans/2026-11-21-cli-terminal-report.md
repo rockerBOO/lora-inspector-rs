@@ -20,6 +20,7 @@
 - `--json` output must be byte-identical regardless of `--width`.
 - Release profile: `opt-level = 3` and `lto = true` in a real `[profile.release]` section; `-C target-cpu` flags stay out of the manifest (documented Makefile target only).
 - `make test`, `make wasm-bindgen-test`, `make fmt && dprint fmt` must pass at the end.
+- Phase 0 (Task 0) may change dependencies but must not change `inspector`'s public API shape, and the wasm bundle may not grow more than 10% over the recorded baseline.
 - JSON contract, exactly as the spec's JSON section and field table: `schema_version: 1`,
   flat `blocks`/`rank` arrays, stable keys that never disappear, `null` = not computed and
   `[]` = computed-and-empty, floats rounded to 6 significant digits, arrays in display
@@ -33,6 +34,56 @@
 4. **Mixed-rank / mixed-alpha files** (`dims()`/`alphas()` return `HashSet` with 2+ values) — header must render all values, not the first, and not panic.
 5. **`--json` piped with no TTY while progress is enabled** — progress must not leak into stdout, and stdout must parse as a single JSON object.
 6. **A section that was not requested versus one that was requested and is empty** — an agent must be able to tell them apart; `null` and `[]` must never be used interchangeably, and the key must never vanish.
+
+---
+
+### Task 0: Upgrade candle and safetensors
+
+**Files:**
+- Modify: `Cargo.toml` (workspace `dependencies`)
+- Modify: `Cargo.lock`
+- Modify: `crates/inspector/src/*.rs` and `crates/lora-inspector-wasm/src/*.rs` only where the new APIs force it
+- Modify: `crates/inspector/src/snapshots/*.snap` only for real value changes, with each change explained
+
+**Interfaces:**
+- Consumes: the existing public API of `inspector` (must survive intact).
+- Produces: `candle-core 0.11`, `safetensors 0.8`, and a workspace that compiles against them. Later tasks are written once against these APIs.
+
+- [ ] **Step 1: Record the baseline**
+
+Run: `cargo test --workspace 2>&1 | grep -E "^test result" ` and `ls -l crates/lora-inspector-wasm/pkg/*.wasm`
+Expected baseline to record in the report: the per-target test counts, plus `lora-inspector_bg.wasm` = 7 737 686 B and `lora-inspector-simd_bg.wasm` = 7 757 294 B.
+
+- [ ] **Step 2: Bump the pins and find the breakage**
+
+Set `candle-core = "0.11"` and `safetensors = "0.8"` in the workspace `dependencies` table, then `cargo check --workspace --all-targets` and collect every error. Expect changes in these areas — do not speculate beyond them, just let the compiler list them: `candle_core::Error` variant shapes (`CannotFindTensor`, `SafeTensor`), `safetensors::tensor::TensorView::new` and `SafeTensors::read_metadata` signatures, `DType`/`WithDType` naming, and anything `wasm_bindgen`-adjacent in the wasm crate.
+
+- [ ] **Step 3: Fix compilation without changing behaviour**
+
+Fix errors one file at a time. The rule for every fix: same public name, same signature, same numeric result. If a dependency forces an `inspector` signature change, make it and list it explicitly in the report and the commit message body.
+
+- [ ] **Step 4: Make the suite green**
+
+Run: `cargo test --workspace`
+Expected: PASS. If snapshots differ, run `cargo insta show` (or read the `.snap` diff) and confirm each changed number is a genuine numeric change rather than a formatting artifact. Explain every changed value in the report; revert the upgrade and report BLOCKED if a value changes beyond float noise and you cannot explain why.
+
+- [ ] **Step 5: Verify the wasm target and its size**
+
+Run: `cargo check --target wasm32-unknown-unknown -p lora-inspector-wasm && make build-wasm-dev && ls -l crates/lora-inspector-wasm/pkg/*.wasm`
+Expected: check passes, and neither wasm exceeds 10% over the Step 1 baseline (i.e. ≤ 8 511 455 B / ≤ 8 532 023 B). Record the exact new sizes.
+
+- [ ] **Step 6: Attempt the cuda feature**
+
+Run: `cargo build --release -p lora-inspector --features cuda`
+Expected: either it builds (report the resulting `cudarc` version) or it fails against the current CUDA toolkit — in which case record the first real error and report it as a finding. Do not add workarounds, and do not remove the feature.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add Cargo.toml Cargo.lock crates/
+git commit -m "build: upgrade candle to 0.11 and safetensors to 0.8" 
+```
+The commit body lists any `inspector` signature that had to change, the new wasm sizes, and the cuda result.
 
 ---
 
