@@ -18,6 +18,7 @@ pub mod network;
 pub mod norms;
 mod parser;
 pub mod statistic;
+pub mod structure;
 pub mod svd;
 
 pub use crate::file::LayerScale;
