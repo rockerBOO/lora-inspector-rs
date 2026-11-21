@@ -226,6 +226,15 @@ async function init_wasm_in_worker() {
 					});
 				}
 			});
+		} else if (e.data.messageType === "network_family") {
+			getNetworkFamily(e).then((networkFamily) => {
+				if (e.data.reply) {
+					self.postMessage({
+						messageType: "network_family",
+						networkFamily,
+					});
+				}
+			});
 		} else if (e.data.messageType === "network_args") {
 			getNetworkArgs(e).then((networkArgs) => {
 				if (e.data.reply) {
@@ -507,6 +516,10 @@ async function unloadWorker(e) {
 
 async function getNetworkModule(e) {
 	return withWorker(e.data.name, (w) => w.network_module());
+}
+
+async function getNetworkFamily(e) {
+	return withWorker(e.data.name, (w) => w.network_family());
 }
 
 async function getWeightKeys(e) {
