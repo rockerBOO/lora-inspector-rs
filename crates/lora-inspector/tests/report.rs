@@ -148,7 +148,7 @@ fn metadata_is_only_present_when_requested() {
     let with = build_report(fixture.path(), &file, &meta, &with_opts).expect("build report");
     assert_eq!(
         with.metadata,
-        Some(std::collections::HashMap::from([(
+        Some(std::collections::BTreeMap::from([(
             "modelspec.architecture".to_string(),
             "flux".to_string(),
         )]))

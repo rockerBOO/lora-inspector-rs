@@ -133,3 +133,58 @@ fn rank_outlier_uses_the_layer_median_rule() {
     // median is 2.25 and only 10.0 exceeds 1.5 × 2.25 = 3.375.
     assert_eq!(proj_out.eff_scale, Some(10.0));
 }
+
+#[test]
+fn rank_eff_scale_obeys_slow_like_the_block_pass() {
+    let fixture = support::Fixture::write_conv();
+    let bytes = fixture.bytes();
+    let file = LoRAFile::new_from_buffer(
+        &bytes,
+        fixture.path().to_str().expect("utf-8 temp path"),
+        &Device::Cpu,
+    );
+    let meta = Metadata::new_from_buffer(&bytes).expect("fixture metadata");
+
+    let fast_opts = ReportOptions {
+        blocks: true,
+        rank: true,
+        top: 8,
+        jobs: 1,
+        slow: false,
+        metadata: false,
+    };
+    let slow_opts = ReportOptions {
+        slow: true,
+        ..fast_opts.clone()
+    };
+
+    let fast = build_report(fixture.path(), &file, &meta, &fast_opts).expect("fast report");
+    let slow = build_report(fixture.path(), &file, &meta, &slow_opts).expect("slow report");
+
+    // The block pass declines the conv layer without --slow and counts it as
+    // skipped; with --slow it materializes it.
+    assert_eq!(fast.skipped.as_ref().expect("fast skipped").layers, 1);
+    assert_eq!(slow.skipped.as_ref().expect("slow skipped").layers, 0);
+
+    let base_name = "down_blocks.1.resnets.0.conv1";
+    let fast_row = fast
+        .rank
+        .as_ref()
+        .expect("fast rank")
+        .iter()
+        .find(|row| row.base_name == base_name)
+        .expect("conv rank row");
+    let slow_row = slow
+        .rank
+        .as_ref()
+        .expect("slow rank")
+        .iter()
+        .find(|row| row.base_name == base_name)
+        .expect("conv rank row");
+
+    assert_eq!(fast_row.eff_scale, None);
+    assert!(
+        slow_row.eff_scale.is_some(),
+        "--slow must materialize the conv layer's scale in the rank pass"
+    );
+}

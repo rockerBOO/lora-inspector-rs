@@ -191,6 +191,14 @@ pub enum DType {
     F64,
     I64,
     U64,
+    F8E5M2,
+    F8E4M3,
+    F8E8M0,
+    F8E4M3FNUZ,
+    F8E5M2FNUZ,
+    /// A dtype outside the set this inspector can name; kept so the
+    /// header/precision conversions never panic on a future format.
+    Unsupported,
 }
 
 impl fmt::Display for DType {
@@ -209,6 +217,12 @@ impl fmt::Display for DType {
             DType::F64 => write!(f, "fp64"),
             DType::I64 => write!(f, "i64"),
             DType::U64 => write!(f, "u64"),
+            DType::F8E5M2 => write!(f, "fp8_e5m2"),
+            DType::F8E4M3 => write!(f, "fp8_e4m3"),
+            DType::F8E8M0 => write!(f, "fp8_e8m0"),
+            DType::F8E4M3FNUZ => write!(f, "fp8_e4m3fnuz"),
+            DType::F8E5M2FNUZ => write!(f, "fp8_e5m2fnuz"),
+            DType::Unsupported => write!(f, "unsupported"),
         }
     }
 }
@@ -229,7 +243,12 @@ impl From<safetensors::Dtype> for DType {
             safetensors::Dtype::F64 => Self::F64,
             safetensors::Dtype::I64 => Self::I64,
             safetensors::Dtype::U64 => Self::U64,
-            a => panic!("Unsupported Dtype {:?}", a),
+            safetensors::Dtype::F8_E5M2 => Self::F8E5M2,
+            safetensors::Dtype::F8_E4M3 => Self::F8E4M3,
+            safetensors::Dtype::F8_E8M0 => Self::F8E8M0,
+            safetensors::Dtype::F8_E4M3FNUZ => Self::F8E4M3FNUZ,
+            safetensors::Dtype::F8_E5M2FNUZ => Self::F8E5M2FNUZ,
+            _ => Self::Unsupported,
         }
     }
 }
@@ -238,13 +257,17 @@ impl From<candle_core::DType> for DType {
     fn from(value: candle_core::DType) -> Self {
         match value {
             candle_core::DType::U8 => Self::U8,
-            candle_core::DType::F16 => Self::F16,
-            candle_core::DType::BF16 => Self::BF16,
             candle_core::DType::U32 => Self::U32,
+            candle_core::DType::I16 => Self::I16,
+            candle_core::DType::I32 => Self::I32,
+            candle_core::DType::I64 => Self::I64,
+            candle_core::DType::BF16 => Self::BF16,
+            candle_core::DType::F16 => Self::F16,
             candle_core::DType::F32 => Self::F32,
             candle_core::DType::F64 => Self::F64,
-            candle_core::DType::I64 => Self::I64,
-            a => panic!("Unsupported Dtype {:?}", a),
+            candle_core::DType::F8E4M3 => Self::F8E4M3,
+            candle_core::DType::F8E8M0 => Self::F8E8M0,
+            _ => Self::Unsupported,
         }
     }
 }
@@ -1276,6 +1299,31 @@ mod tests {
     use crate::norms;
 
     use super::*;
+
+    #[test]
+    fn float8_dtypes_convert_without_panicking() {
+        for (source, expected, display) in [
+            (safetensors::Dtype::F8_E5M2, DType::F8E5M2, "fp8_e5m2"),
+            (safetensors::Dtype::F8_E4M3, DType::F8E4M3, "fp8_e4m3"),
+            (safetensors::Dtype::F8_E8M0, DType::F8E8M0, "fp8_e8m0"),
+            (
+                safetensors::Dtype::F8_E4M3FNUZ,
+                DType::F8E4M3FNUZ,
+                "fp8_e4m3fnuz",
+            ),
+            (
+                safetensors::Dtype::F8_E5M2FNUZ,
+                DType::F8E5M2FNUZ,
+                "fp8_e5m2fnuz",
+            ),
+        ] {
+            assert_eq!(DType::from(source), expected);
+            assert_eq!(expected.to_string(), display);
+        }
+
+        assert_eq!(DType::from(candle_core::DType::F8E4M3), DType::F8E4M3);
+        assert_eq!(DType::from(candle_core::DType::F8E8M0), DType::F8E8M0);
+    }
 
     #[test]
     fn get_base_name_test() {

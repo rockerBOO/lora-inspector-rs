@@ -36,6 +36,7 @@ pub enum Style {
 }
 
 const MIN_WIDTH: usize = 20;
+const MAX_WIDTH: usize = 4096;
 const FALLBACK_WIDTH: usize = 80;
 
 impl Terminal {
@@ -43,7 +44,7 @@ impl Terminal {
     ///
     /// Width is resolved from `--width`, then `COLUMNS`, then the terminal
     /// size reported for stdout (stderr/stdin fall back as the crate does),
-    /// then [`FALLBACK_WIDTH`], and is clamped to [`MIN_WIDTH`]..=`usize::MAX`.
+    /// then [`FALLBACK_WIDTH`], and is clamped to [`MIN_WIDTH`]..=[`MAX_WIDTH`].
     pub fn detect(flag_width: Option<usize>, flag_color: ColorChoice, ascii: bool) -> Terminal {
         Terminal {
             width: resolve_width(flag_width),
@@ -95,7 +96,7 @@ impl Terminal {
             return s.to_string();
         }
 
-        let mut out = String::with_capacity(s.len() + (width - used));
+        let mut out = String::with_capacity(s.len().saturating_add(width.saturating_sub(used)));
         out.push_str(s);
         for _ in used..width {
             out.push(' ');
@@ -112,7 +113,7 @@ impl Terminal {
             return s.to_string();
         }
 
-        let mut out = String::with_capacity(s.len() + (width - used));
+        let mut out = String::with_capacity(s.len().saturating_add(width.saturating_sub(used)));
         for _ in used..width {
             out.push(' ');
         }
@@ -196,15 +197,18 @@ impl Terminal {
     }
 }
 
-/// `--width` → `COLUMNS` → terminal size on stdout → fallback, clamped up to
-/// the usable minimum.
+/// `--width` → `COLUMNS` → terminal size on stdout → fallback, clamped to the
+/// usable range [`MIN_WIDTH`]..=[`MAX_WIDTH`].
 fn resolve_width(flag_width: Option<usize>) -> usize {
+    resolve_width_with(flag_width, std::env::var("COLUMNS").ok())
+}
+
+/// Pure width-resolution decision, separated from the `COLUMNS` environment
+/// read so every branch is testable without mutating process-global state.
+fn resolve_width_with(flag_width: Option<usize>, columns: Option<String>) -> usize {
     let width = if let Some(width) = flag_width {
         width
-    } else if let Some(width) = std::env::var("COLUMNS")
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
-    {
+    } else if let Some(width) = columns.and_then(|v| v.trim().parse().ok()) {
         width
     } else if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
         width as usize
@@ -212,7 +216,7 @@ fn resolve_width(flag_width: Option<usize>) -> usize {
         FALLBACK_WIDTH
     };
 
-    width.max(MIN_WIDTH)
+    width.clamp(MIN_WIDTH, MAX_WIDTH)
 }
 
 /// `Never` is always off; `Always` is unconditionally on (an explicit user
@@ -388,19 +392,28 @@ mod tests {
     }
 
     #[test]
-    fn width_resolution_clamps_to_a_usable_minimum() {
+    fn width_resolution_clamps_to_a_usable_range() {
         assert_eq!(
             Terminal::detect(Some(0), ColorChoice::Never, false).width,
-            20
+            MIN_WIDTH
         );
         assert_eq!(
             Terminal::detect(Some(1), ColorChoice::Never, false).width,
-            20
+            MIN_WIDTH
         );
         assert_eq!(
             Terminal::detect(Some(200), ColorChoice::Never, false).width,
             200
         );
+        assert_eq!(
+            Terminal::detect(Some(usize::MAX), ColorChoice::Never, false).width,
+            MAX_WIDTH
+        );
+        assert_eq!(
+            resolve_width_with(None, Some("18446744073709551615".to_string())),
+            MAX_WIDTH
+        );
+        assert_eq!(resolve_width_with(None, Some("120".to_string())), 120);
     }
 
     #[test]

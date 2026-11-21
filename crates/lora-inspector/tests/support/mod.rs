@@ -57,6 +57,14 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// Write a conv-LoRA fixture whose up/down factors are not 2-D, so the
+    /// cheap Gram path declines it and `--slow` materializes it.
+    pub fn write_conv() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, conv_fixture_bytes()).expect("write conv fixture");
+        Fixture { path }
+    }
+
     /// Path of the written file.
     pub fn path(&self) -> &Path {
         &self.path
@@ -131,6 +139,22 @@ fn push_hada(tensors: &mut Vec<Tensor>, base: &str) {
     tensors.push(tensor(&format!("{base}.hada_w1_a"), &[4, 4], 1.0));
     tensors.push(tensor(&format!("{base}.hada_w1_b"), &[4, 4], 1.0));
     tensors.push(tensor(&format!("{base}.alpha"), &[], 4.0));
+}
+
+/// Add a conv-LoRA layer with a real 2×2 kernel. The cheap Gram path declines
+/// the non-2-D factors; `--slow` materializes the convolution instead.
+fn push_conv_lora(tensors: &mut Vec<Tensor>, base: &str) {
+    tensors.push(tensor(
+        &format!("{base}.lora_down.weight"),
+        &[2, 2, 2, 2],
+        1.0,
+    ));
+    tensors.push(tensor(
+        &format!("{base}.lora_up.weight"),
+        &[2, 2, 1, 1],
+        1.0,
+    ));
+    tensors.push(tensor(&format!("{base}.alpha"), &[], 2.0));
 }
 
 fn fixture_bytes() -> Vec<u8> {
@@ -220,8 +244,19 @@ fn metadata_fixture_bytes() -> Vec<u8> {
     push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 1.0);
     to_safetensors_with_metadata(
         tensors,
-        serde_json::json!({ "modelspec.architecture": "flux" }),
+        serde_json::json!({
+            "modelspec.architecture": "flux",
+            "modelspec.author": "fixture",
+            "modelspec.date": "2026-11-21",
+        }),
     )
+}
+
+/// A single conv layer for exercising the `--slow` materialising fallback.
+fn conv_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    push_conv_lora(&mut tensors, "down_blocks.1.resnets.0.conv1");
+    to_safetensors(tensors)
 }
 
 /// Serialize tensors into the safetensors layout: 8-byte little-endian header

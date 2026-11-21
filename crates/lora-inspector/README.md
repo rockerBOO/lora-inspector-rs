@@ -137,8 +137,8 @@ entirely and print plain text. Exit code `0` means success.
   rank (`exp(H)`), `balance` is `effective_rank / nominal_rank` (1.0 means
   fully balanced), `top1_energy` is the energy fraction in the top singular
   value, and `dominance` is `s[0]/s[1]`. The `Collapsed` test (near-total
-  energy in one direction) runs before the balance bands, so a layer can read
-  `Collapsed` even with a high balance; otherwise the bands are `Good`
+  energy in one direction) runs before the balance bands, so a weak balance
+  can read `Collapsed` rather than its balance band; otherwise the bands are `Good`
   (balance ≥ 0.75), `Ok` (≥ 0.50), `Weak` (≥ 0.25), `Poor` (< 0.25).
 - **`--slow`** switches the block pass to the materialising fallback for layers
   without a plain 2-D up/down pair (see the flag table), and is far slower;

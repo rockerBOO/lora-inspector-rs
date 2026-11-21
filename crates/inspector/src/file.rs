@@ -274,8 +274,9 @@ impl LoRAFile {
     /// can exhaust the wasm heap. A matrix is accepted whether it is stored flat or
     /// with singleton dimensions in any position (e.g. a 1×1 convolution's
     /// `[out, rank, 1, 1]` factors); any other shape (a real convolution kernel,
-    /// tucker or other decomposition) returns `Ok(None)` and falls back to full
-    /// materialization, since this identity doesn't directly apply to them.
+    /// tucker or other decomposition) returns `Ok(None)` and leaves the caller to
+    /// fall back to full materialization, since this identity doesn't directly
+    /// apply to them.
     ///
     /// This is the only path that is safe for large layers, because it never
     /// materializes `up @ down`.

@@ -10,6 +10,8 @@ mod support;
 
 use std::process::{Command, Output};
 
+use lora_inspector::terminal::Terminal;
+
 const BIN: &str = env!("CARGO_BIN_EXE_lora-inspector");
 
 fn run(args: &[&str]) -> Output {
@@ -126,23 +128,67 @@ fn block_weights_alias_still_works() {
 }
 
 #[test]
-fn narrow_width_does_not_panic() {
+fn extreme_widths_do_not_panic_and_stay_clamped() {
     let fixture = support::Fixture::write();
     let path = fixture.path().to_str().expect("utf-8 temp path");
 
-    for width in ["1", "0"] {
+    for width in ["0", "1", "18446744073709551615"] {
         let output = run(&["inspect", path, "--width", width]);
         assert!(
             output.status.success(),
             "--width {width} failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
+        let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
             !stderr.contains("panicked"),
             "--width {width} panicked: {stderr}"
         );
+        assert_line_widths_within_clamp(&stdout);
     }
+
+    let output = Command::new(BIN)
+        .args(["inspect", path])
+        .env("COLUMNS", "18446744073709551615")
+        .output()
+        .expect("run lora-inspector");
+    assert!(
+        output.status.success(),
+        "COLUMNS=18446744073709551615 failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    assert_line_widths_within_clamp(&stdout);
+}
+
+fn assert_line_widths_within_clamp(stdout: &str) {
+    let term = Terminal {
+        width: 4096,
+        color: false,
+        unicode: true,
+    };
+    let max = stdout
+        .lines()
+        .map(|line| term.text_width(line))
+        .max()
+        .unwrap_or(0);
+    assert!(max <= 4096, "line exceeded the clamped width: {max}");
+}
+
+#[test]
+fn json_metadata_is_byte_deterministic() {
+    let fixture = support::Fixture::write_metadata();
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+
+    let first = run(&["inspect", path, "--json", "--metadata"]);
+    let second = run(&["inspect", path, "--json", "--metadata"]);
+    assert!(first.status.success());
+    assert!(second.status.success());
+    assert_eq!(
+        first.stdout, second.stdout,
+        "--json --metadata must be byte-identical across runs"
+    );
 }
 
 #[test]

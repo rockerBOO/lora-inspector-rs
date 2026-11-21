@@ -52,7 +52,7 @@ pub struct Report {
     pub load: Load,
     pub file: FileInfo,
     pub network: NetworkInfo,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<BTreeMap<String, String>>,
     pub blocks: Option<Vec<BlockStat>>,
     pub ungrouped: Option<Ungrouped>,
     pub skipped: Option<Skipped>,
@@ -350,10 +350,12 @@ struct RankRaw {
 /// Each layer's metrics are computed independently, so no cross-layer float
 /// depends on scheduling. The collected rows are sorted by `base_name` before
 /// the summary is derived, which is what makes the output byte-identical for
-/// any thread count.
+/// any thread count. The `eff_scale` field uses the same cheap/materializing
+/// rule as the block pass: the Gram path unless `slow` is set.
 pub fn build_rank(
     file: &LoRAFile,
     jobs: usize,
+    slow: bool,
 ) -> inspector::Result<(Vec<RankLayer>, RankSummary)> {
     let start = std::time::Instant::now();
 
@@ -374,7 +376,11 @@ pub fn build_rank(
                         return Ok(None);
                     };
                     let key = parse_block_key(base_name);
-                    let eff_scale = file.low_rank_effective_scale(base_name)?;
+                    let eff_scale = if slow {
+                        file.effective_scale(base_name)?
+                    } else {
+                        file.low_rank_effective_scale(base_name)?
+                    };
                     Ok(Some(RankRaw {
                         base_name: base_name.clone(),
                         group: key.group,
@@ -535,7 +541,12 @@ pub fn build_report(
 
     let network = build_network_info(file, meta, total_layers, unet, text_encoder);
     let metadata = if opts.metadata {
-        meta.metadata.clone()
+        meta.metadata.as_ref().map(|metadata| {
+            metadata
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect()
+        })
     } else {
         None
     };
@@ -559,7 +570,7 @@ pub fn build_report(
     };
 
     let (rank, rank_summary) = if opts.rank {
-        let (layers, summary) = build_rank(file, opts.jobs)?;
+        let (layers, summary) = build_rank(file, opts.jobs, opts.slow)?;
         (Some(layers), Some(summary))
     } else {
         (None, None)

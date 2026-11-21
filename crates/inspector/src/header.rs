@@ -292,4 +292,23 @@ mod tests {
         assert_eq!(names, sorted);
         names.clear(); // silence unused mut warning path in some rustc versions
     }
+
+    fn float8_header(dtype: &str) -> Vec<u8> {
+        let json = format!(
+            "{{\"test\":{{\"dtype\":\"{dtype}\",\"shape\":[2,2],\"data_offsets\":[0,4]}}}}"
+        );
+        let mut buffer = Vec::with_capacity(8 + json.len());
+        buffer.extend_from_slice(&(json.len() as u64).to_le_bytes());
+        buffer.extend_from_slice(json.as_bytes());
+        buffer
+    }
+
+    #[test]
+    fn parse_header_maps_float8_dtypes_without_panicking() {
+        for (dtype, expected) in [("F8_E4M3", DType::F8E4M3), ("F8_E5M2", DType::F8E5M2)] {
+            let (header, _meta) =
+                parse_header(&float8_header(dtype)).expect("float8 header must parse");
+            assert_eq!(header.precision(), Some(expected));
+        }
+    }
 }
