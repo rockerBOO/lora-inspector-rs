@@ -49,6 +49,7 @@ unchanged.
 | ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--rank`         | off           | Compute and render the effective-rank section (off by default).                                                                                                                                                           |
 | `--json`         | off           | Print a single machine-readable JSON object instead of the terminal report; no ANSI, no progress, no width logic.                                                                                                         |
+| `--layers`       | off           | In `--json`, emit one `layers[]` row per base name, including layers with no resolvable factors. Needs the tensor payload, so it forces a full load even with `--no-blocks`.                                              |
 | `--no-blocks`    | off           | Skip the block section. Without `--rank` this loads only the file header, never the tensor payload.                                                                                                                       |
 | `--metadata`     | off           | Include the raw safetensors metadata map in `--json` output.                                                                                                                                                              |
 | `--slow`         | off           | Allow the materialising fallback for layers without a plain 2-D up/down pair — missing pairs (LoHA/LoKr/OFT/BOFT) or factors that are not 2-D after singleton collapse (convolution kernels, LoCon, tucker); much slower. |
@@ -77,6 +78,12 @@ entirely and print plain text. Exit code `0` means success.
 | `file.precision`                        | string\|null | `fp16`, `bf16`, `fp32`, … of the weight tensors                                                                                                                                              |
 | `network.module`                        | string       | resolved module, e.g. `kohya-ss/lora`, `peft`                                                                                                                                                |
 | `network.type`                          | string\|null | `LoRA`, `LoCon`, `LoHA`, `LoKr`, `OFT`, …                                                                                                                                                    |
+| `network.structure`                     | object       | **key-derived** format evidence; see below. `network.type` is the metadata claim, this is what a loader acts on                                                                              |
+| `network.structure.primary`             | string       | format with the most layers: `LoRA`, `LoHa`, `LoKr`, `OFT`, `GLoRA`, or `Unknown`                                                                                                            |
+| `network.structure.by_format`           | object       | layer count per format, keys sorted                                                                                                                                                          |
+| `network.structure.formats`             | string[]     | distinct formats present, sorted; `[]` when none recognised                                                                                                                                  |
+| `network.structure.has_conv`            | bool         | a factor with more than two dimensions is present (the LoCon distinction)                                                                                                                    |
+| `network.structure.has_dora`            | bool         | any layer carries a `dora_scale`                                                                                                                                                             |
 | `network.family`                        | string       | `UNet`, `TextEncoder`, or `Unknown`                                                                                                                                                          |
 | `network.rank`                          | int[]        | declared ranks, sorted; `[]` when not declared                                                                                                                                               |
 | `network.alpha`                         | float[]      | declared alphas, sorted; `[]` when not declared                                                                                                                                              |
@@ -97,6 +104,10 @@ entirely and print plain text. Exit code `0` means success.
 | `rank[].eff_scale`                      | float\|null  | the same metric as `blocks[].mean`, per layer                                                                                                                                                |
 | `rank[].outlier`                        | bool         | layer scale exceeds 1.5× the median **layer** scale                                                                                                                                          |
 | `rank[].health`                         | string       | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed`                                                                                                                                                    |
+| `layers[]`                              | row[]        | one row per base name, sorted by `base_name`; `null` unless `--layers`                                                                                                                       |
+| `layers[].format`                       | string\|null | key-derived format for this layer: `LoRA`, `LoHa`, `LoKr`, `OFT`, `GLoRA`                                                                                                                   |
+| `layers[].eff_scale`                    | float\|null  | per-layer scale; `null` when no factor could be resolved                                                                                                                                     |
+| `layers[].nominal_rank` … `.health`     | nullable     | the same fields as `rank[]`, all `null` for a layer with no low-rank pair                                                                                                                    |
 | `summary.block_weight`                  | object       | `{median, peak: {label, value, ratio_to_median}, outliers}`                                                                                                                                  |
 | `summary.rank`                          | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}`; `by_health` keys are alphabetical                                                                                          |
 
@@ -124,6 +135,21 @@ entirely and print plain text. Exit code `0` means success.
   plain text, not as this object.
 - **`schema_version` bumps only on rename, retype or removal.** Additive fields
   do not bump it.
+- **`network.type` is a claim; `network.structure` is evidence.** `type` comes
+  from `ss_network_module`/`ss_network_args`, which is what the trainer recorded.
+  `structure` comes from the tensor key names, which is what an inference loader
+  reads. When they disagree the keys win: a file declaring `networks.lora` whose
+  keys carry `hada_w1_a`/`hada_w1_b` loads as LoHa. `--slow` and the scaling
+  formulas dispatch on the keys for the same reason.
+- **`layers` covers every base name, `rank` only the ones with rank metrics.**
+  A layer can have a scale and no metrics (a LyCORIS layer with no low-rank
+  pair), metrics and no scale (a convolution factor the cheap path declines),
+  or neither. There is no `low_rank` boolean because it cannot be made to mean
+  one of those things; test `nominal_rank !== null` or `eff_scale !== null`
+  instead.
+- **`has_conv` is a property, not a format.** LoCon is `LoRA` + `has_conv`;
+  DoRA is any format + `has_dora`. That is why a LoCon file is not reported as
+  a structural divergence from a LoRA one.
 
 ## What the numbers mean
 
