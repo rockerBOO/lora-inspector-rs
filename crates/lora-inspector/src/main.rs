@@ -77,7 +77,7 @@ struct InspectArgs {
     rank: bool,
 
     /// Emit one row per layer in --json, including layers with no resolvable factors
-    #[clap(long)]
+    #[clap(long, requires = "json")]
     layers: bool,
 
     /// Emit a single machine-readable JSON object instead of the terminal report
@@ -231,9 +231,9 @@ fn exit(result: Result<(), CliError>) -> ExitCode {
 
 fn run_inspect(args: InspectArgs) -> Result<(), CliError> {
     let json = args.json;
-    // Load rule: `--no-blocks` without `--rank` is the one header-only load;
-    // every other combination needs the tensor payload for the block or rank
-    // pass.
+    // Load rule: `--no-blocks` without `--rank` and without `--layers` is the
+    // one header-only load; every other combination needs the tensor payload
+    // for the block, rank or per-layer pass.
     let header_only = args.no_blocks && !args.rank && !args.layers;
 
     let opts = ReportOptions {

@@ -50,7 +50,7 @@ unchanged.
 | `--rank`         | off           | Compute and render the effective-rank section (off by default).                                                                                                                                                           |
 | `--json`         | off           | Print a single machine-readable JSON object instead of the terminal report; no ANSI, no progress, no width logic.                                                                                                         |
 | `--layers`       | off           | In `--json`, emit one `layers[]` row per base name, including layers with no resolvable factors. Needs the tensor payload, so it forces a full load even with `--no-blocks`.                                              |
-| `--no-blocks`    | off           | Skip the block section. Without `--rank` this loads only the file header, never the tensor payload.                                                                                                                       |
+| `--no-blocks`    | off           | Skip the block section. Without `--rank` and without `--layers` this loads only the file header, never the tensor payload.                                                                                                |
 | `--metadata`     | off           | Include the raw safetensors metadata map in `--json` output.                                                                                                                                                              |
 | `--slow`         | off           | Allow the materialising fallback for layers without a plain 2-D up/down pair — missing pairs (LoHA/LoKr/OFT/BOFT) or factors that are not 2-D after singleton collapse (convolution kernels, LoCon, tucker); much slower. |
 | `--width <N>`    | detected      | Override the detected terminal width in columns.                                                                                                                                                                          |
@@ -106,6 +106,7 @@ entirely and print plain text. Exit code `0` means success.
 | `rank[].health`                         | string       | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed`                                                                                                                                                    |
 | `layers[]`                              | row[]        | one row per base name, sorted by `base_name`; `null` unless `--layers`                                                                                                                       |
 | `layers[].format`                       | string\|null | key-derived format for this layer: `LoRA`, `LoHa`, `LoKr`, `OFT`, `GLoRA`                                                                                                                   |
+| `layers[].group` / `.label`             | string       | `Other` layers are labelled `OT`, matching `rank[]`, not `null`                                                                                                                               |
 | `layers[].eff_scale`                    | float\|null  | per-layer scale; `null` when no factor could be resolved                                                                                                                                     |
 | `layers[].nominal_rank` … `.health`     | nullable     | the same fields as `rank[]`, all `null` for a layer with no low-rank pair                                                                                                                    |
 | `summary.block_weight`                  | object       | `{median, peak: {label, value, ratio_to_median}, outliers}`                                                                                                                                  |
@@ -125,7 +126,8 @@ entirely and print plain text. Exit code `0` means success.
   the same value; the human view re-formats block-weight and rank values to 2
   decimals for alignment.
 - **`load: header_only` means payload-derived fields are empty by
-  construction.** The header-only path (`--no-blocks` without `--rank`) reads
+  construction.** The header-only path (`--no-blocks` without `--rank` or
+  `--layers`) reads
   only `8 + header_len` bytes; alpha tensors live in the payload, so
   `network.alpha` is necessarily `[]` there, and any other empty field is
   covered by `load`, not by per-field sentinels.

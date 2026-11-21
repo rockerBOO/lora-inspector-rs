@@ -26,8 +26,9 @@ impl StructureFormat {
         }
     }
 
-    /// Tie-break and mixed-marker order. Fixed so output never depends on
-    /// `HashMap` iteration order.
+    /// Lower wins. A layer carrying more than one marker set takes the lowest,
+    /// and a file whose formats tie on layer count takes the lowest, so both
+    /// call sites agree and neither depends on `HashMap` iteration order.
     pub fn precedence(self) -> u8 {
         match self {
             StructureFormat::LoRa => 0,

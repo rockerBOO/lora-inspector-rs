@@ -557,11 +557,14 @@ pub fn build_rank(
 
 /// One row per base name, including layers with no resolvable factors.
 pub fn build_layers(file: &LoRAFile, jobs: usize, slow: bool) -> inspector::Result<Vec<Layer>> {
-    let rows = rank_rows(file, jobs, slow, true)?;
-    let threshold = layer_outlier_threshold(&rows);
+    Ok(layer_rows(&rank_rows(file, jobs, slow, true)?))
+}
 
-    Ok(rows
-        .iter()
+/// Map pre-collected rows to `--layers` rows.
+fn layer_rows(rows: &[RankRaw]) -> Vec<Layer> {
+    let threshold = layer_outlier_threshold(rows);
+
+    rows.iter()
         .map(|row| Layer {
             base_name: row.base_name.clone(),
             group: row.group,
@@ -582,7 +585,7 @@ pub fn build_layers(file: &LoRAFile, jobs: usize, slow: bool) -> inspector::Resu
             eff_scale: row.eff_scale.map(|scale| round_sig(scale, 6)),
             outlier: row.eff_scale.is_some_and(|scale| scale > threshold),
         })
-        .collect())
+        .collect()
 }
 
 /// Resolve `--jobs`: `0` means the available core count, falling back to one
@@ -692,8 +695,9 @@ pub fn build_structure(file: &LoRAFile) -> StructureInfo {
         .map(|(format, count)| (format.as_str().to_string(), *count))
         .collect();
 
-    // Highest count wins; ties break by `precedence`, so the answer never
-    // depends on `HashMap` iteration order.
+    // Highest count wins; ties break by the lowest `precedence`, the same
+    // direction `classify` uses for a layer carrying more than one marker set,
+    // so the two call sites cannot disagree about which format wins.
     let primary = counts
         .iter()
         .max_by(|(fa, ca), (fb, cb)| ca.cmp(cb).then(fb.precedence().cmp(&fa.precedence())))
@@ -772,17 +776,28 @@ pub fn build_report(
         (None, None, None, None)
     };
 
-    let (rank, rank_summary) = if opts.rank {
-        let (layers, summary) = build_rank(file, opts.jobs, opts.slow)?;
-        (Some(layers), Some(summary))
-    } else {
-        (None, None)
-    };
+    // One pass, both views. Asking for `--layers` and `--rank` together used to
+    // run the whole SVD pass twice; the `--layers` rows are a superset, so the
+    // rank array is filtered from the same rows.
+    let (rank, rank_summary, layers) = if opts.rank || opts.layers {
+        let start = std::time::Instant::now();
+        let rows = rank_rows(file, opts.jobs, opts.slow, opts.layers)?;
+        let elapsed = start.elapsed().as_millis();
 
-    let layers = if opts.layers {
-        Some(build_layers(file, opts.jobs, opts.slow)?)
+        let (rank, summary) = if opts.rank {
+            let (layers, summary) = rank_layers(&rows, elapsed);
+            (Some(layers), Some(summary))
+        } else {
+            (None, None)
+        };
+        let layers = if opts.layers {
+            Some(layer_rows(&rows))
+        } else {
+            None
+        };
+        (rank, summary, layers)
     } else {
-        None
+        (None, None, None)
     };
 
     Ok(Report {
