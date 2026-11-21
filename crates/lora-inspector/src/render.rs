@@ -72,13 +72,28 @@ pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> Strin
         size
     ));
 
-    let module = &report.network.module;
+    lines.push(header_network_line(report, term));
+
+    if let Some(modelspec) = modelspec_line(meta, term) {
+        lines.push(modelspec);
+    }
+
+    lines.join("\n")
+}
+
+/// Line 2 of the header: the network summary. Narrow widths degrade by
+/// dropping whole fields (lowest priority first) instead of ellipsizing a
+/// composed sentence.
+fn header_network_line(report: &Report, term: &Terminal) -> String {
+    let sep = sep(term);
+    let module = report.network.module.clone();
     let ty = report
         .network
         .network_type
         .as_ref()
         .map(network_type_label)
-        .unwrap_or("-");
+        .unwrap_or("-")
+        .to_string();
     let rank = if report.network.rank.is_empty() {
         "-".to_string()
     } else {
@@ -89,22 +104,56 @@ pub fn render_header(report: &Report, meta: &Metadata, term: &Terminal) -> Strin
     } else {
         join_f64(&report.network.alpha)
     };
-    let precision = report.file.precision.as_deref().unwrap_or("-");
-    let counts = format!(
-        "{} layers ({} unet, {} te)",
-        report.network.layers.total, report.network.layers.unet, report.network.layers.text_encoder
+    let precision = report.file.precision.as_deref().unwrap_or("-").to_string();
+    let layers_total = count_noun(report.network.layers.total, "layer", "layers");
+    let layers_full = format!(
+        "{} ({} unet, {} te)",
+        layers_total, report.network.layers.unet, report.network.layers.text_encoder
     );
-    let sep = sep(term);
-    lines.push(fit(
-        term,
-        &format!("{module} {sep} {ty} {sep} {rank} {sep} {alpha} {sep} {precision} {sep} {counts}"),
-    ));
 
-    if let Some(modelspec) = modelspec_line(meta, term) {
-        lines.push(fit(term, &modelspec));
+    // Drop precision, then the layer breakdown, then type, then module.
+    let variants = [
+        vec![
+            module.clone(),
+            ty.clone(),
+            rank.clone(),
+            alpha.clone(),
+            precision.clone(),
+            layers_full.clone(),
+        ],
+        vec![
+            module.clone(),
+            ty.clone(),
+            rank.clone(),
+            alpha.clone(),
+            layers_full.clone(),
+        ],
+        vec![
+            module.clone(),
+            ty.clone(),
+            rank.clone(),
+            alpha.clone(),
+            layers_total.clone(),
+        ],
+        vec![
+            module.clone(),
+            rank.clone(),
+            alpha.clone(),
+            layers_total.clone(),
+        ],
+        vec![rank.clone(), alpha.clone(), layers_total.clone()],
+        vec![rank.clone(), layers_total.clone()],
+        vec![layers_total.clone()],
+    ];
+
+    for fields in variants {
+        let line = fields.join(&format!(" {sep} "));
+        if term.text_width(&line) <= term.width {
+            return line;
+        }
     }
 
-    lines.join("\n")
+    layers_total
 }
 
 fn render_block_section(report: &Report, term: &Terminal, opts: &ReportOptions) -> Option<String> {
@@ -137,7 +186,7 @@ fn render_wide(
     let mut lines = vec!["block weight".to_string()];
 
     if let Some(summary) = summary {
-        lines.push(fit(term, &summary_line(summary, blocks.len(), true, term)));
+        lines.push(summary_line(summary, blocks.len(), true, term));
     }
 
     // Blank line between the summary and the value table.
@@ -146,9 +195,12 @@ fn render_wide(
     let mut rows: Vec<&BlockStat> = blocks.iter().collect();
     rows.sort_by(by_mean_desc);
     let peak_mean = rows.first().map(|row| row.mean).unwrap_or(0.0);
+    // Keep the bar from eating the row: it is capped so the numbers stay near
+    // their label instead of being pushed to the far edge.
     let bar_width = term
         .width
-        .saturating_sub(2 + WIDE_LABEL_W + 2 + WIDE_MEAN_W + 2 + LAYERS_W + 2);
+        .saturating_sub(2 + WIDE_LABEL_W + 2 + WIDE_MEAN_W + 2 + LAYERS_W + 2)
+        .min(40);
 
     for row in rows.into_iter().take(opts.top) {
         let frac = if peak_mean > 0.0 {
@@ -158,8 +210,8 @@ fn render_wide(
         };
         let label = term.pad_right(&row.label, WIDE_LABEL_W);
         let bar = term.bar(frac, bar_width);
-        let mean = pad_left(term, &fmt_f64(row.mean), WIDE_MEAN_W);
-        let layers = pad_left(term, &format!("{} layers", row.layers), LAYERS_W);
+        let mean = pad_left(term, &fmt_value(row.mean), WIDE_MEAN_W);
+        let layers = pad_left(term, &count_noun(row.layers, "layer", "layers"), LAYERS_W);
         lines.push(format!("  {label}  {bar}  {mean}  {layers}"));
     }
 
@@ -174,8 +226,14 @@ fn render_compact(
     let mut lines = Vec::new();
 
     if let Some(summary) = summary {
-        lines.push(fit(term, &summary_line(summary, blocks.len(), false, term)));
+        lines.push(summary_line(summary, blocks.len(), false, term));
     }
+
+    // The sparkline column is a fixed width across families so a single-value
+    // family's number lines up with the other families' sparklines.
+    let spark_width = term
+        .width
+        .saturating_sub(2 + COMPACT_FAMILY_W + 2 + 2 + LAYERS_W);
 
     for (family, members) in families_in_order(blocks) {
         let mut ordered: Vec<&BlockStat> = members;
@@ -187,11 +245,12 @@ fn render_compact(
                 .then(a.label.cmp(&b.label))
         });
         let values: Vec<f64> = ordered.iter().map(|row| row.mean).collect();
-        let block_count = format!("{} blocks", ordered.len());
-        let spark_width = term
-            .width
-            .saturating_sub(2 + COMPACT_FAMILY_W + 2 + 2 + term.text_width(&block_count));
-        let spark = term.sparkline(&values, spark_width);
+        let spark = if distinct_count(&values) < 2 {
+            pad_left(term, &fmt_value(values[0]), spark_width)
+        } else {
+            term.sparkline(&values, spark_width)
+        };
+        let block_count = count_noun(ordered.len(), "block", "blocks");
         lines.push(format!(
             "  {}  {}  {}",
             term.pad_right(family_label(family), COMPACT_FAMILY_W),
@@ -214,8 +273,8 @@ fn render_compact(
 
 fn compact_table_row(term: &Terminal, row: &BlockStat) -> String {
     let label = term.pad_right(&row.label, WIDE_LABEL_W);
-    let mean = pad_left(term, &fmt_f64(row.mean), WIDE_MEAN_W);
-    let layers = pad_left(term, &format!("{} layers", row.layers), LAYERS_W);
+    let mean = pad_left(term, &fmt_value(row.mean), WIDE_MEAN_W);
+    let layers = pad_left(term, &count_noun(row.layers, "layer", "layers"), LAYERS_W);
     format!("  {label}  {mean}  {layers}")
 }
 
@@ -230,22 +289,23 @@ fn render_minimal(
         let mut means: Vec<f64> = members.iter().map(|row| row.mean).collect();
         let median = median(&mut means);
         let mut line = format!(
-            "{} {} blocks  med {}",
+            "{} {}  med {}",
             family_label(family),
-            members.len(),
-            fmt_f64(median)
+            count_noun(members.len(), "block", "blocks"),
+            fmt_value(median)
         );
         if let Some(summary) = summary {
             if members.iter().any(|row| row.label == summary.peak.label) {
-                line.push_str(&format!(
-                    "  peak {}{}{}",
-                    fmt_f64(summary.peak.value),
-                    times(term),
-                    fmt_f64(summary.peak.ratio_to_median)
-                ));
+                for annotation in peak_annotations(summary, term, " median") {
+                    let candidate = format!("{line}  {annotation}");
+                    if term.text_width(&candidate) <= term.width {
+                        line = candidate;
+                        break;
+                    }
+                }
             }
         }
-        lines.push(fit(term, &line));
+        lines.push(line);
     }
 
     lines
@@ -322,59 +382,90 @@ fn rank_row(term: &Terminal, row: &RankLayer) -> String {
 
 /// Summary line carrying the headline block numbers. The compact tier folds
 /// the `block weight` title into this line; the wide tier has the title on its
-/// own line above, so `wide` omits the prefix.
+/// own line above, so `wide` omits the prefix. The peak annotation degrades by
+/// dropping the ratio and then the label rather than being ellipsized.
 fn summary_line(
     summary: &BlockWeightSummary,
     block_count: usize,
     wide: bool,
     term: &Terminal,
 ) -> String {
-    let peak = &summary.peak;
-    let median = fmt_f64(summary.median);
-    let value = fmt_f64(peak.value);
-    let ratio = fmt_f64(peak.ratio_to_median);
-    let times = times(term);
-    if wide {
-        format!(
-            "{block_count} blocks  median {median}  peak {} {value} ({ratio}{times} median)",
-            peak.label
-        )
+    let median = fmt_value(summary.median);
+    let blocks = count_noun(block_count, "block", "blocks");
+    let prefix = if wide {
+        format!("{blocks}  median {median}")
     } else {
-        format!(
-            "block weight  median {median}  peak {} {value} ({ratio}{times})",
-            peak.label
-        )
+        format!("block weight  median {median}")
+    };
+    let suffix = if wide { " median" } else { "" };
+    for annotation in peak_annotations(summary, term, suffix) {
+        let line = format!("{prefix}  {annotation}");
+        if term.text_width(&line) <= term.width {
+            return line;
+        }
     }
+    prefix
+}
+
+/// Peak annotations from most to least informative: value with ratio, value
+/// with label, bare value.
+fn peak_annotations(
+    summary: &BlockWeightSummary,
+    term: &Terminal,
+    ratio_suffix: &str,
+) -> Vec<String> {
+    let peak = &summary.peak;
+    let value = fmt_value(peak.value);
+    let ratio = fmt_ratio(peak.ratio_to_median);
+    let times = times(term);
+    vec![
+        format!("peak {} {value} ({ratio}{times}{ratio_suffix})", peak.label),
+        format!("peak {} {value}", peak.label),
+        format!("peak {value}"),
+    ]
 }
 
 fn footer_lines(report: &Report, term: &Terminal) -> Vec<String> {
     let mut lines = Vec::new();
 
     if report.ungrouped.layers > 0 {
-        let mut text = format!("{} layers ungrouped", report.ungrouped.layers);
-        if !report.ungrouped.prefixes.is_empty() {
-            text.push_str(&format!(" ({})", report.ungrouped.prefixes.join(", ")));
-        }
-        lines.push(fit(term, &text));
+        let count = count_noun(report.ungrouped.layers, "layer", "layers");
+        let short = format!("{count} ungrouped");
+        let full = if report.ungrouped.prefixes.is_empty() {
+            short.clone()
+        } else {
+            format!(
+                "{count} ungrouped ({})",
+                report.ungrouped.prefixes.join(", ")
+            )
+        };
+        lines.push(pick_fit(term, full, short));
     }
 
     if report.skipped.layers > 0 {
+        let count = count_noun(report.skipped.layers, "layer", "layers");
         let reason = report
             .skipped
             .reason
             .as_deref()
             .unwrap_or(SKIPPED_FALLBACK_REASON);
         let dash = if term.unicode { "—" } else { "-" };
-        lines.push(fit(
-            term,
-            &format!(
-                "{} layers skipped: {reason} {dash} pass --slow to include",
-                report.skipped.layers
-            ),
-        ));
+        let full = format!("{count} skipped: {reason} {dash} pass --slow to include");
+        let short = format!("{count} skipped; --slow includes them");
+        lines.push(pick_fit(term, full, short));
     }
 
     lines
+}
+
+/// Prefer the full footer text; fall back to the short form when it would
+/// overflow. Prose is never middle-ellipsized.
+fn pick_fit(term: &Terminal, full: String, short: String) -> String {
+    if term.text_width(&full) <= term.width {
+        full
+    } else {
+        short
+    }
 }
 
 fn families_in_order(blocks: &[BlockStat]) -> Vec<(BlockFamily, Vec<&BlockStat>)> {
@@ -462,17 +553,24 @@ fn health_style(health: &RankHealth) -> Style {
 }
 
 fn modelspec_line(meta: &Metadata, term: &Terminal) -> Option<String> {
-    let mut parts: Vec<&str> = Vec::new();
-    if let Some(architecture) = meta_value(meta, "modelspec.architecture") {
-        parts.push(architecture);
+    let architecture = meta_value(meta, "modelspec.architecture");
+    let trigger = meta_value(meta, "modelspec.trigger_phrase");
+    let sep = format!(" {} ", sep(term));
+
+    let mut variants = Vec::new();
+    if let (Some(architecture), Some(trigger)) = (architecture, trigger) {
+        variants.push(format!("{architecture}{sep}{trigger}"));
     }
-    if let Some(trigger) = meta_value(meta, "modelspec.trigger_phrase") {
-        parts.push(trigger);
+    if let Some(architecture) = architecture {
+        variants.push(architecture.to_string());
     }
-    if parts.is_empty() {
-        return None;
+    if let Some(trigger) = trigger {
+        variants.push(trigger.to_string());
     }
-    Some(parts.join(&format!(" {} ", sep(term))))
+
+    variants
+        .into_iter()
+        .find(|line| term.text_width(line) <= term.width)
 }
 
 fn meta_value<'a>(meta: &'a Metadata, key: &str) -> Option<&'a str> {
@@ -528,6 +626,44 @@ fn pad_left(term: &Terminal, s: &str, width: usize) -> String {
 
 fn fmt_f64(value: f64) -> String {
     format!("{value}")
+}
+
+/// Format a block-weight value for display: fixed two decimal places so the
+/// decimal points align across rows. A value below 0.005 reads `<0.01` rather
+/// than rounding to a misleading `0.00`; a true zero stays `0.00`.
+fn fmt_value(value: f64) -> String {
+    if value != 0.0 && value.abs() < 0.005 {
+        "<0.01".to_string()
+    } else {
+        format!("{value:.2}")
+    }
+}
+
+/// Format a peak ratio with one decimal place.
+fn fmt_ratio(value: f64) -> String {
+    format!("{value:.1}")
+}
+
+/// `count` followed by the correctly pluralized noun.
+fn count_noun(count: usize, singular: &str, plural: &str) -> String {
+    format!("{count} {}", if count == 1 { singular } else { plural })
+}
+
+/// Number of distinct values, so a family whose blocks all share one value can
+/// print the value instead of a blank sparkline.
+fn distinct_count(values: &[f64]) -> usize {
+    if values.is_empty() {
+        return 0;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let mut count = 1;
+    for pair in sorted.windows(2) {
+        if pair[0] != pair[1] {
+            count += 1;
+        }
+    }
+    count
 }
 
 fn join_usize(values: &[usize]) -> String {
