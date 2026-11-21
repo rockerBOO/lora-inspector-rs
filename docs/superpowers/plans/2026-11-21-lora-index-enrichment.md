@@ -17,7 +17,7 @@
 - The terminal report (`render.rs`) is not changed by this plan.
 - Every float in JSON goes through `report::round_sig`. `null` means "not computed"; `[]` means "computed, empty".
 - Rust formatting and lints: `cargo fmt --all` then `cargo clippy --workspace --all-targets`. Tests: `cargo test --workspace`.
-- `/mnt/900/training/sets` is **not** a git repository. Task 6–8 commit nothing.
+- `/mnt/900/training/sets` is a git repository whose `.gitignore` is a blanket `*` with only `.gitignore`, `index.py` and `index_loras.py` whitelisted. Stage 2 commits go there, on branch `feat/enrich-lora-index`. Confirm `git status --porcelain` shows only `index.py` before each commit.
 - Enrichment never deletes rows.
 
 ### Plan-time corrections to the spec
@@ -747,7 +747,14 @@ uv run --with duckdb index.py query "SELECT file_path, enrich_error FROM lora_in
 
 Expected: one row with a non-null `enrich_error`, exit code 0.
 
-- [ ] **Step 8: Commit — none.** `/mnt/900/training/sets` is not a git repository.
+- [ ] **Step 8: Commit**
+
+```bash
+cd /mnt/900/training/sets
+git status --porcelain          # must show only index.py
+git add index.py
+git commit -m "feat(index): add enrich subcommand driving the inspector CLI"
+```
 
 ---
 
@@ -812,7 +819,14 @@ Find a row whose `alpha_actual` contains a null and assert `alpha_mismatch` is n
 uv run --with duckdb index.py query "SELECT file_path, declared_alpha, alpha_actual, alpha_mismatch FROM lora_inspect WHERE list_contains(alpha_actual, NULL::DOUBLE) LIMIT 10"
 ```
 
-- [ ] **Step 7: Commit — none.**
+- [ ] **Step 7: Commit**
+
+```bash
+cd /mnt/900/training/sets
+git status --porcelain          # must show only index.py
+git add index.py
+git commit -m "feat(index): record declared-vs-actual divergence verdicts"
+```
 
 ---
 
@@ -874,14 +888,21 @@ Expected: identical before and after, and the second `enrich` reports 0 files in
 rm -rf /tmp/enrich-noprune /tmp/enrich-broken /tmp/broken.safetensors
 ```
 
-- [ ] **Step 6: Commit — none.**
+- [ ] **Step 6: Commit**
+
+```bash
+cd /mnt/900/training/sets
+git status --porcelain          # must show only index.py
+git add index.py
+git commit -m "feat(index): add v_runs and v_issues views"
+```
 
 ---
 
 ## Task 9: Full sweep and documentation
 
 **Files:**
-- Modify: `/mnt/900/training/sets/train-set-analysis/SKILL.md` (document `enrich`, the three tables, `v_issues`)
+- Modify: `/mnt/900/training/sets/train-set-analysis/SKILL.md` (document `enrich`, the three tables, `v_issues`) — **not tracked by git**, see Step 5
 - Modify: `/home/rockerboo/code/lora-inspector-rs/README.md` (document `--layers` and `network.structure`)
 
 - [ ] **Step 1: Rebuild the stale binary**
@@ -926,6 +947,8 @@ Expected: every `.safetensors` on disk has a `lora_inspect` row; `kind` splits i
 `train-set-analysis/SKILL.md`: add `enrich` to the Commands block, the three new tables to the schema section, `v_issues` as the "what is wrong" entry point, and a note that declared and actual values are separate columns.
 
 `README.md`: add `--layers` to the `inspect` examples and flags table, and describe `network.structure` as key-derived versus `network.type` as declared.
+
+`SKILL.md` is **not** tracked by the sets repo: its whitelist covers `*.py` only. Edit it on disk and commit it nowhere; widening the whitelist is a separate decision.
 
 - [ ] **Step 6: Commit the README change only**
 
