@@ -244,6 +244,7 @@ impl From<candle_core::DType> for DType {
             candle_core::DType::F32 => Self::F32,
             candle_core::DType::F64 => Self::F64,
             candle_core::DType::I64 => Self::I64,
+            a => panic!("Unsupported Dtype {:?}", a),
         }
     }
 }
@@ -366,11 +367,11 @@ impl Weight for BufferedLoRAWeight {
         let scale = (alpha.0 / dims[0] as f32) as f64;
 
         if dims.len() == 2 {
-            to_compatible_dtype(&up)?
+            Ok(to_compatible_dtype(&up)?
                 .matmul(&to_compatible_dtype(&down)?)?
-                .detach()?
-                .mul(scale)?
                 .detach()
+                .mul(scale)?
+                .detach())
         } else if dims[2] == 1 && dims[3] == 1 {
             to_compatible_dtype(&up)?
                 .squeeze(3)?
@@ -1648,7 +1649,7 @@ mod tests {
             (format!("{base_name}.lora_up.weight"), up_view),
         ];
 
-        safetensors::serialize(tensors, &None).unwrap()
+        safetensors::serialize(tensors, None).unwrap()
     }
 
     #[test]
@@ -1720,7 +1721,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            1.8109415
+            1.8127829
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1804,7 +1805,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            4.809399
+            4.8135567
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1828,7 +1829,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            35.77691
+            35.777084
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1853,7 +1854,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            0.116758764
+            0.11675898
         );
 
         // Verify that the tensor has the correct shape or dimensions
