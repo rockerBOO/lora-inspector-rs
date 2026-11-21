@@ -182,11 +182,11 @@ git commit -m "test: add per-architecture block-key fixtures"
 **Interfaces:**
 - Consumes: `crate::get_base_name` (existing) only in tests for producing fixture-ready names.
 - Produces, for Tasks 5–7:
-  - `pub enum BlockGroup { Down, Input, Mid, Middle, Up, Output, Double, Single, SingleTransformer, Transformer, Refiner, TokenRefiner, TxtFusion, Blocks, Layers, Modules, TextEncoder, Other }` — `#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]`, serde variant names as written.
+  - `pub enum BlockGroup { Down, Input, Mid, Middle, Up, Output, Double, Single, SingleTransformer, Transformer, Refiner, TokenRefiner, TxtFusion, Blocks, Layers, TextEncoder, Other }` — `#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]`, serde variant names as written.
   - `pub enum BlockFamily { Unet, TextEncoder, Other }` — `#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]`, with `#[serde(rename = "UNet")]` on `Unet`. Serializes as `"UNet" | "TextEncoder" | "Other"`.
   - `pub struct BlockKey { pub group: BlockGroup, pub block_index: Option<usize>, pub sublayer: String }` with `pub fn family(&self) -> BlockFamily`.
   - `pub fn parse_block_key(base_name: &str) -> BlockKey`.
-  - `impl BlockGroup { pub fn tag(&self, index: Option<usize>) -> String; pub fn canonical_rank(&self) -> u8; }` — `tag` yields the two-letter label plus zero-padded 2-digit index (`IN04`, `DB03`, `TE11`, `MID01`), or the bare label when `index` is `None`.
+  - `impl BlockGroup { pub fn tag(&self, index: Option<usize>) -> String; pub fn canonical_rank(&self) -> u8; }` — `tag` yields the two-letter label plus zero-padded 2-digit index (`IN04`, `DB03`, `TE11`), or the bare label when `index` is `None` (`MID` — kohya's `mid_block` has no index).
 
 - [ ] **Step 1: Write the failing tests**
 

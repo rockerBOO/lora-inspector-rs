@@ -264,7 +264,7 @@ Everything after the index is the sublayer, joined with `.` (`attn.q`, `mlp.up`,
 pub struct BlockKey {
     pub group: BlockGroup,       // Down, Input, Mid, Middle, Up, Output, Double, Single,
                                  // SingleTransformer, Transformer, Refiner, TokenRefiner,
-                                 // TxtFusion, Blocks, Layers, Modules, TextEncoder, Other
+                                 // TxtFusion, Blocks, Layers, TextEncoder, Other
     pub block_index: Option<usize>,
     pub sublayer: String,        // "attn.q", "mlp.up", "proj_in", …
 }
@@ -280,19 +280,20 @@ position), checked after text-encoder detection:
 | `single blocks` | Single |
 | `transformer blocks` | Transformer |
 | `down blocks` / `input blocks` | Down / Input |
-| `mid block` / `middle block` | Mid / Middle |
+| `mid block` / `middle block` | Mid / Middle (see below — `mid_block` carries no index) |
 | `up blocks` / `output blocks` | Up / Output |
 | `txtfusion layerwise blocks` / `txtfusion refiner blocks` | TxtFusion |
 | `token refiner refiner blocks`, `token refiner blocks`, `refiner blocks` | TokenRefiner |
 | `noise refiner` / `context refiner` | Refiner |
 | `blocks` (bare, e.g. `diffusion_model.blocks.3`, `lora_unet_blocks_3`) | Blocks |
 | `layers` | Layers |
-| no family pattern, but a numeric id | Modules |
 
-`Modules` covers index-less single tensors that still have a numeric id somewhere,
-and keys with no family and no id (krea2's `first`, `last_linear`, `txtfusion_projector`,
-`tmlp_*`, `tproj_*`) fall to `Other` — one bucket, listed once in the footer rather
-than spread across rows that mean nothing.
+A key with no family pattern is `Other`, whether or not it contains a number — there is no
+separate "modules" bucket. krea2's `first`, `last_linear`, `txtfusion_projector`, `tmlp_*`
+and `tproj_*` all land in that one bucket, listed once in the footer rather than spread
+across rows that mean nothing. (An earlier draft proposed a `Modules` group for
+no-match-with-a-numeric-id; implementation showed it could never be reached, because the
+rule is simply "no match → `Other`", so it was dropped rather than shipped dead.)
 
 Text-encoder detection runs first and short-circuits the family match: if the
 token stream contains `te`/`teN`, `text model encoder`, `text model`, or
@@ -300,7 +301,9 @@ token stream contains `te`/`teN`, `text model encoder`, `text model`, or
 immediately following the matched family token** — for
 `language_model_model_layers_18_self_attn_o_proj` that is `18`, and for
 `lora_te_text_model_encoder_layers_11_self_attn_v_proj` it is `11`; the sublayer is
-the remainder (`self_attn.o_proj`). The number is not required to be trailing. This is
+the remainder with `_` preserved between two non-numeric tokens (`self_attn_o_proj` — not
+`self_attn.o_proj`; one mechanical rule, applied uniformly, beats a hand-written mapping).
+The number is not required to be trailing. This is
 what collapses 216 SD1.5 TE layers into 12 TE blocks instead of one, and it is why
 detection runs on the *normalized* token stream — PEFT writes `text_model.encoder.layers.11`
 with dots, which only matches `text model encoder` after normalization.
@@ -309,12 +312,18 @@ Any key that matches nothing becomes `Other` — grouped by its longest common p
 with siblings, never silently dropped. The report footer states
 `N layers ungrouped (prefix…)` when that happens.
 
+Kohya's `mid_block` has no index of its own: `lora_unet_mid_block_attentions_0_proj_in`
+yields `block_index: None` and sublayer `attentions.0.proj_in`, so it renders with the bare
+label `MID` rather than `MID01`. Reading the first integer after the pattern as the index
+would swallow the sub-block id `0` and silently drop `attentions.0` from the sublayer.
+`middle_block_N` (the SD2/`middle_block` spelling) does carry an index.
+
 `BlockGroup::family()` maps groups to the two display families used by the compact tier:
 `UNet` for every block group except `TextEncoder`, `Other` for `TextEncoder`.
 
 Canonical ordering for display: Down/Input → Mid/Middle → Up/Output → Double →
 Single → SingleTransformer → Transformer → Refiner → TokenRefiner → TxtFusion →
-Blocks → Layers → Modules → Other, then by `block_index`, then by `sublayer`. This
+Blocks → Layers → Other, then by `block_index`, then by `sublayer`. This
 ordering governs the compact/minimal sparkline rows only; the wide tier is one table
 of rows sorted by value descending (see Rendering).
 
@@ -350,7 +359,7 @@ UNet down/up/mid   26 blocks   median 0.41   peak IN04 1.82 (4.4× median)
 
   IN04  ████████████████████████████  1.82   7 layers
   OUT05 █████████████████████         1.21   7 layers
-  MID01 ███████████                   0.63   6 layers
+  MID   ███████████                   0.63   6 layers
   …
 ```
 
@@ -479,9 +488,9 @@ Field reference — this table is the contract and is copied verbatim into the C
 | `network.layers.unet` / `.text_encoder` | int | base names per group family, not substring matching |
 | `metadata` | object\|null | raw `__metadata__`; only with `--metadata` |
 | `blocks[]` | row[] | one row per (group, index), display order; `null` with `--no-blocks` |
-| `blocks[].group` | string | `Down`, `Input`, `Mid`, `Middle`, `Up`, `Output`, `Double`, `Single`, `SingleTransformer`, `Transformer`, `Refiner`, `TokenRefiner`, `TxtFusion`, `Blocks`, `Layers`, `Modules`, `TextEncoder`, `Other` |
+| `blocks[].group` | string | `Down`, `Input`, `Mid`, `Middle`, `Up`, `Output`, `Double`, `Single`, `SingleTransformer`, `Transformer`, `Refiner`, `TokenRefiner`, `TxtFusion`, `Blocks`, `Layers`, `TextEncoder`, `Other` |
 | `blocks[].family` | string | `UNet` \| `TextEncoder` \| `Other` |
-| `blocks[].label` | string | short display tag: `IN04`, `DB03`, `TE11` |
+| `blocks[].label` | string | short display tag: `IN04`, `DB03`, `TE11`; bare (`MID`) when there is no index |
 | `blocks[].index` | int\|null | block index taken from the key |
 | `blocks[].layers` | int | base names in this block |
 | `blocks[].mean` / `.median` / `.max` | float | of the per-layer block weight |
