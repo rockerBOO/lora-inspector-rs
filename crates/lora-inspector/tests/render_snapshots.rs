@@ -231,16 +231,30 @@ fn build_rank_report() -> (Report, Metadata, support::Fixture) {
             eff_scale: Some(0.1),
             outlier: false,
         },
+        RankLayer {
+            base_name: "lora_unet_double_blocks_2_img_attn_proj".to_string(),
+            group: BlockGroup::Double,
+            label: "DB02".to_string(),
+            index: Some(2),
+            nominal_rank: 2,
+            effective_rank: 1.0,
+            balance: 0.0,
+            top1_energy: 1.0,
+            dominance: None,
+            health: RankHealth::Collapsed,
+            eff_scale: Some(0.05),
+            outlier: false,
+        },
     ]);
 
     report.summary.rank = Some(RankSummary {
-        layers: 4,
+        layers: 5,
         by_health: BTreeMap::from([
             ("Good".to_string(), 1),
             ("Ok".to_string(), 1),
             ("Weak".to_string(), 1),
             ("Poor".to_string(), 1),
-            ("Collapsed".to_string(), 0),
+            ("Collapsed".to_string(), 1),
         ]),
         median_balance: 0.5,
         weak_or_worse: 2,
@@ -252,7 +266,15 @@ fn build_rank_report() -> (Report, Metadata, support::Fixture) {
 
 #[test]
 fn rank_rows_stay_within_width_and_keep_health_words() {
-    let (report, meta, _fixture) = build_rank_report();
+    let (mut report, meta, _fixture) = build_rank_report();
+
+    let rows = [
+        ("IN03", "Good"),
+        ("TE07", "Ok"),
+        ("OUT11", "Weak"),
+        ("MID", "Poor"),
+        ("DB02", "Collapsed"),
+    ];
 
     for width in [40, 60, 120] {
         let term = terminal(width, false);
@@ -263,11 +285,27 @@ fn rank_rows_stay_within_width_and_keep_health_words() {
             assert!(used <= width, "width {width}: {used} columns in {line:?}");
         }
 
-        for health in ["Good", "Ok", "Weak", "Poor"] {
+        for (label, health) in rows {
             assert!(
-                out.contains(health),
-                "width {width}: health word {health} missing"
+                out.lines()
+                    .any(|line| line.contains(label) && line.trim_end().ends_with(health)),
+                "width {width}: row {label} must end with health word {health}"
             );
         }
     }
+
+    // The 20-column floor: render without the block section so the rank rows
+    // are isolated, and assert the widest health word still survives.
+    report.blocks = None;
+    let term = terminal(20, false);
+    let out = render(&report, &meta, &term, &opts());
+    for line in out.lines() {
+        let used = term.text_width(line);
+        assert!(used <= 20, "20-column floor: {used} columns in {line:?}");
+    }
+    assert!(
+        out.lines()
+            .any(|line| line.contains("DB02") && line.trim_end().ends_with("Collapsed")),
+        "20-column floor must keep the Collapsed row's health word"
+    );
 }

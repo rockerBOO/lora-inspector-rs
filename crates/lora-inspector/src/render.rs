@@ -425,8 +425,15 @@ fn rank_row(term: &Terminal, row: &RankLayer) -> String {
 
     // Pathological width: keep label + base_name + health even if the base
     // name has to collapse below the usual minimum.
-    try_rank_row(term, &label, &health, &[], &row.base_name, 0)
-        .unwrap_or_else(|| format!("  {label}  {health}"))
+    try_rank_row(term, &label, &health, &[], &row.base_name, 0).unwrap_or_else(|| {
+        // The 20-column floor: the health word is the one thing that must
+        // survive, so the label shrinks to whatever remains and the separator
+        // collapses to a single space.
+        let health_w = term.text_width(&health);
+        let label_max = term.width.saturating_sub(2 + 1 + health_w);
+        let label_cell = term.truncate_middle(&row.label, label_max);
+        format!("  {label_cell} {health}")
+    })
 }
 
 /// Build `  label  [numeric]  base_name  health` with the base name truncated
