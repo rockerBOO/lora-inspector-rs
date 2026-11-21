@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use std::{collections::HashMap, fs::File, io::Read, path::PathBuf};
 
+mod report;
 mod terminal;
 
 #[derive(Parser, Debug)]
