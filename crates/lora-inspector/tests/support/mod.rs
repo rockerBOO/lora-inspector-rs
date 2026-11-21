@@ -49,6 +49,15 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// LoHa keys under metadata that declares `networks.lora`. The declared type
+    /// and the structural type disagree; nothing in the pre-existing output
+    /// reveals it.
+    pub fn write_declared_lora_actual_loha() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, declared_mismatch_fixture_bytes()).expect("write mismatch fixture");
+        Fixture { path }
+    }
+
     /// Write a fixture whose only key matches no block family, so `blocks` is
     /// an empty array rather than `null`.
     pub fn write_ungroupable() -> Fixture {
@@ -253,6 +262,21 @@ fn mixed_structure_fixture_bytes() -> Vec<u8> {
     push_lora(&mut tensors, "down_blocks.0.attn.proj_out", 4, 4.0, 1.0);
     push_hada(&mut tensors, "down_blocks.1.attn.proj_in");
     to_safetensors(tensors)
+}
+
+/// LoHa keys carrying metadata that declares a plain Kohya LoRA.
+fn declared_mismatch_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+    push_hada(&mut tensors, "down_blocks.0.attn.proj_in");
+    push_hada(&mut tensors, "down_blocks.0.attn.proj_out");
+    to_safetensors_with_metadata(
+        tensors,
+        serde_json::json!({
+            "ss_network_module": "networks.lora",
+            "ss_network_dim": "4",
+            "ss_network_alpha": "4.0",
+        }),
+    )
 }
 
 /// A fixture carrying a `__metadata__` map so the opt-in metadata path is real.

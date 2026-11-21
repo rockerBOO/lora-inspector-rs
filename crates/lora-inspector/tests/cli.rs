@@ -286,3 +286,15 @@ fn structure_has_conv_for_conv_factors() {
     let doc = run_json(&fixture, &[]);
     assert_eq!(doc["network"]["structure"]["has_conv"], true);
 }
+
+#[test]
+fn declared_type_and_structural_type_can_disagree() {
+    let fixture = support::Fixture::write_declared_lora_actual_loha();
+    let doc = run_json(&fixture, &[]);
+
+    // The hint.
+    assert_eq!(doc["network"]["type"], "LoRA");
+    // The truth.
+    assert_eq!(doc["network"]["structure"]["primary"], "LoHa");
+    assert_eq!(doc["network"]["structure"]["by_format"]["LoHa"], 2);
+}
