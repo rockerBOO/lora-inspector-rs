@@ -47,11 +47,16 @@ interface MockWorker {
 }
 
 // Create a global mock worker that properly handles async operations
-declare global {
-	function createMockWorker(): MockWorker;
+interface MockWorkerOverrides {
+	networkModule?: string;
+	networkFamily?: string;
 }
 
-global.createMockWorker = () => {
+declare global {
+	function createMockWorker(overrides?: MockWorkerOverrides): MockWorker;
+}
+
+global.createMockWorker = (overrides: MockWorkerOverrides = {}) => {
 	const listeners = new Map<
 		string,
 		((event: { data: MockWorkerResponse }) => void)[]
@@ -71,6 +76,14 @@ global.createMockWorker = () => {
 							dims: message.messageType === "dims" ? [] : undefined,
 							precision:
 								message.messageType === "precision" ? "fp16" : undefined,
+							networkModule:
+								message.messageType === "network_module"
+									? (overrides.networkModule ?? "kohya-ss/lora")
+									: undefined,
+							networkFamily:
+								message.messageType === "network_family"
+									? (overrides.networkFamily ?? "kohya-ss")
+									: undefined,
 							// Add other mock responses as needed
 						};
 						handler({ data: mockResponse });

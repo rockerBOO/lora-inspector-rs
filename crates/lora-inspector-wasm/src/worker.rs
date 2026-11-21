@@ -8,7 +8,7 @@ use web_sys::console;
 
 use inspector::file::LoRAFile;
 use inspector::metadata::Metadata;
-use inspector::network::{NetworkModule, WeightDecomposition};
+use inspector::network::WeightDecomposition;
 use inspector::{norms, statistic, InspectorError};
 
 #[wasm_bindgen]
@@ -277,19 +277,14 @@ impl LoraWorker {
     }
 
     pub fn network_module(&self) -> String {
-        match self.metadata.network_module() {
-            Some(NetworkModule::Lycoris) => "lycoris".to_owned(),
-            Some(NetworkModule::KohyaSSLoRA) => "kohya-ss/lora".to_owned(),
-            Some(NetworkModule::KohyaSSLoRAFlux) => "kohya-ss/lora_flux".to_owned(),
-            Some(NetworkModule::MusubiTunerLoRAFlux2) => "musubi-tuner/lora_flux_2".to_owned(),
-            Some(NetworkModule::KohyaSSLoRALumina) => "kohya-ss/lora_lumina".to_owned(),
-            Some(NetworkModule::KohyaSSLoRASD3) => "kohya-ss/lora_sd3".to_owned(),
-            Some(NetworkModule::MusubiTunerLoRAKrea2) => "musubi-tuner/lora_krea2".to_owned(),
-            Some(NetworkModule::KohyaSSLoRAFA) => "kohya-ss/lora_fa".to_owned(),
-            Some(NetworkModule::KohyaSSDyLoRA) => "kohya-ss/dylora".to_owned(),
-            Some(NetworkModule::KohyaSSOFT) => "kohya-ss/oft".to_owned(),
-            None => "no_module_found".to_owned(),
-        }
+        self.metadata.network_module_display(&self.file.format())
+    }
+
+    pub fn network_family(&self) -> String {
+        self.metadata
+            .resolve_network_family(&self.file.format())
+            .display()
+            .to_string()
     }
 
     pub fn network_args(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {

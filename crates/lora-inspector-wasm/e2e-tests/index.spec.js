@@ -31,6 +31,7 @@ test("file upload shows network data", async ({ page }) => {
 	});
 	await expect(page.locator("#network-alpha")).toContainText("4.0");
 	await expect(page.locator("#network-module")).toContainText("kohya-ss/lora");
+	await expect(page.locator("#network-family")).toContainText("kohya-ss");
 	await expect(page.locator("#network-type")).toContainText("LoRA");
 });
 
@@ -143,6 +144,7 @@ test("drag and drop file upload", async ({ page }) => {
 	});
 	await expect(page.locator("#network-alpha")).toContainText("4.0");
 	await expect(page.locator("#network-module")).toContainText("kohya-ss/lora");
+	await expect(page.locator("#network-family")).toContainText("kohya-ss");
 	await expect(page.locator("#network-type")).toContainText("LoRA");
 
 	// Verify we didn't navigate away from the page
