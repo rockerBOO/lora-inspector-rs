@@ -21,6 +21,8 @@ pub const SCHEMA_VERSION: u32 = 1;
 
 const SKIPPED_REASON: &str = "no low-rank factor (LoHA/LoKr/OFT/BOFT)";
 const UNGROUPED_PREFIX_CAP: usize = 10;
+/// Near-zero floor for outlier thresholds and the peak ratio denominator.
+const OUTLIER_FLOOR: f64 = 1e-10;
 
 /// Options controlling which sections of the report are computed.
 #[derive(Debug, Clone, Serialize)]
@@ -266,11 +268,7 @@ pub fn build_blocks(
     // median is exactly zero.
     let block_means: Vec<f64> = aggs.iter().map(|agg| agg.mean).collect();
     let median_block_mean = median(&block_means);
-    let threshold = if median_block_mean < 1e-10 {
-        1e-10
-    } else {
-        1.5 * median_block_mean
-    };
+    let threshold = outlier_threshold(median_block_mean);
 
     let mut blocks = Vec::with_capacity(aggs.len());
     let mut peak = Peak {
@@ -289,7 +287,7 @@ pub fn build_blocks(
                 value: round_sig(agg.mean, 6),
                 // Same floored denominator as the outlier threshold, so a
                 // flagged block never reads `ratio_to_median: 0.0`.
-                ratio_to_median: round_sig(agg.mean / median_block_mean.max(1e-10), 6),
+                ratio_to_median: round_sig(agg.mean / median_block_mean.max(OUTLIER_FLOOR), 6),
             };
         }
 
@@ -386,11 +384,7 @@ pub fn build_rank(
     // scale (not the block median), matching `LoRAFile::effective_scales_all`.
     let scales: Vec<f64> = raw.iter().filter_map(|row| row.eff_scale).collect();
     let median_scale = median(&scales);
-    let threshold = if median_scale < 1e-10 {
-        1e-10
-    } else {
-        1.5 * median_scale
-    };
+    let threshold = outlier_threshold(median_scale);
 
     let mut by_health = BTreeMap::from([
         ("Collapsed".to_string(), 0usize),
@@ -594,5 +588,16 @@ fn median(values: &[f64]) -> f64 {
         (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
     } else {
         sorted[n / 2]
+    }
+}
+
+/// Outlier threshold shared by the block and rank rules: `1.5 × median`,
+/// floored to [`OUTLIER_FLOOR`] when the median is too close to zero. The two
+/// rules differ only in which median they pass in, never in this formula.
+fn outlier_threshold(median: f64) -> f64 {
+    if median < OUTLIER_FLOOR {
+        OUTLIER_FLOOR
+    } else {
+        1.5 * median
     }
 }
