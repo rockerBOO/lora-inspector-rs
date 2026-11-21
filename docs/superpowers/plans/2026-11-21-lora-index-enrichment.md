@@ -27,6 +27,10 @@ Two spec details are superseded here; the spec text was written before these wer
 1. **`layers[].scale` is dropped.** The spec lists both `scale` and `eff_scale` on a layer row. Both are produced by `LoRAFile::low_rank_effective_scale`, so they are always byte-identical — `build_rank` already emits it as `eff_scale`. The layer row keeps only `eff_scale`, and the index column is `lora_layers.eff_scale`. The invariant becomes "rows with `eff_scale IS NULL` == `skipped.layers`".
 2. **The loader's dispatch changes too.** `LoRAFile::scale_weight` (`crates/inspector/src/file.rs:219-244`) today chooses the scaling formula from `metadata.network_type()` — the declared type. That is the exact failure the spec exists to expose: on a file whose metadata disagrees with its keys, the loader applies the wrong formula. Task 4 makes it dispatch on structure first, metadata second.
 
+3. **Fixtures are synthetic, not the repo-root files the spec named.** The spec's verification section names `boo.safetensors`, `ahetableh_9_lokr.safetensors`, and `Klein 一edit-consistency.safetensors`. Those are git-ignored, so a fresh clone has none of them and a snapshot built on them would fail for the next person. Tasks 2–5 build the same shapes in `tests/support/mod.rs`, which is checked in. The factor-free checkpoint shape is covered by Task 5's `write_dense_only` rather than by shipping a 100 MB fixture.
+
+4. **Assertions instead of `insta` snapshots, except one.** The spec asks for `insta` snapshots of `layers`. Exact-value assertions are stronger for the invariants, so those are plain `assert_eq!`. One snapshot is kept, in Task 5, to pin the layer row's field names against accidental renaming — the thing a snapshot is actually good at.
+
 ## Review Focus
 
 Inputs and failure modes the spec implies that no single task's happy path exercises. Each is pinned by the test named here.
@@ -36,7 +40,7 @@ Inputs and failure modes the spec implies that no single task's happy path exerc
 3. **`alpha_actual` containing `null`** — observed as `[1.0, 16.0, 32.0, null]` on a LoKr file. `alpha_mismatch` must ignore null entries rather than flag. Pinned in Task 7.
 4. **Declared rank 8 against actual `[4, 8, 16]`** — must not flag. Declared 8 against actual `[16]` — must flag. Pinned in Task 7.
 5. **A base name carrying two structural marker sets** (`lora_up` and `hada_w1_a` in one layer) — precedence must be deterministic, not `HashMap`-order dependent. Pinned in Task 1.
-6. **A file that disappears mid-run** — `enrich` records `enrich_error` and deletes nothing. Pinned in Task 8.
+6. **A file deleted between two runs** — `enrich` records nothing and deletes nothing. Pinned in Task 8.
 7. **A truncated or unreadable safetensors** — one error row, the run continues. Pinned in Task 6.
 8. **`--layers --no-blocks`** — `blocks: null` while `load: "full"`. Pinned in Task 5.
 
@@ -407,38 +411,40 @@ git commit -m "test(cli): pin declared-vs-structural type divergence"
 
 **Files:**
 - Modify: `crates/inspector/src/file.rs:219-244` (`LoRAFile::scale_weight`)
-- Test: inline `#[cfg(test)] mod tests` in `file.rs`, alongside `effective_scale_is_l2_of_scaled_weight`
+- Test: `crates/lora-inspector/tests/cli.rs` — deliberately end-to-end, not a unit test
 
 **Interfaces:**
-- Consumes: `structure::{classify, StructureFormat}`.
+- Consumes: `structure::{classify, StructureFormat}`, `Fixture::write_declared_lora_actual_loha` from Task 3.
 - Produces: no new public API. `LoRAFile::scale_weight(&self, base_name: &str) -> Result<Tensor>` keeps its signature; only the formula selection changes.
 
-Today the match is on `metadata.network_type()`. On a file whose metadata declares `networks.lora` while the keys are LoHa, it calls `scale_lora_weight` on LoHa keys and fails — the tool cannot compute a scale for exactly the files whose metadata it cannot trust.
+Today the match is on `metadata.network_type()`. On the mismatched fixture it calls `scale_lora_weight` on LoHa keys, which fails with `TensorNotFound`; `effective_scale` swallows that into `Ok(None)`, so the layer is silently counted as skipped. After this task the same call finds the LoHa markers and returns a real scale.
+
+This is observable from the CLI through `--slow`, which is the path reaching `scale_weight` when `low_rank_effective_scale` declines a layer. Asserting it end-to-end reuses the fixtures Task 3 already built and avoids adding a second hand-rolled safetensors writer to `file.rs` — the existing unit tests there read fixtures off disk via `load_file`, so no writer exists to reuse.
 
 - [ ] **Step 1: Write the failing test**
 
-In `file.rs`:
+In `crates/lora-inspector/tests/cli.rs`:
 
 ```rust
 #[test]
-fn scale_weight_follows_keys_when_metadata_disagrees() -> crate::Result<()> {
-    // LoHa keys carrying metadata that declares networks.lora.
-    let bytes = loha_bytes_with_declared_lora_metadata();
-    let file = LoRAFile::new_from_buffer(&bytes, "mismatch.safetensors", &Device::Cpu);
-    let base_name = "down_blocks.0.attn.proj_in";
+fn slow_path_uses_keys_when_metadata_disagrees() {
+    // LoHa keys under metadata declaring networks.lora. Without structure-first
+    // dispatch the LoRA formula cannot find lora_up/lora_down, the layer is
+    // swallowed into `skipped`, and `blocks` comes back empty.
+    let fixture = support::Fixture::write_declared_lora_actual_loha();
+    let doc = run_json(&fixture, &["--slow"]);
 
-    let scaled = file.scale_weight(base_name)?;
-    assert!(scaled.dims().iter().product::<usize>() > 0);
-    Ok(())
+    assert_eq!(doc["skipped"]["layers"], 0);
+    assert_eq!(doc["blocks"].as_array().expect("blocks array").len(), 1);
 }
 ```
 
-Build `loha_bytes_with_declared_lora_metadata()` with the same hand-rolled header writer the existing tests use — reuse whatever helper the neighbouring tests in `file.rs` already call to make a buffer; if they only construct `LoRAFile` from files on disk, add a small `fn` that serialises `hada_w1_a`/`hada_w1_b`/`alpha` tensors plus `__metadata__ {"ss_network_module": "networks.lora"}`.
+Both fixture layers share the `down_blocks.0` block group, so they aggregate to one `BlockStat` row.
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cargo test -p inspector scale_weight_follows_keys 2>&1 | tail -20`
-Expected: FAIL — the LoRA formula cannot find `lora_up.weight` on LoHa keys.
+Run: `cargo test -p lora-inspector --test cli slow_path_uses_keys 2>&1 | tail -20`
+Expected: FAIL — `skipped.layers` is 2 and `blocks` is empty.
 
 - [ ] **Step 3: Implement structure-first dispatch**
 
@@ -449,10 +455,10 @@ Replace the `match` on `metadata.network_type()` with:
 
 Do not delete the metadata path: it is the only signal for `GLoRA` variants the classifier does not cover and it is the current default for unmarked keys.
 
-- [ ] **Step 4: Run the full crate test suite**
+- [ ] **Step 4: Run the full test suite**
 
-Run: `cargo test -p inspector 2>&1 | tail -30`
-Expected: PASS. Existing tests use metadata that agrees with their keys, so their results are unchanged.
+Run: `cargo test --workspace 2>&1 | tail -30`
+Expected: PASS. Existing tests use metadata that agrees with their keys, so their results are unchanged. Any changed `.snap` file means this was not a dispatch-only change.
 
 - [ ] **Step 5: Commit**
 
@@ -635,7 +641,22 @@ In `report.rs`, `build_report` computes `let layers = if opts.layers { Some(buil
 Run: `cargo test -p lora-inspector 2>&1 | tail -30`
 Expected: PASS, 7 new tests plus every pre-existing one.
 
-- [ ] **Step 6: Format, lint, commit**
+- [ ] **Step 6: Pin the layer row's field names with one snapshot**
+
+Add a test following the `insta` style already used in `crates/lora-inspector/tests/render_snapshots.rs`:
+
+```rust
+#[test]
+fn layers_row_shape() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+    insta::assert_json_snapshot!("layers_row_shape", &doc["layers"]);
+}
+```
+
+Run `INSTA_UPDATE=always cargo test -p lora-inspector layers_row_shape`, then read the generated `.snap` and confirm it contains exactly the keys in the `Layer` interface block — no `scale` field, and `health` as a string or null. Commit the `.snap` with the code.
+
+- [ ] **Step 7: Format, lint, commit**
 
 ```bash
 cargo fmt --all
@@ -659,7 +680,7 @@ git commit -m "feat(cli): add --layers for per-layer rows in --json"
   - `find_inspector() -> str` — binary lookup
   - `inspector_fingerprint(binary: Path) -> str` — `f"{version}|{size}|{mtime_ns}|{SCHEMA_VERSION}"`
   - `enrich_file(binary: str, path: Path) -> tuple[dict, list[str], str | None]` — `(report, warnings, error)`
-  - `insert_inspect(con, path: Path, report: dict, fingerprint: str)` — writes `lora_inspect`, `lora_blocks`, `lora_layers`
+  - `insert_inspect(con, path: Path, report: dict, fingerprint: str, declared: tuple[int | None, float | None, str | None])` — writes `lora_inspect`, `lora_blocks`, `lora_layers`. `declared` is `(rank, alpha, module)`; Task 6 passes `(None, None, None)` and Task 7 supplies the real parse.
   - `cmd_enrich(args)`
 
 - [ ] **Step 1: Add the three tables to `get_db`**
@@ -686,19 +707,26 @@ Write `lora_blocks` one row per `blocks[]` entry, and `lora_layers` one row per 
 
 `raw` stores `json.dumps({k: v for k, v in report.items() if k not in ("metadata", "layers", "rank")})`.
 
-Declared scalars (`declared_rank`, `declared_alpha`, `declared_module`) come from parsing `loras.metadata` for that path — see Task 7. In this task, leave them null and let Task 7 fill them.
+`declared` is passed in and written straight to `declared_rank`/`declared_alpha`/`declared_module`. In this task every caller passes `(None, None, None)`; Task 7 supplies the parse.
 
-- [ ] **Step 5: Implement the driver and cache**
+- [ ] **Step 5: Implement the driver**
 
 - Enumerate `sorted(path for path in Path(args.path).rglob("*.safetensors"))`.
 - Load `existing = {file_path: (file_mtime, fingerprint, schema_version)}` from `lora_inspect` left-joined to `loras` on `file_path`.
 - Skip a file when its `mtime` is unchanged **and** its stored `fingerprint` equals the current one. `--force` skips this check.
-- Cache path: `INSPECT_DIR / path.relative_to(SETS_DEFAULT)` with `.json.gz` appended. Write gzip JSON of the full report including `--metadata`; read it back on a hit whose fingerprint matches.
-- `--from-cache` replays any cache entry regardless of fingerprint, and skips inspection entirely when the entry is missing.
-- Concurrency: `concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs)`; before submitting, sort by size descending, and run any file over 500 MB on its own (submit, wait, continue) so peak RSS stays bounded.
+- Concurrency: `concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs)`; sort by size descending before submitting, and run any file over 500 MB on its own (submit, wait, continue) so peak RSS stays bounded.
 - Print one line per file: `[i/n] name -> primary/kind` or `[i/n] name ERROR ...`.
+- Call `enrich_file` directly in this step; no cache yet.
 
-- [ ] **Step 6: Verify against a small real sample**
+- [ ] **Step 6: Add the cache and `--from-cache`**
+
+- Cache path: `INSPECT_DIR / path.relative_to(SETS_DEFAULT)` with `.json.gz` appended.
+- On a miss, inspect and then write gzip JSON of the full report; pass `--metadata` so the cache alone can rebuild the DB.
+- On a hit whose stored fingerprint matches the current fingerprint, read the cache instead of inspecting.
+- On a hit whose fingerprint differs, inspect again and overwrite — never replay stale metrics as current.
+- `--from-cache` replays any cache entry regardless of fingerprint, and skips inspection entirely when no entry exists.
+
+- [ ] **Step 7: Verify against a small real sample**
 
 ```bash
 cd /mnt/900/training/sets
@@ -719,7 +747,7 @@ uv run --with duckdb index.py query "SELECT file_path, enrich_error FROM lora_in
 
 Expected: one row with a non-null `enrich_error`, exit code 0.
 
-- [ ] **Step 7: Commit — none.** `/mnt/900/training/sets` is not a git repository.
+- [ ] **Step 8: Commit — none.** `/mnt/900/training/sets` is not a git repository.
 
 ---
 
