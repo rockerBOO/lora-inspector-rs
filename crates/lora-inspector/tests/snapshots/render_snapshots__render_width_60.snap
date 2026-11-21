@@ -1,0 +1,16 @@
+---
+source: crates/lora-inspector/tests/render_snapshots.rs
+expression: "render(& report, & meta, & terminal(60, false), & opts())"
+---
+fixture.safetensors  3.7 KB
+unknown · - · 4, 8 · 4, 8 · fp32 · 7 layers (4 unet, 2 te)
+
+block weight  median 2  peak IN00 6 (3×)
+  UNet          █████████████████▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁  2 blocks
+  TextEncoder                                       1 blocks
+
+  IN00             6    2 layers
+  TE00             2    2 layers
+  IN02           0.3    1 layers
+1 layers ungrouped (txtfusion_projector)
+1 layers skipped: no low-rank…BOFT) — pass --slow to include

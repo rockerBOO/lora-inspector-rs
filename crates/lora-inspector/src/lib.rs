@@ -5,5 +5,6 @@
 //! built by one is the same type everywhere. Add each new shared `src/<name>.rs`
 //! module here.
 
+pub mod render;
 pub mod report;
 pub mod terminal;

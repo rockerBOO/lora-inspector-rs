@@ -1121,6 +1121,7 @@ dependencies = [
  "clap",
  "indicatif",
  "inspector",
+ "insta",
  "serde",
  "serde_json",
  "terminal_size",
