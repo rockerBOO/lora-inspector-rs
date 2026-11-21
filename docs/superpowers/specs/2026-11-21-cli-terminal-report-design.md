@@ -332,10 +332,18 @@ of rows sorted by value descending (see Rendering).
 - **Block weight** = `effective_scale` per base name (Frobenius norm of the scaled
   delta, computed from the rank×rank Gram matrices), averaged per block. The block's
   `max` sublayer value is kept for the outlier annotation.
-- **Outlier** = `eff_scale > 1.5 × median across layers`, matching
+- **Outlier, block rows** = `block.mean > 1.5 × median of the block means`. Comparing a
+  *block mean* against the *layer* median would be a category error: averaging a block's
+  layers pulls every block toward the layer median, so almost nothing would ever be
+  flagged and `summary.block_weight.outliers` would sit at 0 on healthy files. The block
+  section asks "which block is carrying disproportionate weight", and that is a
+  comparison among blocks.
+- **Outlier, rank rows** = `layer.eff_scale > 1.5 × median of the layer scales`, matching
   `LoRAFile::effective_scales_all`. Note: the JS phase-1 computes
   `max(median, 1e-10) * 1.5` while Rust uses `if median < 1e-10 { 1e-10 } else {1.5×}`;
   these disagree near zero. The Rust formula is authoritative.
+- `summary.block_weight.peak.ratio_to_median` is the same comparison as the block outlier
+  rule: peak block mean ÷ median block mean.
 - **Rank metrics** = `inspector::svd::RankMetrics` verbatim: `nominal_rank`,
   `effective_rank`, `balance`, `top1_energy`, `dominance`, `health`.
 
@@ -494,11 +502,12 @@ Field reference — this table is the contract and is copied verbatim into the C
 | `blocks[].index` | int\|null | block index taken from the key |
 | `blocks[].layers` | int | base names in this block |
 | `blocks[].mean` / `.median` / `.max` | float | of the per-layer block weight |
-| `blocks[].outlier` | bool | mean exceeds 1.5× the median across all layers |
+| `blocks[].outlier` | bool | mean exceeds 1.5× the median **block** mean |
 | `ungrouped` | object | `{layers, prefixes}` for keys matching no family |
 | `skipped` | object | `{layers, reason}` for layers without a low-rank factor |
 | `rank[]` | row[] | one row per layer, sorted by `base_name`; `null` unless `--rank` |
 | `rank[].eff_scale` | float\|null | the same metric as `blocks[].mean`, per layer |
+| `rank[].outlier` | bool | layer scale exceeds 1.5× the median **layer** scale |
 | `rank[].health` | string | `Good`, `Ok`, `Weak`, `Poor`, `Collapsed` |
 | `summary.block_weight` | object | `{median, peak: {label, value, ratio_to_median}, outliers}` |
 | `summary.rank` | object\|null | `{layers, by_health, median_balance, weak_or_worse, elapsed_ms}` |

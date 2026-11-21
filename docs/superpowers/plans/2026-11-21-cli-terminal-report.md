@@ -332,7 +332,7 @@ git commit -m "feat(inspector): expose the non-materializing effective-scale pat
 
 **Files:**
 - Create: `crates/lora-inspector/src/terminal.rs`
-- Modify: `crates/lora-inspector/src/main.rs` (add `mod terminal;`)
+- Modify: `crates/lora-inspector/src/lib.rs` (declare `pub mod terminal;`; `main.rs` imports it from the library rather than declaring its own copy)
 - Modify: `crates/lora-inspector/Cargo.toml` (add `unicode-width = "0.2"`, `terminal_size = "0.4"`)
 
 **Interfaces:**
@@ -420,7 +420,7 @@ git commit -m "feat(cli): add width- and unicode-aware terminal primitives"
 
 **Files:**
 - Create: `crates/lora-inspector/src/report.rs`
-- Modify: `crates/lora-inspector/src/main.rs` (add `mod report;`)
+- Create: `crates/lora-inspector/src/lib.rs` — the shared surface (`pub mod report; pub mod terminal;` and, in Task 7, `pub mod render;`), so integration tests can link these modules. `main.rs` imports them from the library (`use lora_inspector::report;`) and must NOT also declare `mod report;`: compiling the same file in both targets produces two distinct sets of types and doubles the build.
 
 **Interfaces:**
 - Consumes: `inspector::blocks::{parse_block_key, BlockGroup, BlockFamily}`, `LoRAFile::{base_names, low_rank_effective_scale, effective_scale, precision, dims, alphas, format}`, `Metadata::{new_from_header_buffer, network_module_display, network_family, network_type}`, `inspector::LayerScale`.
@@ -491,7 +491,7 @@ git commit -m "feat(cli): build the block-weight report without materializing we
 
 **Files:**
 - Create: `crates/lora-inspector/src/render.rs`
-- Modify: `crates/lora-inspector/src/main.rs` (add `mod render;`)
+- Modify: `crates/lora-inspector/src/lib.rs` (add `pub mod render;`) and `crates/lora-inspector/src/main.rs` (import it)
 - Modify: `crates/lora-inspector/Cargo.toml` (`[dev-dependencies] insta = "1.34.0"`)
 - Create: `crates/lora-inspector/tests/render_snapshots.rs`
 
