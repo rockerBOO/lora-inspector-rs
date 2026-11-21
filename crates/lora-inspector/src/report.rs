@@ -6,10 +6,6 @@
 //! float passes through [`round_sig`] so the human rendering and `--json`
 //! output show the same canonical value.
 
-// `report` is consumed by the render tier in a later task, so nothing here is
-// referenced from `main.rs` yet.
-#![allow(dead_code)]
-
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
@@ -33,6 +29,7 @@ pub struct ReportOptions {
     pub top: usize,
     pub jobs: usize,
     pub slow: bool,
+    pub metadata: bool,
 }
 
 /// The top-level JSON document emitted by `--json`.
@@ -162,12 +159,23 @@ pub fn round_sig(x: f64, digits: u32) -> f64 {
     (x * factor).round() / factor
 }
 
-/// One block's aggregated inputs before outlier flagging and rounding.
+/// One block's raw per-layer scales before aggregation.
 struct RawBlock {
     group: BlockGroup,
     index: Option<usize>,
     family: BlockFamily,
     scales: Vec<f64>,
+}
+
+/// One block's aggregated raw values before outlier flagging and rounding.
+struct BlockAgg {
+    group: BlockGroup,
+    index: Option<usize>,
+    family: BlockFamily,
+    layers: usize,
+    mean: f64,
+    max: f64,
+    median: f64,
 }
 
 /// Aggregate per-layer effective scales into one flat row per `(group, index)`.
@@ -186,7 +194,6 @@ pub fn build_blocks(
     let mut ungrouped_prefixes: Vec<String> = Vec::new();
     let mut ungrouped_layers = 0usize;
     let mut skipped_layers = 0usize;
-    let mut all_scales: Vec<f64> = Vec::new();
 
     for base_name in &base_names {
         let key = parse_block_key(base_name);
@@ -200,11 +207,6 @@ pub fn build_blocks(
             skipped_layers += 1;
             continue;
         };
-
-        // The outlier threshold uses the median across every layer with a
-        // computed weight, matching `LoRAFile::effective_scales_all`. Skipped
-        // layers (no low-rank factor) are not part of that set.
-        all_scales.push(scale);
 
         if key.group == BlockGroup::Other {
             ungrouped_layers += 1;
@@ -229,18 +231,26 @@ pub fn build_blocks(
             .push(scale);
     }
 
-    let median_all = median(&all_scales);
-    // The Rust formula is authoritative: near-zero medians get an absolute
-    // floor rather than multiplying the near-zero value by 1.5.
-    let threshold = if median_all < 1e-10 {
-        1e-10
-    } else {
-        1.5 * median_all
-    };
+    let mut aggs: Vec<BlockAgg> = by_block
+        .into_values()
+        .map(|raw| {
+            let layers = raw.scales.len();
+            let mean = raw.scales.iter().sum::<f64>() / layers as f64;
+            let max = raw.scales.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            BlockAgg {
+                group: raw.group,
+                index: raw.index,
+                family: raw.family,
+                layers,
+                mean,
+                max,
+                median: median(&raw.scales),
+            }
+        })
+        .collect();
 
-    let mut raw_blocks: Vec<RawBlock> = by_block.into_values().collect();
     // Display order is part of the contract: group rank, then index, then label.
-    raw_blocks.sort_by(|a, b| {
+    aggs.sort_by(|a, b| {
         a.group
             .canonical_rank()
             .cmp(&b.group.canonical_rank())
@@ -248,7 +258,20 @@ pub fn build_blocks(
             .then(a.group.tag(a.index).cmp(&b.group.tag(b.index)))
     });
 
-    let mut blocks = Vec::with_capacity(raw_blocks.len());
+    // The block outlier rule compares block means to the median block mean,
+    // never to the median of the individual layer scales. Averaging a block's
+    // layers pulls every block toward the layer median, which would flag almost
+    // nothing. The near-zero floor keeps the threshold meaningful when the
+    // median is exactly zero.
+    let block_means: Vec<f64> = aggs.iter().map(|agg| agg.mean).collect();
+    let median_block_mean = median(&block_means);
+    let threshold = if median_block_mean < 1e-10 {
+        1e-10
+    } else {
+        1.5 * median_block_mean
+    };
+
+    let mut blocks = Vec::with_capacity(aggs.len());
     let mut peak = Peak {
         label: String::new(),
         value: 0.0,
@@ -256,21 +279,16 @@ pub fn build_blocks(
     };
     let mut peak_mean = f64::NEG_INFINITY;
 
-    for raw in &raw_blocks {
-        let layers = raw.scales.len();
-        let mean = raw.scales.iter().sum::<f64>() / layers as f64;
-        let max = raw.scales.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        let block_median = median(&raw.scales);
-
+    for agg in &aggs {
         // The first block in display order wins ties, so the peak is stable.
-        if mean > peak_mean {
-            peak_mean = mean;
+        if agg.mean > peak_mean {
+            peak_mean = agg.mean;
             peak = Peak {
-                label: raw.group.tag(raw.index),
-                value: round_sig(mean, 6),
+                label: agg.group.tag(agg.index),
+                value: round_sig(agg.mean, 6),
                 ratio_to_median: round_sig(
-                    if median_all > 0.0 {
-                        mean / median_all
+                    if median_block_mean > 0.0 {
+                        agg.mean / median_block_mean
                     } else {
                         0.0
                     },
@@ -280,15 +298,15 @@ pub fn build_blocks(
         }
 
         blocks.push(BlockStat {
-            group: raw.group,
-            family: raw.family,
-            label: raw.group.tag(raw.index),
-            index: raw.index,
-            layers,
-            mean: round_sig(mean, 6),
-            max: round_sig(max, 6),
-            median: round_sig(block_median, 6),
-            outlier: mean > threshold,
+            group: agg.group,
+            family: agg.family,
+            label: agg.group.tag(agg.index),
+            index: agg.index,
+            layers: agg.layers,
+            mean: round_sig(agg.mean, 6),
+            max: round_sig(agg.max, 6),
+            median: round_sig(agg.median, 6),
+            outlier: agg.mean > threshold,
         });
     }
 
@@ -305,7 +323,7 @@ pub fn build_blocks(
         reason: (skipped_layers > 0).then(|| SKIPPED_REASON.to_string()),
     };
     let summary = BlockWeightSummary {
-        median: round_sig(median_all, 6),
+        median: round_sig(median_block_mean, 6),
         peak,
         outliers: blocks.iter().filter(|block| block.outlier).count(),
     };
@@ -378,6 +396,11 @@ pub fn build_report(
     }
 
     let network = build_network_info(file, meta, total_layers, unet, text_encoder);
+    let metadata = if opts.metadata {
+        meta.metadata.clone()
+    } else {
+        None
+    };
 
     let (blocks, block_weight, ungrouped, skipped) = if opts.blocks {
         let (blocks, ungrouped, skipped, summary) = build_blocks(file, opts)?;
@@ -410,9 +433,7 @@ pub fn build_report(
             precision: file.precision().map(|precision| precision.to_string()),
         },
         network,
-        // `--metadata` is not part of `ReportOptions` yet, so the raw map stays
-        // out of the JSON contract until the CLI surface wires the flag.
-        metadata: None,
+        metadata,
         blocks,
         ungrouped,
         skipped,

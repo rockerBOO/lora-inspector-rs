@@ -5,8 +5,10 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use std::{collections::HashMap, fs::File, io::Read, path::PathBuf};
 
-mod report;
-mod terminal;
+// `report` and `terminal` are the shared library modules (see `src/lib.rs`);
+// the `Inspect` command that consumes them lands in a later task.
+#[allow(unused_imports)]
+use lora_inspector::{report, terminal};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Inspect LoRA file weights and norms")]

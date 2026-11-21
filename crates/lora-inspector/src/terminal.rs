@@ -1,8 +1,3 @@
-// `terminal` is the first of four modules that assemble the `inspect` report;
-// its items are consumed by the render tier in a later task, so nothing here is
-// referenced from `main.rs` yet.
-#![allow(dead_code)]
-
 use std::io::IsTerminal;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};

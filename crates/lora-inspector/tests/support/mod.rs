@@ -25,6 +25,14 @@ impl Fixture {
         Fixture { path }
     }
 
+    /// Write the block-outlier fixture: one heavy block among light blocks,
+    /// where the block-mean rule and the layer-median rule disagree.
+    pub fn write_outlier() -> Fixture {
+        let path = temp_path();
+        fs::write(&path, outlier_fixture_bytes()).expect("write outlier fixture");
+        Fixture { path }
+    }
+
     /// Path of the written file.
     pub fn path(&self) -> &Path {
         &self.path
@@ -130,6 +138,31 @@ fn fixture_bytes() -> Vec<u8> {
     // A plain LoRA layer whose key matches no family pattern.
     push_lora(&mut tensors, "txtfusion_projector", 4, 4.0, 2.5);
 
+    to_safetensors(tensors)
+}
+
+/// One heavy block (mean 4.0) among light blocks (mean 2.0 each).
+fn outlier_fixture_bytes() -> Vec<u8> {
+    let mut tensors = Vec::new();
+
+    // IN00: layers 4.0 and 4.0 -> mean 4.0.
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_in", 4, 4.0, 4.0);
+    push_lora(&mut tensors, "down_blocks.0.attn.proj_out", 4, 4.0, 4.0);
+
+    // IN01: layers 3.0 and 1.0 -> mean 2.0.
+    push_lora(&mut tensors, "down_blocks.1.attn.proj_in", 4, 4.0, 3.0);
+    push_lora(&mut tensors, "down_blocks.1.attn.proj_out", 4, 4.0, 1.0);
+
+    // IN02: layers 3.0 and 1.0 -> mean 2.0.
+    push_lora(&mut tensors, "down_blocks.2.attn.proj_in", 4, 4.0, 3.0);
+    push_lora(&mut tensors, "down_blocks.2.attn.proj_out", 4, 4.0, 1.0);
+
+    to_safetensors(tensors)
+}
+
+/// Serialize tensors into the safetensors layout: 8-byte little-endian header
+/// length, JSON header with `data_offsets`, then little-endian `f32` payload.
+fn to_safetensors(tensors: Vec<Tensor>) -> Vec<u8> {
     let mut header = serde_json::Map::new();
     let mut offset = 0usize;
     for t in &tensors {

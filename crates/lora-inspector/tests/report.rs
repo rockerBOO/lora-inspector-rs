@@ -13,6 +13,7 @@ fn opts(blocks: bool) -> ReportOptions {
         top: 8,
         jobs: 1,
         slow: false,
+        metadata: false,
     }
 }
 
@@ -26,6 +27,19 @@ fn build(blocks: bool) -> (Report, support::Fixture) {
     );
     let meta = Metadata::new_from_buffer(&bytes).expect("fixture metadata");
     let report = build_report(fixture.path(), &file, &meta, &opts(blocks)).expect("build report");
+    (report, fixture)
+}
+
+fn build_outlier() -> (Report, support::Fixture) {
+    let fixture = support::Fixture::write_outlier();
+    let bytes = fixture.bytes();
+    let file = LoRAFile::new_from_buffer(
+        &bytes,
+        fixture.path().to_str().expect("utf-8 temp path"),
+        &Device::Cpu,
+    );
+    let meta = Metadata::new_from_buffer(&bytes).expect("fixture metadata");
+    let report = build_report(fixture.path(), &file, &meta, &opts(true)).expect("build report");
     (report, fixture)
 }
 
@@ -46,6 +60,64 @@ fn block_means_average_the_layers_in_each_block() {
     assert_eq!(te00.mean, 2.0);
     assert_eq!(te00.max, 3.0);
     assert_eq!(te00.median, 2.0);
+}
+
+#[test]
+fn block_outlier_uses_block_mean_median_not_layer_median() {
+    let (report, _fixture) = build_outlier();
+    let blocks = report.blocks.expect("blocks computed");
+
+    let in00 = blocks.iter().find(|b| b.label == "IN00").expect("IN00 row");
+    let in01 = blocks.iter().find(|b| b.label == "IN01").expect("IN01 row");
+    let in02 = blocks.iter().find(|b| b.label == "IN02").expect("IN02 row");
+
+    // One heavy block (mean 4.0) among light blocks (mean 2.0 each).
+    assert!(in00.outlier);
+    assert!(!in01.outlier);
+    assert!(!in02.outlier);
+    assert_eq!(
+        report.summary.block_weight.expect("block summary").outliers,
+        1
+    );
+
+    // Prove the disagreement: the layer median is 3.0 (sorted [1, 1, 3, 3, 4,
+    // 4]), so 1.5 × 3.0 = 4.5 >= IN00.mean 4.0 and the old layer-median rule
+    // would NOT flag it. The block-mean median is 2.0, so 1.5 × 2.0 = 3.0 <
+    // 4.0 and the block rule does flag it.
+    assert!(1.5 * 3.0 >= in00.mean);
+    assert!(1.5 * 2.0 < in00.mean);
+}
+
+#[test]
+fn metadata_is_only_present_when_requested() {
+    let fixture = support::Fixture::write();
+    let file = LoRAFile::new_from_buffer(
+        &fixture.bytes(),
+        fixture.path().to_str().expect("utf-8 temp path"),
+        &Device::Cpu,
+    );
+    let meta = Metadata {
+        metadata: Some(std::collections::HashMap::from([(
+            "modelspec.architecture".to_string(),
+            "flux".to_string(),
+        )])),
+    };
+
+    let without = build_report(fixture.path(), &file, &meta, &opts(true)).expect("build report");
+    assert_eq!(without.metadata, None);
+
+    let with_opts = ReportOptions {
+        metadata: true,
+        ..opts(true)
+    };
+    let with = build_report(fixture.path(), &file, &meta, &with_opts).expect("build report");
+    assert_eq!(
+        with.metadata,
+        Some(std::collections::HashMap::from([(
+            "modelspec.architecture".to_string(),
+            "flux".to_string(),
+        )]))
+    );
 }
 
 #[test]
