@@ -73,6 +73,13 @@ struct InspectArgs {
     file: PathBuf,
 
     /// Compute and render the effective-rank section (off by default)
+    ///
+    /// `balance` and the Good/Ok/Weak/Poor health counts are `effective_rank /
+    /// nominal_rank`, so they fall as `dim` rises even when the LoRA is unchanged:
+    /// compare `effective_rank` (absolute) across files, not health. `outlier` is
+    /// `eff_scale > 1.5 x the median eff_scale of this file`, so it is relative to
+    /// the file and its count does not travel between files of different overall
+    /// strength. Both baselines are reported in `summary.rank`.
     #[clap(long)]
     rank: bool,
 
