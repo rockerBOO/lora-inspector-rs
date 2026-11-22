@@ -7,8 +7,9 @@ use crate::{
     metadata::Metadata,
     network::NetworkType,
     norms::{l1, l2, matrix_norm},
+    structure::{classify, StructureFormat},
     svd,
-    weight::{self, BufferedLoRAWeight, Weight, WeightKey},
+    weight::{self, BufferedLoRAWeight, Weight},
     InspectorError, Result,
 };
 
@@ -19,6 +20,13 @@ pub struct LayerScale {
     pub is_outlier: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorInfo {
+    pub name: String,
+    pub dtype: String,
+    pub shape: Vec<usize>,
+}
+
 /// LoRA file buffer
 #[derive(Debug)]
 pub struct LoRAFile {
@@ -26,13 +34,34 @@ pub struct LoRAFile {
     weights: Option<BufferedLoRAWeight>,
     scaled_weights: HashMap<String, candle_core::Tensor>,
     metadata: Option<Metadata>,
+    header: Option<crate::header::HeaderIndex>,
 }
 
 // const WEIGHT_NOT_LOADED: &str = "Weight not loaded properly";
 
+/// Reshape a LoRA factor to its 2D matrix form when it is a matrix with any
+/// number of singleton (size-1) dimensions in any position — e.g. a 1×1 convolution
+/// stored as `[out, rank, 1, 1]`. The surviving dimensions keep their original
+/// element order. Returns `Ok(None)` when the factor is not a matrix (a real
+/// convolution kernel, a rank-0/1 tensor, or a fully-unit shape), in which case
+/// the Gram identity below does not apply.
+fn flatten_matrix(tensor: &candle_core::Tensor) -> Result<Option<candle_core::Tensor>> {
+    let non_unit: Vec<usize> = tensor
+        .dims()
+        .iter()
+        .copied()
+        .filter(|&dim| dim != 1)
+        .collect();
+    if non_unit.len() != 2 {
+        return Ok(None);
+    }
+    Ok(Some(tensor.reshape((non_unit[0], non_unit[1]))?))
+}
+
 impl LoRAFile {
     pub fn new_from_buffer(buffer: &[u8], filename: &str, device: &Device) -> LoRAFile {
         let metadata = Metadata::new_from_buffer(buffer).map_err(|e| e.to_string());
+        let header = crate::header::parse_header(buffer).ok().map(|(h, _)| h);
 
         LoRAFile {
             filename: filename.to_string(),
@@ -41,7 +70,24 @@ impl LoRAFile {
                 .unwrap_or_else(|_| None),
             scaled_weights: HashMap::new(),
             metadata: metadata.map(Some).unwrap_or_else(|_| None),
+            header,
         }
+    }
+
+    /// Builds a `LoRAFile` from just the safetensors header — no tensor payload
+    /// bytes required. `is_tensors_loaded()` will be `false`; call
+    /// `reload_weights` with the full file buffer before any weight-value
+    /// operation (`scale_weight`, `effective_scale`, `rank_metrics`, ...).
+    pub fn new_from_header_buffer(buffer: &[u8], filename: &str) -> Result<LoRAFile> {
+        let (header, meta_map) = crate::header::parse_header(buffer)?;
+
+        Ok(LoRAFile {
+            filename: filename.to_string(),
+            weights: None,
+            scaled_weights: HashMap::new(),
+            metadata: Some(Metadata { metadata: meta_map }),
+            header: Some(header),
+        })
     }
 
     pub fn unload(&mut self) {
@@ -64,30 +110,30 @@ impl LoRAFile {
     }
 
     pub fn unet_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.unet_keys())
+            .map(|h| h.unet_keys())
             .unwrap_or_default()
     }
 
     pub fn text_encoder_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.text_encoder_keys())
+            .map(|h| h.text_encoder_keys())
             .unwrap_or_default()
     }
 
     pub fn weight_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.weight_keys())
+            .map(|h| h.weight_keys())
             .unwrap_or_default()
     }
 
     pub fn alpha_keys(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.alpha_keys())
+            .map(|h| h.alpha_keys())
             .unwrap_or_default()
     }
 
@@ -99,29 +145,37 @@ impl LoRAFile {
     }
 
     pub fn dims(&self) -> HashSet<usize> {
-        self.weights
-            .as_ref()
-            .map(|weights| weights.dims())
-            .unwrap_or_default()
+        self.header.as_ref().map(|h| h.dims()).unwrap_or_default()
     }
 
     pub fn precision(&self) -> Option<weight::DType> {
-        self.weights
-            .as_ref()
-            .and_then(|weights| weights.precision())
+        self.header.as_ref().and_then(|h| h.precision())
     }
 
     pub fn keys(&self) -> Vec<String> {
-        self.weights
-            .as_ref()
-            .map(|weights| weights.keys())
-            .unwrap_or_default()
+        self.header.as_ref().map(|h| h.keys()).unwrap_or_default()
     }
 
     pub fn base_names(&self) -> Vec<String> {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.base_names())
+            .map(|h| h.base_names())
+            .unwrap_or_default()
+    }
+
+    pub fn tensor_info(&self) -> Vec<TensorInfo> {
+        self.header
+            .as_ref()
+            .map(|h| {
+                h.tensor_info()
+                    .into_iter()
+                    .map(|(name, dtype, shape)| TensorInfo {
+                        name,
+                        dtype: dtype.to_string(),
+                        shape,
+                    })
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
@@ -146,9 +200,9 @@ impl LoRAFile {
     }
 
     pub fn format(&self) -> weight::LoRAFormat {
-        self.weights
+        self.header
             .as_ref()
-            .map(|weights| weights.format())
+            .map(|h| h.format())
             .unwrap_or(weight::LoRAFormat::Kohya)
     }
 
@@ -168,34 +222,67 @@ impl LoRAFile {
         //     return Ok(tensor.clone());
         // }
 
-        match self.weights.as_ref() {
-            Some(weights) => match self
-                .metadata
-                .as_ref()
-                .and_then(|metadata| metadata.network_type())
-            {
-                Some(NetworkType::LoRA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::DyLoRA) => Ok(weights.scale_lora_weight(base_name)?),
-                Some(NetworkType::GLoRA) => Ok(weights.scale_glora_weights(base_name)?),
-                Some(NetworkType::LoKr) => Ok(weights.scale_lokr_weight(base_name)?),
-                Some(NetworkType::LoHA) => Ok(weights.scale_hada_weight(base_name)?),
-                Some(NetworkType::BOFT) => Ok(weights.scale_boft_weight(base_name)?),
-                Some(NetworkType::DiagOFT) => Ok(weights.scale_diag_oft_weight(base_name)?),
-                Some(_) => Err(InspectorError::UnsupportedNetworkType),
-                None => Ok(weights.scale_lora_weight(base_name)?),
-            },
-            None => Err(InspectorError::Msg(
+        let Some(weights) = self.weights.as_ref() else {
+            return Err(InspectorError::Msg(
                 "Weight not loaded. Load the weight first.".to_string(),
-            )),
+            ));
+        };
+
+        // The keys decide the formula, because they are what a loader acts on.
+        // Metadata is the fallback: a file can declare `networks.lora` while its
+        // keys carry `hada_w1_a`, and picking the declared formula there would
+        // fail to find the factors and silently drop the layer.
+        let keys = self.keys_of(base_name);
+        if let Some(format) = classify(&keys) {
+            let uses_oft_diag = keys
+                .iter()
+                .any(|key| key.split('.').any(|token| token == "oft_diag"));
+            return match format {
+                StructureFormat::LoRa => Ok(weights.scale_lora_weight(base_name)?),
+                StructureFormat::LoHa => Ok(weights.scale_hada_weight(base_name)?),
+                StructureFormat::LoKr => Ok(weights.scale_lokr_weight(base_name)?),
+                StructureFormat::Oft if uses_oft_diag => {
+                    Ok(weights.scale_diag_oft_weight(base_name)?)
+                }
+                StructureFormat::Oft => Ok(weights.scale_boft_weight(base_name)?),
+                StructureFormat::Glora => Ok(weights.scale_glora_weights(base_name)?),
+            };
         }
+
+        match self
+            .metadata
+            .as_ref()
+            .and_then(|metadata| metadata.network_type())
+        {
+            Some(NetworkType::LoRA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::LoRAFA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::DyLoRA) => Ok(weights.scale_lora_weight(base_name)?),
+            Some(NetworkType::GLoRA) => Ok(weights.scale_glora_weights(base_name)?),
+            Some(NetworkType::LoKr) => Ok(weights.scale_lokr_weight(base_name)?),
+            Some(NetworkType::LoHA) => Ok(weights.scale_hada_weight(base_name)?),
+            Some(NetworkType::BOFT) => Ok(weights.scale_boft_weight(base_name)?),
+            Some(NetworkType::DiagOFT) => Ok(weights.scale_diag_oft_weight(base_name)?),
+            Some(_) => Err(InspectorError::UnsupportedNetworkType),
+            None => Ok(weights.scale_lora_weight(base_name)?),
+        }
+    }
+
+    /// The tensor keys belonging to `base_name`: the name itself, or anything
+    /// under it. A prefix test rather than re-stripping the marker suffixes,
+    /// so the marker vocabulary stays in one place (`crate::structure`).
+    fn keys_of(&self, base_name: &str) -> Vec<String> {
+        let dotted = format!("{base_name}.");
+        self.keys()
+            .into_iter()
+            .filter(|key| key == base_name || key.starts_with(&dotted))
+            .collect()
     }
 
     pub fn effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
         match self.weights.as_ref() {
             None => Ok(None),
             Some(_) => {
-                if let Some(norm) = self.lora_frobenius_norm(base_name)? {
+                if let Some(norm) = self.low_rank_effective_scale(base_name)? {
                     return Ok(Some(norm));
                 }
 
@@ -218,10 +305,16 @@ impl LoRAFile {
     /// `rank x rank` Gram matrices of `up` and `down`. For layers with a huge output
     /// dimension (e.g. DiT modulation/projection layers), the full product can be
     /// hundreds of MB to reconstruct just to throw away everything but its norm, which
-    /// can exhaust the wasm heap. Returns `Ok(None)` when the layer isn't a plain 2D
-    /// LoRA up/down pair (conv/tucker/other decompositions fall back to full
-    /// materialization since this identity doesn't directly apply to them).
-    fn lora_frobenius_norm(&self, base_name: &str) -> Result<Option<f64>> {
+    /// can exhaust the wasm heap. A matrix is accepted whether it is stored flat or
+    /// with singleton dimensions in any position (e.g. a 1×1 convolution's
+    /// `[out, rank, 1, 1]` factors); any other shape (a real convolution kernel,
+    /// tucker or other decomposition) returns `Ok(None)` and leaves the caller to
+    /// fall back to full materialization, since this identity doesn't directly
+    /// apply to them.
+    ///
+    /// This is the only path that is safe for large layers, because it never
+    /// materializes `up @ down`.
+    pub fn low_rank_effective_scale(&self, base_name: &str) -> Result<Option<f64>> {
         let weights = match self.weights.as_ref() {
             Some(weights) => weights,
             None => return Ok(None),
@@ -242,9 +335,12 @@ impl LoRAFile {
             Err(e) => return Err(InspectorError::from(e)),
         };
 
-        if up.dims().len() != 2 || down.dims().len() != 2 {
+        let Some(up) = flatten_matrix(&up)? else {
             return Ok(None);
-        }
+        };
+        let Some(down) = flatten_matrix(&down)? else {
+            return Ok(None);
+        };
 
         let alpha = weights.alpha(base_name)?;
         let rank = down.dims()[0] as f64;
@@ -629,6 +725,70 @@ mod tests {
     }
 
     #[test]
+    fn low_rank_effective_scale_returns_none_for_hada_layers() {
+        // `edgWar40KAdeptaSororitas.safetensors` has only plain `lora_up`/`lora_down`
+        // pairs, so the LoHA fixture supplies a decomposition this Gram-matrix path
+        // cannot evaluate. Key used:
+        // `lora_unet_down_blocks_0_attentions_0_proj_in.hada_w1_a`.
+        let file = "loha.safetensors";
+        let buffer = load_file(file).unwrap();
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let hada_key = lora_file
+            .keys()
+            .into_iter()
+            .find(|k| k.contains("hada_w1_a"))
+            .expect("fixture has hada layers");
+        let hada_base = weight::get_base_name(&hada_key);
+
+        assert_eq!(
+            lora_file.low_rank_effective_scale(&hada_base).unwrap(),
+            None
+        );
+        // The fallback path still resolves it, so the `None` above comes from the
+        // cheap path declining the decomposition, not from an unresolvable layer.
+        assert!(lora_file.effective_scale(&hada_base).unwrap().is_some());
+    }
+
+    #[test]
+    fn low_rank_effective_scale_handles_1x1_conv() -> crate::Result<()> {
+        let file = "boo.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_0_attentions_0_proj_in";
+
+        let cheap = lora_file
+            .low_rank_effective_scale(base_name)?
+            .expect("1x1 conv must not be skipped");
+
+        // The materialising path reconstructs the full 1x1 conv delta
+        // (`up @ down`) before taking its norm; the cheap Gram path must agree,
+        // otherwise the reshape is silently producing a plausible-but-wrong
+        // number from a mismatched element order.
+        let scaled = lora_file.scale_weight(base_name)?;
+        let dense = lora_file.l2_norm::<f64>(&scaled)?;
+        assert!((cheap - dense).abs() < 1e-6, "cheap={cheap} dense={dense}");
+
+        Ok(())
+    }
+
+    #[test]
+    fn low_rank_effective_scale_rejects_real_conv() -> crate::Result<()> {
+        // `lora_unet_down_blocks_1_resnets_1_conv2.safetensors` is a plain LoRA
+        // with a 3x3 convolution kernel: down `[1, 640, 3, 3]`, up
+        // `[640, 1, 1, 1]`. Neither factor is a matrix, so the cheap Gram path
+        // declines it and the materialising fallback still resolves it.
+        let file = "lora_unet_down_blocks_1_resnets_1_conv2.safetensors";
+        let buffer = load_file(file)?;
+        let lora_file = LoRAFile::new_from_buffer(&buffer, file, &Device::Cpu);
+        let base_name = "lora_unet_down_blocks_1_resnets_1_conv2";
+
+        assert_eq!(lora_file.low_rank_effective_scale(base_name).unwrap(), None);
+        assert!(lora_file.effective_scale(base_name).unwrap().is_some());
+
+        Ok(())
+    }
+
+    #[test]
     fn factorization_balance_reasonable() -> crate::Result<()> {
         let file = "edgWar40KAdeptaSororitas.safetensors";
         let buffer = load_file(file)?;
@@ -712,6 +872,54 @@ mod tests {
         assert_eq!(outliers, vec![false, false, false, false, true]);
         assert!((median - 1.0).abs() < 1e-10);
         assert!((threshold - 1.5).abs() < 1e-10);
+    }
+
+    fn header_only_bytes(buffer: &[u8]) -> &[u8] {
+        let mut len_bytes = [0u8; 8];
+        len_bytes.copy_from_slice(&buffer[0..8]);
+        let header_len = u64::from_le_bytes(len_bytes) as usize;
+        &buffer[0..8 + header_len]
+    }
+
+    #[test]
+    fn header_only_load_exposes_keys_without_weights() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let lora_file =
+            LoRAFile::new_from_header_buffer(header_only_bytes(&buffer), "boo.safetensors")?;
+
+        assert!(!lora_file.is_tensors_loaded());
+        assert!(!lora_file.keys().is_empty());
+        assert!(!lora_file.base_names().is_empty());
+        assert!(!lora_file.unet_keys().is_empty());
+        assert!(!lora_file.tensor_info().is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn header_only_load_keys_match_full_buffer_load() -> crate::Result<()> {
+        let buffer = load_test_file()?;
+        let header_file =
+            LoRAFile::new_from_header_buffer(header_only_bytes(&buffer), "boo.safetensors")?;
+        let full_file = LoRAFile::new_from_buffer(&buffer, "boo.safetensors", &Device::Cpu);
+
+        let mut header_keys = header_file.keys();
+        let mut full_keys = full_file.keys();
+        header_keys.sort();
+        full_keys.sort();
+        assert_eq!(header_keys, full_keys);
+
+        assert_eq!(header_file.dims(), full_file.dims());
+        assert_eq!(header_file.format(), full_file.format());
+        assert_eq!(header_file.precision(), full_file.precision());
+
+        Ok(())
+    }
+
+    #[test]
+    fn header_only_load_rejects_truncated_buffer() {
+        let result = LoRAFile::new_from_header_buffer(&[1_u8, 2, 3], "boo.safetensors");
+        assert!(result.is_err());
     }
 
     #[test]

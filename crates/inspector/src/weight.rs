@@ -18,13 +18,18 @@ use crate::tensor::kron;
 //   Load weights only when required
 // LoRAWeight
 
-fn is_peft(keys: Vec<String>) -> bool {
+pub(crate) fn is_peft(keys: Vec<String>) -> bool {
     keys.into_iter()
         .take(10)
         .any(|k| k.contains("lora_A") || k.contains("lora_B"))
 }
 
-fn is_text_encoder_key(key: &str) -> bool {
+/// A key belongs to the text encoder side when it names a CLIP/T5-style text
+/// tower; everything else is part of the diffusion model. Matching on the
+/// encoder prefixes rather than an explicit `lora_unet` allowlist keeps
+/// `diffusion_model.*`, `transformer.*` and bare `transformer_blocks.*`
+/// (diffusers/PEFT-saved) checkpoints from reporting an empty U-Net side.
+pub(crate) fn is_text_encoder_key(key: &str) -> bool {
     key.contains("lora_te") || key.contains("text_encoder") || key.contains("text_model")
 }
 
@@ -195,6 +200,14 @@ pub enum DType {
     F64,
     I64,
     U64,
+    F8E5M2,
+    F8E4M3,
+    F8E8M0,
+    F8E4M3FNUZ,
+    F8E5M2FNUZ,
+    /// A dtype outside the set this inspector can name; kept so the
+    /// header/precision conversions never panic on a future format.
+    Unsupported,
 }
 
 impl fmt::Display for DType {
@@ -213,6 +226,12 @@ impl fmt::Display for DType {
             DType::F64 => write!(f, "fp64"),
             DType::I64 => write!(f, "i64"),
             DType::U64 => write!(f, "u64"),
+            DType::F8E5M2 => write!(f, "fp8_e5m2"),
+            DType::F8E4M3 => write!(f, "fp8_e4m3"),
+            DType::F8E8M0 => write!(f, "fp8_e8m0"),
+            DType::F8E4M3FNUZ => write!(f, "fp8_e4m3fnuz"),
+            DType::F8E5M2FNUZ => write!(f, "fp8_e5m2fnuz"),
+            DType::Unsupported => write!(f, "unsupported"),
         }
     }
 }
@@ -233,7 +252,12 @@ impl From<safetensors::Dtype> for DType {
             safetensors::Dtype::F64 => Self::F64,
             safetensors::Dtype::I64 => Self::I64,
             safetensors::Dtype::U64 => Self::U64,
-            a => panic!("Unsupported Dtype {:?}", a),
+            safetensors::Dtype::F8_E5M2 => Self::F8E5M2,
+            safetensors::Dtype::F8_E4M3 => Self::F8E4M3,
+            safetensors::Dtype::F8_E8M0 => Self::F8E8M0,
+            safetensors::Dtype::F8_E4M3FNUZ => Self::F8E4M3FNUZ,
+            safetensors::Dtype::F8_E5M2FNUZ => Self::F8E5M2FNUZ,
+            _ => Self::Unsupported,
         }
     }
 }
@@ -242,12 +266,17 @@ impl From<candle_core::DType> for DType {
     fn from(value: candle_core::DType) -> Self {
         match value {
             candle_core::DType::U8 => Self::U8,
-            candle_core::DType::F16 => Self::F16,
-            candle_core::DType::BF16 => Self::BF16,
             candle_core::DType::U32 => Self::U32,
+            candle_core::DType::I16 => Self::I16,
+            candle_core::DType::I32 => Self::I32,
+            candle_core::DType::I64 => Self::I64,
+            candle_core::DType::BF16 => Self::BF16,
+            candle_core::DType::F16 => Self::F16,
             candle_core::DType::F32 => Self::F32,
             candle_core::DType::F64 => Self::F64,
-            candle_core::DType::I64 => Self::I64,
+            candle_core::DType::F8E4M3 => Self::F8E4M3,
+            candle_core::DType::F8E8M0 => Self::F8E8M0,
+            _ => Self::Unsupported,
         }
     }
 }
@@ -376,11 +405,11 @@ impl Weight for BufferedLoRAWeight {
         let scale = (alpha.0 / dims[0] as f32) as f64;
 
         if dims.len() == 2 {
-            to_compatible_dtype(&up)?
+            Ok(to_compatible_dtype(&up)?
                 .matmul(&to_compatible_dtype(&down)?)?
-                .detach()?
-                .mul(scale)?
                 .detach()
+                .mul(scale)?
+                .detach())
         } else if dims[2] == 1 && dims[3] == 1 {
             to_compatible_dtype(&up)?
                 .squeeze(3)?
@@ -698,6 +727,12 @@ impl Weight for BufferedLoRAWeight {
                     Ok(x) => Ok(Alpha(
                         x.to_dtype(candle_core::DType::F32)?.to_scalar::<f32>()?,
                     )),
+                    // No stored alpha tensor: sd-scripts/musubi-tuner treat a
+                    // missing network_alpha as equal to the rank, giving a
+                    // scale of 1.0.
+                    Err(candle_core::Error::SafeTensor(
+                        safetensors::SafeTensorError::TensorNotFound(_),
+                    )) => Ok(Alpha(self.rank(base_name)? as f32)),
                     Err(e) => Err(e),
                 }
             }
@@ -746,16 +781,25 @@ impl BufferedLoRAWeight {
 }
 
 pub trait WeightKey {
+    /// Correctness reference `HeaderIndex` is tested against in `header.rs`'s
+    /// `header_index_matches_buffered_weight_for_boo_file` test; not called
+    /// from non-test code since the header-based migration.
+    #[cfg_attr(not(test), allow(dead_code))]
     fn keys(&self) -> Vec<String>;
     fn keys_by_key(&self, key: &str) -> Vec<String>;
     #[allow(dead_code)]
     fn up_keys(&self) -> Vec<String>;
     #[allow(dead_code)]
     fn down_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn unet_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn text_encoder_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn weight_keys(&self) -> Vec<String>;
+    #[allow(dead_code)]
     fn alpha_keys(&self) -> Vec<String>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn base_names(&self) -> Vec<String>;
 }
 
@@ -767,7 +811,12 @@ pub trait Weight {
 
     fn get(&self, key: &str) -> Result<Tensor, candle_core::Error>;
 
+    /// Correctness reference `HeaderIndex` is tested against in `header.rs`'s
+    /// `header_index_matches_buffered_weight_for_boo_file` test; not called
+    /// from non-test code since the header-based migration.
+    #[cfg_attr(not(test), allow(dead_code))]
     fn format(&self) -> LoRAFormat;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn precision(&self) -> Option<DType>;
     fn scale_lora_weight(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
     fn scale_glora_weights(&self, base_name: &str) -> Result<Tensor, candle_core::Error>;
@@ -782,6 +831,7 @@ pub trait Weight {
     fn alphas(&self) -> HashSet<Alpha>;
     #[allow(dead_code)]
     fn dora_scale(&self, key: &str) -> Result<Tensor, candle_core::Error>;
+    #[cfg_attr(not(test), allow(dead_code))]
     fn dims(&self) -> HashSet<usize>;
     #[allow(dead_code)]
     fn shapes(&self) -> HashMap<String, Vec<usize>>;
@@ -911,7 +961,10 @@ impl Weight for LoRAWeight {
 
                 match x {
                     Some(x) => Ok(Alpha(x.to_scalar::<f32>()?)),
-                    None => Err(candle_core::Error::Msg("No alpha found".to_string())),
+                    // No stored alpha tensor: sd-scripts/musubi-tuner treat a
+                    // missing network_alpha as equal to the rank, giving a
+                    // scale of 1.0.
+                    None => Ok(Alpha(self.rank(base_name)? as f32)),
                 }
             }
         }
@@ -1269,6 +1322,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn float8_dtypes_convert_without_panicking() {
+        for (source, expected, display) in [
+            (safetensors::Dtype::F8_E5M2, DType::F8E5M2, "fp8_e5m2"),
+            (safetensors::Dtype::F8_E4M3, DType::F8E4M3, "fp8_e4m3"),
+            (safetensors::Dtype::F8_E8M0, DType::F8E8M0, "fp8_e8m0"),
+            (
+                safetensors::Dtype::F8_E4M3FNUZ,
+                DType::F8E4M3FNUZ,
+                "fp8_e4m3fnuz",
+            ),
+            (
+                safetensors::Dtype::F8_E5M2FNUZ,
+                DType::F8E5M2FNUZ,
+                "fp8_e5m2fnuz",
+            ),
+        ] {
+            assert_eq!(DType::from(source), expected);
+            assert_eq!(expected.to_string(), display);
+        }
+
+        assert_eq!(DType::from(candle_core::DType::F8E4M3), DType::F8E4M3);
+        assert_eq!(DType::from(candle_core::DType::F8E8M0), DType::F8E8M0);
+    }
+
+    #[test]
     fn get_base_name_test() {
         let base_name = get_base_name("lora_unet_up_blocks_1_attentions_1_proj_out.lora_up.weight");
         assert_eq!(base_name, "lora_unet_up_blocks_1_attentions_1_proj_out");
@@ -1378,7 +1456,7 @@ mod tests {
                     .unwrap(),
                 ),
             ],
-            &None,
+            None,
         )
         .unwrap();
 
@@ -1672,6 +1750,65 @@ mod tests {
         );
     }
 
+    /// Builds a minimal single-layer LoRA safetensors buffer with lora_down/lora_up
+    /// weights but no `.alpha` tensor, matching LoRAs (e.g. musubi-tuner's Krea2
+    /// network) that omit alpha entirely rather than storing one per layer.
+    fn build_lora_buffer_without_alpha(base_name: &str, rank: usize, dim: usize) -> Vec<u8> {
+        let down_data = vec![1.0_f32; rank * dim];
+        let up_data = vec![1.0_f32; dim * rank];
+
+        let down_bytes: Vec<u8> = down_data.iter().flat_map(|f| f.to_le_bytes()).collect();
+        let up_bytes: Vec<u8> = up_data.iter().flat_map(|f| f.to_le_bytes()).collect();
+
+        let down_view = safetensors::tensor::TensorView::new(
+            safetensors::Dtype::F32,
+            vec![rank, dim],
+            &down_bytes,
+        )
+        .unwrap();
+        let up_view = safetensors::tensor::TensorView::new(
+            safetensors::Dtype::F32,
+            vec![dim, rank],
+            &up_bytes,
+        )
+        .unwrap();
+
+        let tensors = vec![
+            (format!("{base_name}.lora_down.weight"), down_view),
+            (format!("{base_name}.lora_up.weight"), up_view),
+        ];
+
+        safetensors::serialize(tensors, None).unwrap()
+    }
+
+    #[test]
+    fn buffered_alpha_defaults_to_rank_when_alpha_tensor_missing() {
+        let base_name = "diffusion_model.blocks.10.mlp.gate";
+        let buffer = build_lora_buffer_without_alpha(base_name, 4, 8);
+
+        let lora_weight = BufferedLoRAWeight::new(buffer, &Device::Cpu).unwrap();
+
+        let alpha = lora_weight.alpha(base_name).unwrap();
+        assert_eq!(alpha.0, 4.0);
+
+        let scaled = lora_weight.scale_lora_weight(base_name).unwrap();
+        assert_eq!(scaled.dims(), &[8, 8]);
+    }
+
+    #[test]
+    fn lora_weight_alpha_defaults_to_rank_when_alpha_tensor_missing() {
+        let base_name = "diffusion_model.blocks.26.attn.wq";
+        let buffer = build_lora_buffer_without_alpha(base_name, 4, 8);
+
+        let lora_weight = LoRAWeight::new(buffer).unwrap();
+
+        let alpha = lora_weight.alpha(base_name).unwrap();
+        assert_eq!(alpha.0, 4.0);
+
+        let scaled = lora_weight.scale_lora_weight(base_name).unwrap();
+        assert_eq!(scaled.dims(), &[8, 8]);
+    }
+
     #[test]
     fn buffered_dims_scale_lora_weight_conv2d() {
         let buffer = load_test_conv_file().unwrap();
@@ -1713,7 +1850,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            1.8109415
+            1.8127829
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1797,7 +1934,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            4.809399
+            4.8135567
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1821,7 +1958,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            35.77691
+            35.777084
         );
 
         // Verify that the tensor has the correct shape or dimensions
@@ -1846,7 +1983,7 @@ mod tests {
 
         assert_eq!(
             norms::l2::<f32>(&scaled_tensor.to_dtype(candle_core::DType::F32).unwrap()).unwrap(),
-            0.116758764
+            0.11675898
         );
 
         // Verify that the tensor has the correct shape or dimensions

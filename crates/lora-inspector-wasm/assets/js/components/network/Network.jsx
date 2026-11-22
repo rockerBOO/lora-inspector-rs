@@ -11,6 +11,7 @@ export function Network({ metadata, filename, worker }) {
 	const [networkModule, setNetworkModule] = useState(
 		metadata.get("ss_network_module"),
 	);
+	const [networkFamily, setNetworkFamily] = useState("unknown");
 	const [networkType, setNetworkType] = useState("");
 	const [networkArgs, setNetworkArgs] = useState(
 		metadata.has("ss_network_args")
@@ -32,6 +33,12 @@ export function Network({ metadata, filename, worker }) {
 			worker,
 		).then((resp) => {
 			setNetworkModule(resp.networkModule);
+		});
+		trySyncMessage(
+			{ messageType: "network_family", name: filename },
+			worker,
+		).then((resp) => {
+			setNetworkFamily(resp.networkFamily);
 		});
 		trySyncMessage(
 			{ messageType: "network_type", name: filename },
@@ -73,6 +80,12 @@ export function Network({ metadata, filename, worker }) {
 
 	return [
 		<div key="network" className="row space-apart">
+			<MetaAttribute
+				containerProps={{ id: "network-family" }}
+				name="Network family"
+				valueClassName="attribute"
+				value={networkFamily}
+			/>
 			<MetaAttribute
 				containerProps={{ id: "network-module" }}
 				name="Network module"

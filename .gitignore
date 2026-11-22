@@ -54,3 +54,6 @@ perf.data.old
 
 # Superpowers skill working docs (specs/plans), not project documentation
 docs/superpowers/
+
+# Superpowers SDD workspace
+.superpowers/

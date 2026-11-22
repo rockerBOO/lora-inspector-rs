@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 
-use crate::network::{NetworkArgs, NetworkModule, NetworkType, WeightDecomposition};
+use crate::network::{NetworkArgs, NetworkFamily, NetworkModule, NetworkType, WeightDecomposition};
+use crate::weight::LoRAFormat;
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Metadata {
@@ -19,18 +20,19 @@ impl Metadata {
         )
     }
 
+    /// Builds `Metadata` from just the safetensors header (see
+    /// `crate::header::parse_header`), without requiring tensor payload bytes.
+    pub fn new_from_header_buffer(buffer: &[u8]) -> crate::Result<Metadata> {
+        let (_header, meta_map) = crate::header::parse_header(buffer)?;
+        Ok(Metadata { metadata: meta_map })
+    }
+
     pub fn metadata_size(&self) -> usize {
         self.metadata.as_ref().map_or(0, |m| m.len())
     }
     pub fn network_args(&self) -> Option<NetworkArgs> {
         match &self.metadata.as_ref().map(|v| v.get("ss_network_args")) {
-            Some(Some(network_args)) => match serde_json::from_str::<NetworkArgs>(network_args) {
-                Ok(network_args) => Some(network_args),
-                Err(e) => {
-                    println!("{:#?}", e);
-                    None
-                }
-            },
+            Some(Some(network_args)) => serde_json::from_str::<NetworkArgs>(network_args).ok(),
             _ => None,
         }
     }
@@ -65,6 +67,7 @@ impl Metadata {
             Some(NetworkModule::KohyaSSDyLoRA) => Some(NetworkType::DyLoRA),
             Some(NetworkModule::KohyaSSOFT) => Some(NetworkType::OFT),
             Some(NetworkModule::KohyaSSLoRAFlux) => Some(NetworkType::LoRA),
+            Some(NetworkModule::KohyaSSLoRAGeneric) => Some(NetworkType::LoRA),
             Some(NetworkModule::MusubiTunerLoRAFlux2) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRALumina) => Some(NetworkType::LoRA),
             Some(NetworkModule::KohyaSSLoRASD3) => Some(NetworkType::LoRA),
@@ -93,6 +96,7 @@ impl Metadata {
         match self.metadata.as_ref().map(|v| v.get("ss_network_module")) {
             Some(Some(network_module)) => match network_module.as_str() {
                 "networks.lora" => Some(NetworkModule::KohyaSSLoRA),
+                "networks.lora_generic" => Some(NetworkModule::KohyaSSLoRAGeneric),
                 "networks.lora_flux" => Some(NetworkModule::KohyaSSLoRAFlux),
                 "networks.lora_flux_2" => Some(NetworkModule::MusubiTunerLoRAFlux2),
                 "networks.lora_sd3" => Some(NetworkModule::KohyaSSLoRASD3),
@@ -104,6 +108,106 @@ impl Metadata {
                 _ => None,
             },
             _ => None,
+        }
+    }
+
+    /// Reads a metadata value, trimmed, treating blank values as absent.
+    fn metadata_value(&self, key: &str) -> Option<&str> {
+        self.metadata
+            .as_ref()?
+            .get(key)
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+    }
+
+    /// The module as the trainer names it, without its vendor prefix:
+    /// `networks.lora_generic` -> `lora_generic`, `lycoris.kohya` -> `kohya`.
+    pub fn network_module_name(&self) -> Option<String> {
+        let raw = self.metadata_value("ss_network_module")?;
+
+        Some(match raw.split_once('.') {
+            Some((_vendor, module)) if !module.is_empty() => module.to_string(),
+            _ => raw.to_string(),
+        })
+    }
+
+    /// Which trainer produced this file, from metadata alone.
+    /// Key-shape evidence is layered on top by [`Self::resolve_network_family`].
+    pub fn network_family(&self) -> NetworkFamily {
+        if let Some(module) = self.metadata_value("ss_network_module") {
+            if let Some(name) = module.strip_prefix("networks.") {
+                return match name {
+                    "lora_flux_2" | "lora_krea2" => NetworkFamily::MusubiTuner,
+                    _ => NetworkFamily::Kohya,
+                };
+            }
+
+            if module.starts_with("lycoris.") {
+                return NetworkFamily::Lycoris;
+            }
+        }
+
+        if let Some(version) = self.metadata_value("modelspec.implementation_version") {
+            if version.starts_with("sd-scripts/") {
+                return NetworkFamily::Kohya;
+            }
+        }
+
+        if let Some(implementation) = self.metadata_value("modelspec.implementation") {
+            if implementation.contains("kohya-ss/sd-scripts")
+                || implementation.contains("OpenMOSS/MOSS-Image")
+            {
+                return NetworkFamily::Kohya;
+            }
+
+            if implementation.contains("diffusers") {
+                return NetworkFamily::Diffusers;
+            }
+        }
+
+        NetworkFamily::Unknown
+    }
+
+    /// Family resolution for a loaded file: metadata first, then the key shape
+    /// the loader detected. `LoRAFormat::Kohya` is the loader's fallback and is
+    /// deliberately not treated as evidence.
+    pub fn resolve_network_family(&self, format: &LoRAFormat) -> NetworkFamily {
+        match self.network_family() {
+            NetworkFamily::Unknown => match format {
+                LoRAFormat::Peft => NetworkFamily::Peft,
+                LoRAFormat::Lycoris => NetworkFamily::Lycoris,
+                LoRAFormat::Kohya => NetworkFamily::Unknown,
+            },
+            family => family,
+        }
+    }
+
+    /// The string shown to a user for this file's trainer module. Table-known
+    /// modules keep their established names; anything else is attributed to the
+    /// family that produced it, and only a file with no evidence reads `unknown`.
+    pub fn network_module_display(&self, format: &LoRAFormat) -> String {
+        if let Some(module) = self.network_module() {
+            return match module {
+                NetworkModule::KohyaSSLoRA => "kohya-ss/lora".to_string(),
+                NetworkModule::KohyaSSLoRAGeneric => "kohya-ss/lora_generic".to_string(),
+                NetworkModule::KohyaSSLoRAFlux => "kohya-ss/lora_flux".to_string(),
+                NetworkModule::MusubiTunerLoRAFlux2 => "musubi-tuner/lora_flux_2".to_string(),
+                NetworkModule::KohyaSSLoRALumina => "kohya-ss/lora_lumina".to_string(),
+                NetworkModule::KohyaSSLoRASD3 => "kohya-ss/lora_sd3".to_string(),
+                NetworkModule::MusubiTunerLoRAKrea2 => "musubi-tuner/lora_krea2".to_string(),
+                NetworkModule::KohyaSSLoRAFA => "kohya-ss/lora_fa".to_string(),
+                NetworkModule::KohyaSSDyLoRA => "kohya-ss/dylora".to_string(),
+                NetworkModule::KohyaSSOFT => "kohya-ss/oft".to_string(),
+                NetworkModule::Lycoris => "lycoris".to_string(),
+            };
+        }
+
+        let family = self.resolve_network_family(format);
+
+        match (family, self.network_module_name()) {
+            (NetworkFamily::Unknown, _) => "unknown".to_string(),
+            (family, Some(module)) => format!("{}/{}", family.display(), module),
+            (family, None) => family.display().to_string(),
         }
     }
 }
@@ -527,5 +631,224 @@ mod tests {
         assert!(diff.added.is_empty());
         assert!(diff.removed.is_empty());
         assert!(diff.changed.is_empty());
+    }
+
+    fn meta(pairs: &[(&str, &str)]) -> Metadata {
+        Metadata {
+            metadata: Some(
+                pairs
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            ),
+        }
+    }
+
+    #[test]
+    fn network_family_from_module_string() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")]).network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_anima")]).network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_flux_2")]).network_family(),
+            NetworkFamily::MusubiTuner
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_krea2")]).network_family(),
+            NetworkFamily::MusubiTuner
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "lycoris.kohya")]).network_family(),
+            NetworkFamily::Lycoris
+        );
+    }
+
+    #[test]
+    fn network_family_from_implementation() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation_version",
+                "sd-scripts/11d8cedd0c67b93a10f8b2d75f43554f6f12c794",
+            )])
+            .network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/OpenMOSS/MOSS-Image",
+            )])
+            .network_family(),
+            NetworkFamily::Kohya
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/huggingface/diffusers",
+            )])
+            .network_family(),
+            NetworkFamily::Diffusers
+        );
+    }
+
+    #[test]
+    fn network_family_unknown_cases() {
+        use crate::network::NetworkFamily;
+
+        assert_eq!(meta(&[]).network_family(), NetworkFamily::Unknown);
+        assert_eq!(
+            meta(&[("ss_network_module", "")]).network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "foo.bar")]).network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/nobody/some-trainer",
+            )])
+            .network_family(),
+            NetworkFamily::Unknown
+        );
+        assert_eq!(
+            Metadata { metadata: None }.network_family(),
+            NetworkFamily::Unknown
+        );
+    }
+
+    #[test]
+    fn network_module_name_strips_vendor_prefix() {
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")]).network_module_name(),
+            Some("lora_generic".to_string())
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "lycoris.kohya")]).network_module_name(),
+            Some("kohya".to_string())
+        );
+        assert_eq!(meta(&[]).network_module_name(), None);
+        assert_eq!(
+            meta(&[("ss_network_module", "")]).network_module_name(),
+            None
+        );
+    }
+
+    #[test]
+    fn lora_generic_maps_to_kohya_module_and_lora_type() {
+        use crate::network::{NetworkModule, NetworkType};
+
+        let m = meta(&[("ss_network_module", "networks.lora_generic")]);
+        assert_eq!(m.network_module(), Some(NetworkModule::KohyaSSLoRAGeneric));
+        assert_eq!(m.network_type(), Some(NetworkType::LoRA));
+    }
+
+    #[test]
+    fn unmapped_kohya_module_is_not_typed() {
+        let m = meta(&[("ss_network_module", "networks.lora_anima")]);
+        assert_eq!(m.network_module(), None);
+        assert_eq!(m.network_type(), None);
+    }
+
+    #[test]
+    fn resolve_family_uses_format_only_as_last_resort() {
+        use crate::network::NetworkFamily;
+        use crate::weight::LoRAFormat;
+
+        assert_eq!(
+            meta(&[]).resolve_network_family(&LoRAFormat::Peft),
+            NetworkFamily::Peft
+        );
+        assert_eq!(
+            meta(&[]).resolve_network_family(&LoRAFormat::Lycoris),
+            NetworkFamily::Lycoris
+        );
+        // LoRAFormat::Kohya is the fallback format, not evidence.
+        assert_eq!(
+            meta(&[]).resolve_network_family(&LoRAFormat::Kohya),
+            NetworkFamily::Unknown
+        );
+        // Metadata outranks the format.
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")])
+                .resolve_network_family(&LoRAFormat::Peft),
+            NetworkFamily::Kohya
+        );
+    }
+
+    #[test]
+    fn module_display_keeps_known_strings() {
+        use crate::weight::LoRAFormat;
+
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora")])
+                .network_module_display(&LoRAFormat::Kohya),
+            "kohya-ss/lora"
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_krea2")])
+                .network_module_display(&LoRAFormat::Kohya),
+            "musubi-tuner/lora_krea2"
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "lycoris.kohya")])
+                .network_module_display(&LoRAFormat::Lycoris),
+            "lycoris"
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_generic")])
+                .network_module_display(&LoRAFormat::Kohya),
+            "kohya-ss/lora_generic"
+        );
+    }
+
+    #[test]
+    fn module_display_never_says_no_module_found() {
+        use crate::weight::LoRAFormat;
+
+        // Unmapped module under a known vendor prefix keeps the family prefix.
+        assert_eq!(
+            meta(&[("ss_network_module", "networks.lora_anima")])
+                .network_module_display(&LoRAFormat::Kohya),
+            "kohya-ss/lora_anima"
+        );
+        // Family known, module unknown.
+        assert_eq!(
+            meta(&[(
+                "modelspec.implementation",
+                "https://github.com/huggingface/diffusers"
+            )])
+            .network_module_display(&LoRAFormat::Kohya),
+            "diffusers"
+        );
+        // Nothing known, but the key shape is PEFT.
+        assert_eq!(
+            Metadata { metadata: None }.network_module_display(&LoRAFormat::Peft),
+            "peft"
+        );
+        // Nothing known and the format is the fallback.
+        assert_eq!(
+            Metadata { metadata: None }.network_module_display(&LoRAFormat::Kohya),
+            "unknown"
+        );
+        // Empty and unrecognised vendor prefixes are unknown, not "kohya-ss/".
+        assert_eq!(
+            meta(&[("ss_network_module", "")]).network_module_display(&LoRAFormat::Kohya),
+            "unknown"
+        );
+        assert_eq!(
+            meta(&[("ss_network_module", "foo.bar")]).network_module_display(&LoRAFormat::Kohya),
+            "unknown"
+        );
     }
 }

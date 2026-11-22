@@ -13,6 +13,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum NetworkModule {
     KohyaSSLoRA,
+    KohyaSSLoRAGeneric,
     KohyaSSLoRAFlux,
     MusubiTunerLoRAFlux2,
     KohyaSSLoRALumina,
@@ -22,6 +23,29 @@ pub enum NetworkModule {
     KohyaSSDyLoRA,
     KohyaSSOFT,
     Lycoris,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub enum NetworkFamily {
+    Kohya,
+    MusubiTuner,
+    Lycoris,
+    Diffusers,
+    Peft,
+    Unknown,
+}
+
+impl NetworkFamily {
+    pub fn display(&self) -> &'static str {
+        match self {
+            NetworkFamily::Kohya => "kohya-ss",
+            NetworkFamily::MusubiTuner => "musubi-tuner",
+            NetworkFamily::Lycoris => "lycoris",
+            NetworkFamily::Diffusers => "diffusers",
+            NetworkFamily::Peft => "peft",
+            NetworkFamily::Unknown => "unknown",
+        }
+    }
 }
 
 #[wasm_bindgen]

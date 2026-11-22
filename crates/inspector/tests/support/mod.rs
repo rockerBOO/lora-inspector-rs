@@ -49,6 +49,14 @@ fn dtype_from_str(dtype: &str) -> Dtype {
     }
 }
 
+/// Byte width of a tensor with `dtype` and `shape`, i.e. the slice length a
+/// `TensorView` needs. `Dtype::size()` is deprecated in favour of `bitsize()`,
+/// which counts bits so sub-byte dtypes stay representable.
+fn tensor_byte_len(dtype: Dtype, shape: &[usize]) -> usize {
+    let n_elements: usize = shape.iter().product();
+    (n_elements * dtype.bitsize()).div_ceil(8)
+}
+
 /// Builds a valid, zero-filled safetensors buffer matching a fixture's key/shape/dtype
 /// layout. Numeric values don't matter here -- only shapes, dtypes, and key names,
 /// since the matrix tests assert on parsing/classification, not on math.
@@ -65,9 +73,7 @@ pub fn synthesize_safetensors(fixture: &Fixture) -> Vec<u8> {
         .iter()
         .map(|key| {
             let info = &fixture.keys[*key];
-            let dtype = dtype_from_str(&info.dtype);
-            let n_elements: usize = info.shape.iter().product();
-            n_elements * dtype.size()
+            tensor_byte_len(dtype_from_str(&info.dtype), &info.shape)
         })
         .max()
         .unwrap_or(0);
@@ -78,15 +84,14 @@ pub fn synthesize_safetensors(fixture: &Fixture) -> Vec<u8> {
         .map(|key| {
             let info = &fixture.keys[*key];
             let dtype = dtype_from_str(&info.dtype);
-            let n_elements: usize = info.shape.iter().product();
-            let needed_len = n_elements * dtype.size();
+            let needed_len = tensor_byte_len(dtype, &info.shape);
             let view = TensorView::new(dtype, info.shape.clone(), &shared_buf[0..needed_len])
                 .unwrap_or_else(|e| panic!("failed to build tensor view for {key}: {e:?}"));
             ((*key).clone(), view)
         })
         .collect();
 
-    safetensors::serialize(views, &fixture.metadata)
+    safetensors::serialize(views, fixture.metadata.clone())
         .unwrap_or_else(|e| panic!("failed to serialize synthetic safetensors buffer: {e:?}"))
 }
 

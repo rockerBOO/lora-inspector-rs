@@ -44,10 +44,12 @@ jobs:
         run: corepack enable
 
       - name: Run install
-        run: yarn --cwd crates/lora-inspector-wasm
+        run: yarn install
+        working-directory: crates/lora-inspector-wasm
 
       - name: Run build
-        run: yarn --cwd crates/lora-inspector-wasm build
+        run: yarn build
+        working-directory: crates/lora-inspector-wasm
 
       - uses: superfly/flyctl-actions/setup-flyctl@63da3ecc5e2793b98a3f2519b3d75d4f4c11cec2
         with:

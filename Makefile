@@ -10,6 +10,11 @@ DEV := --dev
 WEAK_REFS := --weak-refs
 WEAK_REFS :=
 SIMD := RUSTFLAGS="-C target-feature=+simd128"
+# Release wasm bundles keep the size profile: the workspace release profile
+# optimizes native builds for speed, and wasm-pack has no opt-level setting of
+# its own. Dev wasm builds stay unoptimized for fast local iteration.
+SIZE := RUSTFLAGS="-C opt-level=z"
+SIMD_SIZE := RUSTFLAGS="-C target-feature=+simd128 -C opt-level=z"
 
 # Default target
 .PHONY: all
@@ -33,11 +38,11 @@ test-release:
 # Build WASM for production (optimized, slow to compile)
 .PHONY: build-wasm
 build-wasm:
-	wasm-pack build $(TARGET) --out-name lora-inspector --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
+	$(SIZE) wasm-pack build $(TARGET) --out-name lora-inspector --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
 
 .PHONY: build-wasm-simd
 build-wasm-simd:
-	$(SIMD) wasm-pack build $(TARGET) --out-name lora-inspector-simd --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
+	$(SIMD_SIZE) wasm-pack build $(TARGET) --out-name lora-inspector-simd --out-dir $(OUT_DIR) $(WASM_DIR) $(RELEASE) $(WEAK_REFS)
 
 # Fast, unoptimized WASM builds (debug info, no optimization) for local dev iteration.
 .PHONY: build-wasm-dev

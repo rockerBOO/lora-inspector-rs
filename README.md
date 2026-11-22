@@ -34,6 +34,34 @@ Subsets showing the different subset datasets, image augments, captions.
 - WebAssembly-powered performance
 - No external dependencies (like torch or python)
 
+## Reading the rank numbers
+
+The `--rank` section reports two kinds of quantity, and only one of them travels between files.
+
+**Absolute** — comparable across any two LoRAs of the same architecture:
+
+- `effective_rank`: `exp(H)` over the singular-value energy distribution `s²` of the update
+  (`up @ down`). `5.6` means the energy is spread as if ~5.6 directions were in use; it is a
+  concentration measure, not a count of dimensions.
+- `top1_energy` (`s₀² / Σs²`), `dominance` (`s₀ / s₁`), `eff_scale` (`‖up@down‖_F · alpha/rank`,
+  so alpha is included).
+- `summary.rank.mean_effective_rank` / `median_effective_rank`.
+
+**Relative** — meaningful only inside one file, because the denominator is the file itself:
+
+- `balance` = `effective_rank / nominal_rank`, and therefore every health bucket
+  (Good ≥ 0.75, Ok ≥ 0.50, Weak ≥ 0.25, Poor below). Raise `dim` from 16 to 32 and an
+  unchanged effective rank of 5.6 moves from *Weak* to *Poor* without the LoRA changing. Use
+  `effective_rank` to compare across `dim`; use `balance`/health to describe one file.
+- `outlier`, and `summary.rank.outliers`: `eff_scale > 1.5 × median(eff_scale of this file)`.
+  A uniformly stronger or weaker LoRA moves the median with it, so the count stays put and the
+  flag cannot detect a change in overall strength. The threshold and the median it came from are
+  both emitted (`summary.rank.outlier_threshold`, `median_eff_scale`) so you can normalise
+  yourself — `eff_scale / median_eff_scale` is the scale-invariant version of the flag.
+- Block-level `outliers` (in `blocks[]` and `summary.block_weight`) are counted over **blocks**;
+  layer-level `outlier` (in `rank[]`/`layers[]`) is counted over **layers**. Same word, different
+  denominator.
+
 ## Project Structure
 
 - `crates/`: Project sub-modules

@@ -232,3 +232,72 @@ describe("Network Utilities", () => {
 		});
 	});
 });
+
+describe("Network family display", () => {
+	it("renders the network family alongside the module", async () => {
+		const { Network } = await import(
+			"../assets/js/components/network/Network.jsx"
+		);
+
+		const metadata = new Map([
+			["ss_network_module", "networks.lora_generic"],
+			["ss_network_dim", "8"],
+			["ss_network_alpha", "16"],
+		]);
+
+		render(
+			<Network
+				metadata={metadata}
+				filename="moss.safetensors"
+				worker={createMockWorker({
+					networkModule: "kohya-ss/lora_generic",
+					networkFamily: "kohya-ss",
+				})}
+			/>,
+		);
+
+		expect(screen.getByText("Network family")).toBeDefined();
+		expect(await screen.findByText("kohya-ss")).toBeDefined();
+		expect(await screen.findByText("kohya-ss/lora_generic")).toBeDefined();
+	});
+
+	it("shows the family alone when the module is unknown", async () => {
+		const { Network } = await import(
+			"../assets/js/components/network/Network.jsx"
+		);
+
+		render(
+			<Network
+				metadata={new Map([["ss_network_dim", "8"]])}
+				filename="diffusers.safetensors"
+				worker={createMockWorker({
+					networkModule: "diffusers",
+					networkFamily: "diffusers",
+				})}
+			/>,
+		);
+
+		// Family row and module row both read "diffusers" for this file.
+		const matches = await screen.findAllByText("diffusers");
+		expect(matches.length).toBe(2);
+	});
+
+	it("shows unknown for a file with no metadata", async () => {
+		const { Network } = await import(
+			"../assets/js/components/network/Network.jsx"
+		);
+
+		render(
+			<Network
+				metadata={new Map()}
+				filename="bare.safetensors"
+				worker={createMockWorker({
+					networkModule: "unknown",
+					networkFamily: "unknown",
+				})}
+			/>,
+		);
+
+		expect(screen.getAllByText("unknown").length).toBeGreaterThan(0);
+	});
+});

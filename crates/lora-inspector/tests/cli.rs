@@ -1,0 +1,438 @@
+//! End-to-end tests for the `inspect` command, run against the real binary so
+//! the CLI surface (`--json` error contract, load rules, progress routing) is
+//! exercised rather than just the shared library modules.
+
+// The shared fixture module is compiled once per test binary, so helpers that
+// another test file uses (but this one does not) would warn as dead code here.
+#![allow(dead_code)]
+
+mod support;
+
+use std::process::{Command, Output};
+
+use lora_inspector::terminal::Terminal;
+
+const BIN: &str = env!("CARGO_BIN_EXE_lora-inspector");
+
+fn run(args: &[&str]) -> Output {
+    Command::new(BIN)
+        .args(args)
+        .output()
+        .expect("run lora-inspector")
+}
+
+/// Run `inspect <fixture> --json` with optional extra flags, asserting success
+/// and returning the parsed document.
+fn run_json(fixture: &support::Fixture, extra: &[&str]) -> serde_json::Value {
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+    let mut args = vec!["inspect", path, "--json"];
+    args.extend_from_slice(extra);
+    let output = run(&args);
+    assert!(
+        output.status.success(),
+        "inspect --json failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    serde_json::from_str(stdout.trim()).expect("stdout parses as a single JSON document")
+}
+
+#[test]
+fn json_is_a_single_object_and_independent_of_width() {
+    let fixture = support::Fixture::write();
+    let narrow = run_json(&fixture, &["--width", "40"]);
+    let wide = run_json(&fixture, &["--width", "200"]);
+
+    assert!(narrow.is_object(), "--json must emit a single object");
+    assert_eq!(narrow, wide, "--json must not depend on --width");
+    assert_eq!(narrow["load"], "full");
+    assert!(narrow["ungrouped"].is_object());
+    assert!(narrow["skipped"].is_object());
+}
+
+#[test]
+fn json_rank_is_null_unless_requested() {
+    let fixture = support::Fixture::write();
+
+    let without = run_json(&fixture, &[]);
+    assert!(without["rank"].is_null());
+
+    let with = run_json(&fixture, &["--rank"]);
+    assert!(
+        with["rank"].is_array(),
+        "rank is a flat array when computed"
+    );
+}
+
+#[test]
+fn no_blocks_skips_the_block_payload() {
+    let fixture = support::Fixture::write();
+    let value = run_json(&fixture, &["--no-blocks"]);
+    assert!(value["blocks"].is_null());
+    assert_eq!(value["load"], "header_only");
+    assert!(
+        value["ungrouped"].is_null(),
+        "ungrouped is null when the block pass did not run"
+    );
+    assert!(
+        value["skipped"].is_null(),
+        "skipped is null when the block pass did not run"
+    );
+}
+
+#[test]
+fn a_file_with_nothing_groupable_gives_an_empty_array_not_null() {
+    let fixture = support::Fixture::write_ungroupable();
+    let value = run_json(&fixture, &[]);
+
+    assert_eq!(value["blocks"], serde_json::json!([]));
+    assert!(
+        value["ungrouped"]["layers"].as_u64().expect("layer count") > 0,
+        "the ungroupable layer must be counted"
+    );
+}
+
+#[test]
+fn progress_never_lands_on_stdout() {
+    let fixture = support::Fixture::write();
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+    let output = run(&["inspect", path, "--json", "--rank"]);
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    let value: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout must be JSON only");
+    assert!(value.is_object());
+
+    for glyph in ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏', '│', '█']
+    {
+        assert!(
+            !stdout.contains(glyph),
+            "stdout must not contain the progress glyph {glyph:?}"
+        );
+    }
+}
+
+#[test]
+fn block_weights_alias_still_works() {
+    let fixture = support::Fixture::write();
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+    let output = run(&["block-weights", "--file", path, "--output-format", "text"]);
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    assert!(
+        stdout.contains("block weight"),
+        "block-weights text output must render the block section: {stdout}"
+    );
+}
+
+#[test]
+fn extreme_widths_do_not_panic_and_stay_clamped() {
+    let fixture = support::Fixture::write();
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+
+    for width in ["0", "1", "18446744073709551615"] {
+        let output = run(&["inspect", path, "--width", width]);
+        assert!(
+            output.status.success(),
+            "--width {width} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            !stderr.contains("panicked"),
+            "--width {width} panicked: {stderr}"
+        );
+        assert_line_widths_within_clamp(&stdout);
+    }
+
+    let output = Command::new(BIN)
+        .args(["inspect", path])
+        .env("COLUMNS", "18446744073709551615")
+        .output()
+        .expect("run lora-inspector");
+    assert!(
+        output.status.success(),
+        "COLUMNS=18446744073709551615 failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("utf-8 stdout");
+    assert_line_widths_within_clamp(&stdout);
+}
+
+fn assert_line_widths_within_clamp(stdout: &str) {
+    let term = Terminal {
+        width: 4096,
+        color: false,
+        unicode: true,
+    };
+    let max = stdout
+        .lines()
+        .map(|line| term.text_width(line))
+        .max()
+        .unwrap_or(0);
+    assert!(max <= 4096, "line exceeded the clamped width: {max}");
+}
+
+#[test]
+fn json_metadata_is_byte_deterministic() {
+    let fixture = support::Fixture::write_metadata();
+    let path = fixture.path().to_str().expect("utf-8 temp path");
+
+    let first = run(&["inspect", path, "--json", "--metadata"]);
+    let second = run(&["inspect", path, "--json", "--metadata"]);
+    assert!(first.status.success());
+    assert!(second.status.success());
+    assert_eq!(
+        first.stdout, second.stdout,
+        "--json --metadata must be byte-identical across runs"
+    );
+}
+
+#[test]
+fn metadata_is_null_unless_requested() {
+    let fixture = support::Fixture::write_metadata();
+
+    let without = run_json(&fixture, &[]);
+    assert!(without["metadata"].is_null());
+
+    let with = run_json(&fixture, &["--metadata"]);
+    assert!(with["metadata"].is_object(), "metadata is opt-in");
+}
+
+#[test]
+fn schema_version_is_one() {
+    let fixture = support::Fixture::write();
+    let value = run_json(&fixture, &[]);
+    assert_eq!(value["schema_version"], 1);
+}
+
+#[test]
+fn a_missing_file_is_one_json_error_object_with_exit_one() {
+    let missing = std::env::temp_dir().join("lora-inspector-missing-file-never-exists.safetensors");
+    let output = run(&["inspect", missing.to_str().expect("utf-8 path"), "--json"]);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        output.stdout.is_empty(),
+        "nothing may reach stdout on failure"
+    );
+    let stderr = String::from_utf8(output.stderr).expect("utf-8 stderr");
+    let value: serde_json::Value =
+        serde_json::from_str(stderr.trim()).expect("stderr is one JSON error object");
+    assert_eq!(value["error"]["kind"], "io");
+    assert!(value["error"]["message"].is_string());
+}
+
+#[test]
+fn a_bad_file_is_an_error_not_a_partial_report() {
+    let fixture = support::Fixture::write();
+    let mut truncated = fixture.bytes();
+    // Drop the last four payload bytes so the buffer no longer reaches the
+    // declared end offset: a truncation, not a missing header.
+    truncated.truncate(truncated.len() - 4);
+    let path = std::env::temp_dir().join(format!(
+        "lora-inspector-truncated-{}.safetensors",
+        std::process::id()
+    ));
+    std::fs::write(&path, truncated).expect("write truncated fixture");
+
+    let output = run(&["inspect", path.to_str().expect("utf-8 path"), "--json"]);
+    std::fs::remove_file(&path).ok();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        output.stdout.is_empty(),
+        "a partial report must never reach stdout"
+    );
+    let stderr = String::from_utf8(output.stderr).expect("utf-8 stderr");
+    let value: serde_json::Value =
+        serde_json::from_str(stderr.trim()).expect("stderr is one JSON error object");
+    assert_eq!(value["error"]["kind"], "format");
+}
+
+#[test]
+fn structure_reports_key_derived_formats() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &[]);
+
+    let structure = &doc["network"]["structure"];
+    assert_eq!(structure["primary"], "LoRA");
+    assert_eq!(structure["by_format"]["LoRA"], 2);
+    assert_eq!(structure["by_format"]["LoHa"], 1);
+    assert_eq!(
+        structure["formats"],
+        serde_json::json!(["LoHa", "LoRA"]),
+        "formats must be sorted"
+    );
+    assert_eq!(structure["has_conv"], false);
+    assert_eq!(structure["has_dora"], false);
+}
+
+#[test]
+fn structure_is_present_in_header_only_mode() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--no-blocks"]);
+
+    assert_eq!(doc["load"], "header_only");
+    assert_eq!(doc["network"]["structure"]["primary"], "LoRA");
+}
+
+#[test]
+fn structure_has_conv_for_conv_factors() {
+    let fixture = support::Fixture::write_conv();
+    let doc = run_json(&fixture, &[]);
+    assert_eq!(doc["network"]["structure"]["has_conv"], true);
+}
+
+#[test]
+fn declared_type_and_structural_type_can_disagree() {
+    let fixture = support::Fixture::write_declared_lora_actual_loha();
+    let doc = run_json(&fixture, &[]);
+
+    // The hint.
+    assert_eq!(doc["network"]["type"], "LoRA");
+    // The truth.
+    assert_eq!(doc["network"]["structure"]["primary"], "LoHa");
+    assert_eq!(doc["network"]["structure"]["by_format"]["LoHa"], 2);
+}
+
+#[test]
+fn slow_path_uses_keys_when_metadata_disagrees() {
+    // LoHa keys under metadata declaring networks.lora. Without structure-first
+    // dispatch the LoRA formula cannot find lora_up/lora_down, the layer is
+    // swallowed into `skipped`, and `blocks` comes back empty.
+    let fixture = support::Fixture::write_declared_lora_actual_loha();
+    let doc = run_json(&fixture, &["--slow"]);
+
+    assert_eq!(doc["skipped"]["layers"], 0);
+    assert_eq!(doc["blocks"].as_array().expect("blocks array").len(), 1);
+}
+
+fn doc_schema_version(doc: &serde_json::Value) -> u64 {
+    doc["schema_version"]
+        .as_u64()
+        .expect("schema_version is an integer")
+}
+
+/// The `layers` array from a `--json` document.
+fn layers_of(doc: &serde_json::Value) -> &Vec<serde_json::Value> {
+    doc["layers"].as_array().expect("layers array")
+}
+
+#[test]
+fn layers_covers_every_base_name() {
+    // The shared fixture has 6 LoRA layers plus 1 partial LoHa layer the cheap
+    // Gram path declines, so `skipped.layers` is 1 and `layers` must still have
+    // 7 rows.
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    assert_eq!(doc["network"]["layers"]["total"], 7);
+    assert_eq!(layers_of(&doc).len(), 7);
+}
+
+#[test]
+fn layers_null_scale_matches_skipped_count() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    let null_scale = layers_of(&doc)
+        .iter()
+        .filter(|row| row["eff_scale"].is_null())
+        .count();
+    assert_eq!(
+        null_scale as u64,
+        doc["skipped"]["layers"].as_u64().unwrap()
+    );
+    assert_eq!(null_scale, 1);
+}
+
+#[test]
+fn layers_health_present_matches_rank_length() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+
+    let with_health = layers_of(&doc)
+        .iter()
+        .filter(|row| !row["health"].is_null())
+        .count();
+    assert_eq!(
+        with_health,
+        doc["rank"].as_array().expect("rank array").len()
+    );
+    assert_eq!(with_health, 6);
+}
+
+#[test]
+fn layers_records_the_structural_format_per_layer() {
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--layers"]);
+
+    let rows = layers_of(&doc);
+    let loha = rows.iter().filter(|row| row["format"] == "LoHa").count();
+    let lora = rows.iter().filter(|row| row["format"] == "LoRA").count();
+    assert_eq!((lora, loha), (2, 1));
+}
+
+#[test]
+fn layers_is_null_unless_requested_and_does_not_change_rank() {
+    let fixture = support::Fixture::write();
+    let without = run_json(&fixture, &["--rank"]);
+    let with = run_json(&fixture, &["--rank", "--layers"]);
+
+    assert!(without["layers"].is_null());
+    assert_eq!(without["rank"], with["rank"]);
+    assert_eq!(
+        without["summary"]["block_weight"],
+        with["summary"]["block_weight"]
+    );
+
+    // `elapsed_ms` is wall-clock and differs between any two runs, so the rank
+    // summary is compared field by field rather than as a whole.
+    let before = &without["summary"]["rank"];
+    let after = &with["summary"]["rank"];
+    assert_eq!(before["layers"], after["layers"]);
+    assert_eq!(before["by_health"], after["by_health"]);
+    assert_eq!(before["median_balance"], after["median_balance"]);
+    assert_eq!(before["weak_or_worse"], after["weak_or_worse"]);
+    assert_eq!(doc_schema_version(&with), 1);
+}
+
+#[test]
+fn layers_with_no_blocks_keeps_full_load() {
+    let fixture = support::Fixture::write();
+    let doc = run_json(&fixture, &["--layers", "--no-blocks"]);
+
+    assert_eq!(doc["load"], "full");
+    assert!(doc["blocks"].is_null());
+    assert_eq!(layers_of(&doc).len(), 7);
+}
+
+#[test]
+fn layers_on_a_factorless_file_is_all_nulls_and_does_not_panic() {
+    // A dense-only file: no low-rank factors anywhere, so every layer row is
+    // null-valued. This is the shape a full checkpoint presents.
+    let fixture = support::Fixture::write_dense_only();
+    let doc = run_json(&fixture, &["--layers"]);
+
+    let rows = layers_of(&doc);
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().all(|row| row["nominal_rank"].is_null()));
+    assert!(rows.iter().all(|row| row["eff_scale"].is_null()));
+    assert!(rows.iter().all(|row| row["health"].is_null()));
+}
+
+#[test]
+fn layers_row_shape() {
+    // Pins the field names of a `layers` row. Values are already covered by the
+    // assertions above; this guards the key set against accidental renaming.
+    let fixture = support::Fixture::write_mixed_structure();
+    let doc = run_json(&fixture, &["--layers", "--rank"]);
+    // `insta` is built without its `json` feature here, so the value is
+    // pretty-printed and snapshotted as text.
+    let pretty = serde_json::to_string_pretty(&doc["layers"]).expect("pretty json");
+    insta::assert_snapshot!("layers_row_shape", pretty);
+}
