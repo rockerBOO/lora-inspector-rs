@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::weight::{get_base_name, is_peft, DType, LoRAFormat};
+use crate::weight::{get_base_name, is_peft, is_text_encoder_key, DType, LoRAFormat};
 use crate::InspectorError;
 
 /// Matches the upstream `safetensors` crate's own sanity bound on header size
@@ -60,11 +60,17 @@ impl HeaderIndex {
     }
 
     pub fn unet_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_unet")
+        self.keys()
+            .into_iter()
+            .filter(|k| !is_text_encoder_key(k))
+            .collect()
     }
 
     pub fn text_encoder_keys(&self) -> Vec<String> {
-        self.keys_by_key("lora_te")
+        self.keys()
+            .into_iter()
+            .filter(|k| is_text_encoder_key(k))
+            .collect()
     }
 
     pub fn alpha_keys(&self) -> Vec<String> {
@@ -293,14 +299,43 @@ mod tests {
         names.clear(); // silence unused mut warning path in some rustc versions
     }
 
-    fn float8_header(dtype: &str) -> Vec<u8> {
-        let json = format!(
-            "{{\"test\":{{\"dtype\":\"{dtype}\",\"shape\":[2,2],\"data_offsets\":[0,4]}}}}"
-        );
+    fn header_buffer(json: &str) -> Vec<u8> {
         let mut buffer = Vec::with_capacity(8 + json.len());
         buffer.extend_from_slice(&(json.len() as u64).to_le_bytes());
         buffer.extend_from_slice(json.as_bytes());
         buffer
+    }
+
+    fn float8_header(dtype: &str) -> Vec<u8> {
+        header_buffer(&format!(
+            "{{\"test\":{{\"dtype\":\"{dtype}\",\"shape\":[2,2],\"data_offsets\":[0,4]}}}}"
+        ))
+    }
+
+    // diffusers/PEFT checkpoints prefix their diffusion-model keys with
+    // `diffusion_model.`, `transformer.` or bare `transformer_blocks.` rather
+    // than kohya's `lora_unet_`, so a `lora_unet` allowlist reports an empty
+    // U-Net side for them.
+    #[test]
+    fn unet_keys_cover_non_kohya_key_prefixes() {
+        let buffer = header_buffer(
+            "{\"diffusion_model.blocks.0.cross_attn.k.lora_A.weight\":{\"dtype\":\"F16\",\"shape\":[4,8],\"data_offsets\":[0,64]},\"transformer_blocks.0.attn.add_k_proj.lora_down.weight\":{\"dtype\":\"F16\",\"shape\":[4,8],\"data_offsets\":[64,128]},\"text_encoder.encoder.layers.0.self_attn.q_proj.lora_A.weight\":{\"dtype\":\"F16\",\"shape\":[4,8],\"data_offsets\":[128,192]}}",
+        );
+        let (header, _meta) = parse_header(&buffer).expect("header must parse");
+
+        let mut unet_keys = header.unet_keys();
+        unet_keys.sort();
+        assert_eq!(
+            unet_keys,
+            vec![
+                "diffusion_model.blocks.0.cross_attn.k.lora_A.weight".to_string(),
+                "transformer_blocks.0.attn.add_k_proj.lora_down.weight".to_string(),
+            ]
+        );
+        assert_eq!(
+            header.text_encoder_keys(),
+            vec!["text_encoder.encoder.layers.0.self_attn.q_proj.lora_A.weight".to_string()]
+        );
     }
 
     #[test]

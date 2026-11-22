@@ -23,6 +23,7 @@ pub mod svd;
 
 pub use crate::file::LayerScale;
 pub use crate::svd::RankMetrics;
+pub use crate::weight::LoRAFormat;
 mod tensor;
 mod weight;
 

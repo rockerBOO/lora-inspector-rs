@@ -209,13 +209,25 @@ fn layer_counts_come_from_block_families_not_name_substrings() {
         &Device::Cpu,
     );
 
-    // The substring helpers see none of these keys (there is no `lora_unet` or
-    // `lora_te` prefix), so they are empty even though family-based counting is
-    // not. The hada layer, the noisy down-block layer and the ungroupable key
-    // are all part of the walk, so the totals are 7/4/2, not the 4/2/2 a plain
-    // four-layer fixture would give.
-    assert!(file.unet_keys().is_empty());
-    assert!(file.text_encoder_keys().is_empty());
+    // The old substring helpers keyed on `lora_unet`/`lora_te` saw none of
+    // these keys, so they are not where the counts below come from: layer
+    // counts come from block families. unet_keys() is every key that isn't a
+    // text-encoder key and text_encoder_keys() picks out the `text_model.*`
+    // ones; the diffusers-style `down_blocks.*` / `txtfusion_projector` names
+    // carry no encoder prefix, so they land on the U-Net side. The hada layer,
+    // the noisy down-block layer and the ungroupable key are all part of the
+    // walk, so the totals are 7/4/2, not the 4/2/2 a plain four-layer fixture
+    // would give.
+    assert!(!file.unet_keys().is_empty());
+    assert!(file
+        .unet_keys()
+        .iter()
+        .all(|k| !k.starts_with("text_model.")));
+    assert!(!file.text_encoder_keys().is_empty());
+    assert!(file
+        .text_encoder_keys()
+        .iter()
+        .all(|k| k.starts_with("text_model.")));
 
     assert_eq!(report.network.layers.total, 7);
     assert_eq!(report.network.layers.unet, 4);

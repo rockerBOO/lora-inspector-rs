@@ -12,7 +12,7 @@ use inspector::InspectorError;
 use lora_inspector::render::{render, render_block_section};
 use lora_inspector::report::{build_report, ReportOptions};
 use lora_inspector::terminal::{ColorChoice, Terminal};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Mirrors `inspector::header::MAX_HEADER_SIZE`, kept here so the header-only
 /// loader can reject an absurd declared header length before allocating it.
@@ -64,6 +64,20 @@ Examples:
         /// Path to the second safetensors file
         #[clap(long)]
         file2: PathBuf,
+    },
+
+    /// Extract a lightweight JSON fixture (key names, shapes, dtypes, and
+    /// raw __metadata__) from a safetensors file's header, without loading
+    /// tensor data. Used to build committed test fixtures from large local
+    /// LoRA files.
+    ExtractFixture {
+        /// Path to the safetensors file
+        #[clap(short, long)]
+        file: PathBuf,
+
+        /// Path to write the JSON fixture to
+        #[clap(short, long)]
+        out: PathBuf,
     },
 }
 
@@ -223,6 +237,7 @@ fn main() -> ExitCode {
             output_format,
         } => exit(run_block_weights(file, &output_format)),
         Command::CompareMetadata { file1, file2 } => exit(run_compare_metadata(file1, file2)),
+        Command::ExtractFixture { file, out } => exit(run_extract_fixture(file, out)),
     }
 }
 
@@ -447,4 +462,71 @@ fn metadata_from_file(file_path: PathBuf) -> Result<Metadata, CliError> {
     Ok(Metadata {
         metadata: Some(metadata.__metadata__),
     })
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FixtureTensorInfo {
+    dtype: String,
+    shape: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Fixture {
+    source: String,
+    keys: HashMap<String, FixtureTensorInfo>,
+    metadata: Option<HashMap<String, String>>,
+}
+
+/// Write a header-only JSON fixture (key names, dtypes, shapes and the raw
+/// `__metadata__` map) for a safetensors file, so a large local LoRA can become
+/// a small committed test fixture without copying any tensor data.
+fn run_extract_fixture(file: PathBuf, out: PathBuf) -> Result<(), CliError> {
+    let buffer = read_header_bytes(&file, false)?;
+    let header_data = &buffer[HEADER_LENGTH_BYTES as usize..];
+
+    #[derive(Deserialize)]
+    struct RawTensorInfo {
+        dtype: String,
+        shape: Vec<usize>,
+    }
+
+    let header: HashMap<String, serde_json::Value> =
+        serde_json::from_slice(header_data).map_err(|e| CliError::format(false, e.to_string()))?;
+
+    let mut keys = HashMap::new();
+    let mut metadata = None;
+
+    for (key, value) in header {
+        if key == "__metadata__" {
+            metadata = serde_json::from_value(value).ok();
+            continue;
+        }
+        let info: RawTensorInfo =
+            serde_json::from_value(value).map_err(|e| CliError::format(false, e.to_string()))?;
+        keys.insert(
+            key,
+            FixtureTensorInfo {
+                dtype: info.dtype,
+                shape: info.shape,
+            },
+        );
+    }
+
+    let fixture = Fixture {
+        source: file.display().to_string(),
+        keys,
+        metadata,
+    };
+
+    let json = serde_json::to_string_pretty(&fixture)
+        .map_err(|e| CliError::format(false, e.to_string()))?;
+    std::fs::write(&out, json).map_err(|e| CliError::io(false, e))?;
+
+    println!(
+        "Wrote fixture with {} keys to {}",
+        fixture.keys.len(),
+        out.display()
+    );
+
+    Ok(())
 }

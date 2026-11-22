@@ -1,0 +1,4217 @@
+{
+  "source": "/mnt/900/lora/wan2.2/wan2.2_5b_c0wg1rl_72_000002500.safetensors",
+  "keys": {
+    "diffusion_model.blocks.27.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.22.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.14.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.20.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.10.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.2.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.15.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.14.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.28.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.12.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.4.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.8.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.16.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.23.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.ffn.2.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        14336
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.19.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.10.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.14.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.28.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.2.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.1.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.2.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.12.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.4.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.27.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.23.self_attn.v.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.3.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.25.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.7.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.21.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.27.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.22.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.20.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.18.cross_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.20.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.0.self_attn.k.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.15.ffn.0.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.26.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.11.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.13.self_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.15.self_attn.q.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.9.ffn.0.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        14336,
+        64
+      ]
+    },
+    "diffusion_model.blocks.25.cross_attn.v.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.1.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.17.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.6.cross_attn.q.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.11.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.19.ffn.2.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.24.cross_attn.o.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.9.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.29.cross_attn.o.lora_A.weight": {
+      "dtype": "BF16",
+      "shape": [
+        64,
+        3072
+      ]
+    },
+    "diffusion_model.blocks.0.cross_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    },
+    "diffusion_model.blocks.5.self_attn.k.lora_B.weight": {
+      "dtype": "BF16",
+      "shape": [
+        3072,
+        64
+      ]
+    }
+  },
+  "metadata": {
+    "training_info": "{\"step\": 2500, \"epoch\": 43}",
+    "format": "pt",
+    "ss_tag_frequency": "{\"1_c0wg1rl\": {\"c0wg1rl\": 1}}",
+    "version": "1.0",
+    "software": "{\"name\": \"ai-toolkit\", \"repo\": \"https://github.com/ostris/ai-toolkit\", \"version\": \"0.3.16\"}",
+    "name": "wan2.2_5b_c0wg1rl_72",
+    "sshs_legacy_hash": "4aac8ef2",
+    "ss_output_name": "wan2.2_5b_c0wg1rl_72",
+    "sshs_model_hash": "c1fe884fdee87de8ae28c5fba526fa5b5a42c9dd4633588a175ea02b9aed3eb4",
+    "ss_base_model_version": "sd_1.5"
+  }
+}

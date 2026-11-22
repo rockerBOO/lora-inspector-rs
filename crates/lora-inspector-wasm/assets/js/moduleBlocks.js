@@ -24,9 +24,22 @@ const FLUX_PEFT =
 // transformer_blocks.N.* plus a token_refiner.refiner_blocks.N.* block group.
 // Also covers the ai-toolkit trained variant, which prefixes keys with
 // "diffusion_model." and uses "blocks"/"token_refiner.blocks" with
-// attn.qkv_proj/attn.out_proj/mlp.fc1/mlp.fc2 sub-blocks.
+// attn.qkv_proj/attn.out_proj/mlp.fc1/mlp.fc2 sub-blocks. Qwen-Image reuses
+// this layout but names its feed-forward halves txt_mlp/img_mlp.
 const H3_BLOCK_RE =
-	/(?:diffusion_model\.)?(?<block_type>transformer_blocks|token_refiner\.refiner_blocks|blocks|token_refiner\.blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn(?:\.\w+)?|mlp(?:\.\w+)?|ff)/;
+	/(?:diffusion_model\.)?(?<block_type>transformer_blocks|token_refiner\.refiner_blocks|blocks|token_refiner\.blocks)\.(?<block_id>\d+)\.(?<subblock_type>attn(?:\.\w+)?|txt_mlp(?:\.\w+)?|img_mlp(?:\.\w+)?|mlp(?:\.\w+)?|ff)/;
+
+// Wan 2.x video DiT block naming: kohya-style lora_unet_blocks_N_(self_attn|
+// cross_attn)_* / lora_unet_blocks_N_ffn_N, and diffusers-style
+// diffusion_model.blocks.N.<self_attn|cross_attn|ffn>.*
+const WAN_BLOCK_RE =
+	/(lora_unet|diffusion_model)[._]blocks[._](?<block_id>\d+)[._](?<subblock_type>self_attn|cross_attn|ffn)/;
+
+// LTX 2.3 audio/video multimodal DiT (diffusers-native, "diffusion_model."
+// prefix): diffusion_model.transformer_blocks.N.<attn1|attn2|audio_attn1|
+// audio_attn2|audio_to_video_attn|video_to_audio_attn>.*
+const LTX_BLOCK_RE =
+	/diffusion_model\.transformer_blocks\.(?<block_id>\d+)\.(?<subblock_type>audio_attn\d+|audio_to_video_attn|video_to_audio_attn|attn\d+)/;
 
 const LUMINA_TRANSFORMER =
 	/.*unet.*(?<block_type>layers|noise_refiner|context_refiner).*_(?<block_id>\d+)_(?<type>adaLN_modulation|feed_forward|attention_out|attention_qkv)(?<subblock_type>_w\d+)?/;
@@ -160,6 +173,59 @@ function parseSDKey(key) {
 			blockIdx: 0,
 			name: "IMG_IN",
 			type: "embedder",
+		};
+	}
+
+	// Wan 2.x DiT blocks (self_attn/cross_attn/ffn) and LTX 2.3 audio/video
+	// blocks. Both must be matched ahead of the H3 and Krea 2 block branches
+	// below: H3 also claims the "diffusion_model.blocks." prefix (ai-toolkit
+	// variant) and Krea 2 claims "lora_unet_blocks_", so a Wan key would
+	// otherwise be parsed with the wrong block type.
+	if (
+		(key.includes("_blocks_") || key.includes(".blocks.")) &&
+		(key.includes("self_attn") ||
+			key.includes("cross_attn") ||
+			key.includes("ffn"))
+	) {
+		const matches = key.match(WAN_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`Wan: Did not match on key: ${key} ${WAN_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+		const isAttention = groups.subblock_type !== "ffn";
+
+		return {
+			...result,
+			type: isAttention ? "attentions" : "mlp",
+			idx: idx,
+			blockId: `${idx}`,
+			blockType: "blocks",
+			blockIdx: idx,
+			name: `TB${padTwo(idx)}`,
+			isAttention: isAttention,
+		};
+	}
+
+	// LTX 2.3 audio/video multimodal DiT blocks
+	if (key.includes("diffusion_model.transformer_blocks.")) {
+		const matches = key.match(LTX_BLOCK_RE);
+		if (!matches) {
+			throw new Error(`LTX: Did not match on key: ${key} ${LTX_BLOCK_RE}`);
+		}
+
+		const groups = matches.groups;
+		const idx = Number.parseInt(groups.block_id);
+
+		return {
+			...result,
+			type: "attentions",
+			idx: idx,
+			blockId: `${idx}`,
+			blockType: groups.subblock_type,
+			name: `TB${padTwo(idx)}`,
+			isAttention: true,
 		};
 	}
 
