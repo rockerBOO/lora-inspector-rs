@@ -183,8 +183,21 @@ pub struct Layer {
 pub struct RankSummary {
     pub layers: usize,
     pub by_health: BTreeMap<String, usize>,
+    /// `balance` is `effective_rank / nominal_rank`, so this median moves with the
+    /// declared rank and is not comparable between files of different `dim`.
     pub median_balance: f64,
     pub weak_or_worse: usize,
+    /// Mean and median `effective_rank` in absolute terms. Unlike `balance` and the
+    /// health counts, these do not depend on the declared rank, so they are the
+    /// numbers to compare across files.
+    pub mean_effective_rank: f64,
+    pub median_effective_rank: f64,
+    /// The median `eff_scale` the outlier threshold was derived from, and the
+    /// threshold itself. Both are relative to this file: a uniformly stronger or
+    /// weaker LoRA moves the median with it, so `outliers` counts only travel
+    /// between files of similar overall scale.
+    pub median_eff_scale: f64,
+    pub outlier_threshold: f64,
     pub elapsed_ms: u128,
 }
 
@@ -477,18 +490,22 @@ fn rank_rows(
 /// Deliberately not computed over every row: the `--layers` array must not
 /// change the `outlier` flags the `--rank` array reports, and those are pinned
 /// to the rank pass's own median.
-fn layer_outlier_threshold(rows: &[RankRaw]) -> f64 {
+/// Returns `(median_eff_scale, outlier_threshold)`. The median is returned because
+/// the threshold alone cannot be interpreted: it is `1.5 * median` of this file, so a
+/// reader needs the baseline to know what the flags were measured against.
+fn layer_outlier_baseline(rows: &[RankRaw]) -> (f64, f64) {
     let scales: Vec<f64> = rows
         .iter()
         .filter(|row| row.metrics.is_some())
         .filter_map(|row| row.eff_scale)
         .collect();
-    outlier_threshold(median(&scales))
+    let median_scale = median(&scales);
+    (median_scale, outlier_threshold(median_scale))
 }
 
 /// Build the `--rank` array and its summary from pre-collected rows.
 fn rank_layers(rows: &[RankRaw], elapsed_ms: u128) -> (Vec<RankLayer>, RankSummary) {
-    let threshold = layer_outlier_threshold(rows);
+    let (median_eff_scale, threshold) = layer_outlier_baseline(rows);
 
     let mut by_health = BTreeMap::from([
         ("Collapsed".to_string(), 0usize),
@@ -501,6 +518,7 @@ fn rank_layers(rows: &[RankRaw], elapsed_ms: u128) -> (Vec<RankLayer>, RankSumma
 
     let mut layers = Vec::new();
     let mut balances: Vec<f64> = Vec::new();
+    let mut effective_ranks: Vec<f64> = Vec::new();
 
     for row in rows.iter().filter(|row| row.metrics.is_some()) {
         let Some(metrics) = row.metrics.as_ref() else {
@@ -516,6 +534,7 @@ fn rank_layers(rows: &[RankRaw], elapsed_ms: u128) -> (Vec<RankLayer>, RankSumma
             weak_or_worse += 1;
         }
         balances.push(metrics.balance);
+        effective_ranks.push(metrics.effective_rank);
 
         layers.push(RankLayer {
             base_name: row.base_name.clone(),
@@ -538,6 +557,10 @@ fn rank_layers(rows: &[RankRaw], elapsed_ms: u128) -> (Vec<RankLayer>, RankSumma
         by_health,
         median_balance: round_sig(median(&balances), 6),
         weak_or_worse,
+        mean_effective_rank: round_sig(mean(&effective_ranks), 6),
+        median_effective_rank: round_sig(median(&effective_ranks), 6),
+        median_eff_scale: round_sig(median_eff_scale, 6),
+        outlier_threshold: round_sig(threshold, 6),
         elapsed_ms,
     };
 
@@ -562,7 +585,8 @@ pub fn build_layers(file: &LoRAFile, jobs: usize, slow: bool) -> inspector::Resu
 
 /// Map pre-collected rows to `--layers` rows.
 fn layer_rows(rows: &[RankRaw]) -> Vec<Layer> {
-    let threshold = layer_outlier_threshold(rows);
+    // Same baseline as `--rank`, so `--layers` cannot change an `outlier` flag.
+    let (_median_eff_scale, threshold) = layer_outlier_baseline(rows);
 
     rows.iter()
         .map(|row| Layer {
@@ -824,6 +848,14 @@ pub fn build_report(
 
 /// Median of `values`; an empty slice is `0.0`, an even length averages the
 /// middle two entries.
+/// Arithmetic mean, with the same empty-slice contract as [`median`].
+fn mean(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
 fn median(values: &[f64]) -> f64 {
     if values.is_empty() {
         return 0.0;
@@ -847,5 +879,102 @@ fn outlier_threshold(median: f64) -> f64 {
         OUTLIER_FLOOR
     } else {
         1.5 * median
+    }
+}
+
+#[cfg(test)]
+mod baseline_tests {
+    use super::*;
+
+    /// Health derived the way `rank_metrics_from_svs` derives it: from `balance`,
+    /// which is `effective_rank / nominal_rank`.
+    fn raw(name: &str, eff_scale: f64, effective_rank: f64, nominal_rank: usize) -> RankRaw {
+        let balance = effective_rank / nominal_rank as f64;
+        let health = if balance >= 0.75 {
+            RankHealth::Good
+        } else if balance >= 0.50 {
+            RankHealth::Ok
+        } else if balance >= 0.25 {
+            RankHealth::Weak
+        } else {
+            RankHealth::Poor
+        };
+        RankRaw {
+            base_name: name.to_string(),
+            group: BlockGroup::Layers,
+            family: BlockFamily::Unet,
+            index: Some(0),
+            metrics: Some(RankMetrics {
+                nominal_rank,
+                effective_rank,
+                top1_energy: 1.0 / effective_rank,
+                balance,
+                dominance: Some(1.0),
+                health,
+            }),
+            eff_scale: Some(eff_scale),
+            format: None,
+        }
+    }
+
+    /// The outlier rule is `eff_scale > OUTLIER_FACTOR * median`, and until now that
+    /// lived only in prose. Pin it, together with the baseline it needs.
+    #[test]
+    fn summary_reports_the_baseline_the_flags_were_measured_against() {
+        // median of these five scales is 1.0 -> threshold 1.5
+        let rows: Vec<RankRaw> = [0.5, 0.8, 1.0, 1.2, 4.0]
+            .iter()
+            .enumerate()
+            .map(|(i, s)| raw(&format!("lora_unet_layers_0_proj_{i}"), *s, 4.0, 16))
+            .collect();
+
+        let (layers, summary) = rank_layers(&rows, 0);
+
+        assert!((summary.median_eff_scale - 1.0).abs() < 1e-9);
+        assert!((summary.outlier_threshold - 1.5).abs() < 1e-9);
+        assert_eq!(layers.iter().filter(|l| l.outlier).count(), 1);
+        assert!(
+            layers
+                .iter()
+                .find(|l| l.outlier)
+                .unwrap()
+                .eff_scale
+                .unwrap()
+                > 1.5
+        );
+    }
+
+    /// Effective rank is absolute; balance and health divide by the declared rank.
+    /// Report both, and do not let a higher `dim` look like a worse LoRA.
+    #[test]
+    fn effective_rank_is_reported_absolutely_so_dim_does_not_hide_it() {
+        let at16: Vec<RankRaw> = (0..4)
+            .map(|i| raw(&format!("lora_unet_layers_0_proj_{i}"), 1.0, 5.6, 16))
+            .collect();
+        let at32: Vec<RankRaw> = (0..4)
+            .map(|i| raw(&format!("lora_unet_layers_0_proj_{i}"), 1.0, 5.6, 32))
+            .collect();
+
+        let (_, s16) = rank_layers(&at16, 0);
+        let (_, s32) = rank_layers(&at32, 0);
+
+        // Identical LoRA, identical absolute rank...
+        assert!((s16.mean_effective_rank - s32.mean_effective_rank).abs() < 1e-9);
+        assert_eq!(s16.mean_effective_rank, 5.6);
+        // ...and the relative measures disagree with each other's verdicts.
+        assert!(s32.median_balance < s16.median_balance);
+        assert_eq!(s16.by_health.get("Weak"), Some(&4));
+        assert_eq!(s16.by_health.get("Poor"), Some(&0));
+        assert_eq!(s32.by_health.get("Weak"), Some(&0));
+        assert_eq!(s32.by_health.get("Poor"), Some(&4));
+    }
+
+    #[test]
+    fn empty_input_reports_zeros_not_nan() {
+        let (layers, summary) = rank_layers(&[], 0);
+        assert!(layers.is_empty());
+        assert_eq!(summary.mean_effective_rank, 0.0);
+        assert_eq!(summary.median_effective_rank, 0.0);
+        assert_eq!(summary.median_eff_scale, 0.0);
     }
 }

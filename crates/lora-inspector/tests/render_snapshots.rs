@@ -262,6 +262,10 @@ fn build_rank_report() -> (Report, Metadata, support::Fixture) {
         ]),
         median_balance: 0.5,
         weak_or_worse: 2,
+        mean_effective_rank: 2.6,
+        median_effective_rank: 2.5,
+        median_eff_scale: 0.12,
+        outlier_threshold: 0.18,
         elapsed_ms: 2400,
     });
 
