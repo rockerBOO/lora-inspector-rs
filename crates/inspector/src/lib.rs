@@ -10,6 +10,7 @@ use wasm_bindgen::JsValue;
 #[grammar = "key.pest"]
 pub struct KeyParser;
 
+pub mod blocks;
 pub mod file;
 mod header;
 pub mod metadata;
@@ -17,6 +18,7 @@ pub mod network;
 pub mod norms;
 mod parser;
 pub mod statistic;
+pub mod structure;
 pub mod svd;
 
 pub use crate::file::LayerScale;

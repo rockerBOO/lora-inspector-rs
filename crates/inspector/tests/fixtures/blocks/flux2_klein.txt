@@ -1,0 +1,15 @@
+diffusion_model.double_blocks.0.img_attn.proj
+diffusion_model.double_blocks.0.img_attn.qkv
+diffusion_model.double_blocks.0.img_mlp.0
+diffusion_model.double_blocks.0.txt_attn.proj
+diffusion_model.double_blocks.0.txt_mlp.2
+diffusion_model.double_blocks.1.txt_attn.qkv
+diffusion_model.double_blocks.2.img_attn.qkv
+diffusion_model.double_blocks.4.img_mlp.2
+diffusion_model.double_blocks.7.txt_mlp.0
+diffusion_model.single_blocks.0.linear1
+diffusion_model.single_blocks.0.linear2
+diffusion_model.single_blocks.5.linear1
+diffusion_model.single_blocks.11.linear1
+diffusion_model.single_blocks.17.linear2
+diffusion_model.single_blocks.23.linear2

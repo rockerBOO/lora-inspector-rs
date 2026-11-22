@@ -1,9 +1,23 @@
-use clap::{Parser, Subcommand};
-use inspector::metadata::compare_metadata;
-use inspector::{file, metadata, norms, statistic, InspectorError};
-use serde::{Deserialize, Serialize};
-use std::io;
-use std::{collections::HashMap, fs::File, io::Read, path::PathBuf};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, IsTerminal, Read, Seek, SeekFrom};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+use candle_core::Device;
+use clap::{Args, Parser, Subcommand};
+use inspector::file::LoRAFile;
+use inspector::metadata::{compare_metadata, Metadata};
+use inspector::InspectorError;
+use lora_inspector::render::{render, render_block_section};
+use lora_inspector::report::{build_report, ReportOptions};
+use lora_inspector::terminal::{ColorChoice, Terminal};
+use serde::Deserialize;
+
+/// Mirrors `inspector::header::MAX_HEADER_SIZE`, kept here so the header-only
+/// loader can reject an absurd declared header length before allocating it.
+const MAX_HEADER_SIZE: usize = 100_000_000;
+const HEADER_LENGTH_BYTES: u64 = 8;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "Inspect LoRA file weights and norms")]
@@ -14,12 +28,29 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Inspect block weights
+    /// Analyze a LoRA file and print a terminal report
+    #[clap(long_about = "\
+Analyze a LoRA file and print a width-adaptive terminal report.
+
+The header and block sections are always printed; --rank adds the
+effective-rank section. --json replaces the terminal report with a single
+machine-readable object whose floats are rounded to six significant digits.
+--no-blocks without --rank loads only the file header, never the tensor
+payload.
+
+Examples:
+  lora-inspector inspect model.safetensors
+  lora-inspector inspect model.safetensors --rank --width 60
+  lora-inspector inspect model.safetensors --json --no-blocks")]
+    Inspect(InspectArgs),
+
+    /// Inspect block weights (deprecated)
     BlockWeights {
         /// Path to the safetensors file
         #[clap(short, long)]
         file: PathBuf,
 
+        /// Output format: json or text
         #[clap(short, long, default_value = "json")]
         output_format: String,
     },
@@ -36,386 +67,377 @@ enum Command {
     },
 }
 
-#[derive(Serialize, Clone, Debug)]
-struct WeightStatistics {
-    l1_norm: f64,
-    l2_norm: f64,
-    matrix_norm: f64,
-    max: f64,
-    min: f64,
-    std_dev: Option<f64>,
-    median: Option<f64>,
-}
+#[derive(Args, Debug)]
+struct InspectArgs {
+    /// Path to the safetensors file to inspect
+    file: PathBuf,
 
-#[derive(Serialize, Debug, Clone)]
-struct BlockData {
-    weights: HashMap<String, WeightStatistics>,
-    average_l2_norm: f64,
-}
+    /// Compute and render the effective-rank section (off by default)
+    #[clap(long)]
+    rank: bool,
 
-#[derive(Serialize, Debug)]
-struct OutputData {
-    metadata: Option<HashMap<String, String>>,
-    base_names: Vec<String>,
-    norms: HashMap<String, WeightStatistics>,
-    blocks: HashMap<String, BlockData>,
-    non_block_weights: HashMap<String, WeightStatistics>,
-}
+    /// Emit one row per layer in --json, including layers with no resolvable factors
+    #[clap(long, requires = "json")]
+    layers: bool,
 
-pub type Result<T> = std::result::Result<T, LoraInspectorError>;
+    /// Emit a single machine-readable JSON object instead of the terminal report
+    #[clap(long)]
+    json: bool,
+
+    /// Skip the block section and load only the file header
+    #[clap(long)]
+    no_blocks: bool,
+
+    /// Include the raw safetensors metadata map in --json output
+    #[clap(long)]
+    metadata: bool,
+
+    /// Allow the materializing fallback for layers without an up/down pair
+    #[clap(long)]
+    slow: bool,
+
+    /// Override the detected terminal width in columns
+    #[clap(long)]
+    width: Option<usize>,
+
+    /// Number of rows in the most-loaded blocks table
+    #[clap(long, default_value_t = 8)]
+    top: usize,
+
+    /// Worker threads for the rank pass (0 = available cores)
+    #[clap(long, default_value_t = 0)]
+    jobs: usize,
+
+    /// Use ASCII glyphs only, no Unicode bar characters
+    #[clap(long)]
+    ascii: bool,
+
+    /// When to use ANSI colour: auto, always, or never
+    #[clap(long, value_enum, default_value_t = ColorChoice::Auto)]
+    color: ColorChoice,
+
+    /// Suppress the progress indicator on stderr
+    #[clap(long)]
+    quiet: bool,
+}
 
 #[derive(Debug)]
-pub enum LoraInspectorError {
-    Json(serde_json::Error),
-    Io(io::Error),
-    Inspector(InspectorError),
+enum ErrorKind {
+    Io,
+    Format,
+    Unsupported,
 }
 
-impl From<serde_json::Error> for LoraInspectorError {
-    fn from(err: serde_json::Error) -> LoraInspectorError {
-        LoraInspectorError::Json(err)
+impl ErrorKind {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ErrorKind::Io => "io",
+            ErrorKind::Format => "format",
+            ErrorKind::Unsupported => "unsupported",
+        }
     }
 }
 
-impl From<io::Error> for LoraInspectorError {
-    fn from(err: io::Error) -> LoraInspectorError {
-        LoraInspectorError::Io(err)
-    }
+/// A runtime error reported to the user. `json` selects the `--json` error
+/// contract: one `{"error": {"kind", "message"}}` object on stderr and exit 1.
+struct CliError {
+    json: bool,
+    kind: ErrorKind,
+    message: String,
 }
 
-impl From<InspectorError> for LoraInspectorError {
-    fn from(err: InspectorError) -> LoraInspectorError {
-        LoraInspectorError::Inspector(err)
-    }
-}
-
-// Parses a weight name to determine if it belongs to a block and which one
-fn parse_block_info(weight_name: &str) -> Option<(String, String)> {
-    // Check for "blocks_XX" pattern
-    if let Some(blocks_idx) = weight_name.find("blocks_") {
-        // Find where the block number starts
-        let num_start = blocks_idx + "blocks_".len();
-
-        // Find where the block number ends (next underscore)
-        if let Some(num_end) = weight_name[num_start..].find('_') {
-            let block_num = &weight_name[num_start..num_start + num_end];
-
-            // Determine if it's a single or double block
-            let block_type = if weight_name.contains("single") {
-                "single"
-            } else if weight_name.contains("double") {
-                "double"
-            } else {
-                "unknown"
-            };
-
-            let block_key = format!("{}_{}", block_type, block_num);
-            return Some((block_key, weight_name.to_string()));
+impl CliError {
+    fn io(json: bool, err: io::Error) -> CliError {
+        CliError {
+            json,
+            kind: ErrorKind::Io,
+            message: err.to_string(),
         }
     }
 
-    None
-}
-
-// Calculate average L2 norm for a block
-fn calculate_block_average_l2(norms: &HashMap<String, WeightStatistics>) -> f64 {
-    if norms.is_empty() {
-        return 0.0;
+    fn format(json: bool, message: impl Into<String>) -> CliError {
+        CliError {
+            json,
+            kind: ErrorKind::Format,
+            message: message.into(),
+        }
     }
 
-    let sum: f64 = norms.values().map(|norm| norm.l2_norm).sum();
-    sum / (norms.len() as f64)
+    fn report(&self) {
+        if self.json {
+            let value = serde_json::json!({
+                "error": {
+                    "kind": self.kind.as_str(),
+                    "message": &self.message,
+                }
+            });
+            eprintln!("{value}");
+        } else {
+            eprintln!("error: {}", self.message);
+        }
+    }
 }
 
-// Generate ASCII bar chart
-fn generate_ascii_bar(value: f64, max_value: f64, width: usize) -> String {
-    let bar_width = if max_value > 0.0 {
-        ((value / max_value) * width as f64).round() as usize
-    } else {
-        0
+/// Map an [`InspectorError`] onto the JSON error contract's `kind` field.
+///
+/// Only filesystem access is `io`; a network type the report cannot decompose
+/// is `unsupported`; every malformed-header, truncation, tensor and
+/// serialization failure is `format`. The `usage` kind is reserved for clap,
+/// which exits 2 before any of this runs.
+fn inspector_error(json: bool, err: InspectorError) -> CliError {
+    let kind = match &err {
+        InspectorError::Io(_) => ErrorKind::Io,
+        InspectorError::UnsupportedNetworkType => ErrorKind::Unsupported,
+        InspectorError::Candle(_)
+        | InspectorError::SafeTensor(_)
+        | InspectorError::Load(_)
+        | InspectorError::Msg(_)
+        | InspectorError::SerdeJson(_)
+        | InspectorError::SerdeWasmBindgenError(_)
+        | InspectorError::NotFound => ErrorKind::Format,
     };
-
-    let bar = "█".repeat(bar_width);
-    let padding = " ".repeat(width - bar_width);
-    format!("[{}{}] {:.6}", bar, padding, value)
+    let message = match &err {
+        InspectorError::Io(io_err) => io_err.to_string(),
+        other => other.to_string(),
+    };
+    CliError {
+        json,
+        kind,
+        message,
+    }
 }
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     let cli = Cli::parse();
-
     match cli.command {
+        Command::Inspect(args) => exit(run_inspect(args)),
         Command::BlockWeights {
             file,
             output_format,
-        } => {
-            // Handle block weights command
-            println!("Block weights command with file: {}", file.display());
-            parse_block_weights(file, output_format.as_str())
-        }
-
-        Command::CompareMetadata { file1, file2 } => {
-            // Handle compare metadata command
-            println!(
-                "Compare metadata command with files: {} and {}",
-                file1.display(),
-                file2.display()
-            );
-            let diff = compare_metadata(&metadata_from_file(file1)?, &metadata_from_file(file2)?);
-
-            println!("Added:");
-            for (k, v) in diff.added.iter() {
-                println!("{}", k);
-                println!("{}", v);
-            }
-
-            println!("Removed:");
-            for (k, v) in diff.removed.iter() {
-                println!("{}", k);
-                println!("{}", v);
-            }
-
-            println!("Changed:");
-            for (k, v) in diff.changed.iter() {
-                println!("{}", k);
-                println!("old: {}", v.old);
-                println!("new: {}", v.new);
-            }
-            Ok(())
-        } // Handle other subcommands...
+        } => exit(run_block_weights(file, &output_format)),
+        Command::CompareMetadata { file1, file2 } => exit(run_compare_metadata(file1, file2)),
     }
 }
 
-fn parse_block_weights(file: PathBuf, output_format: &str) -> Result<()> {
-    let device = if let Ok(device) = candle_core::Device::cuda_if_available(0) {
-        device
-    } else {
-        candle_core::Device::Cpu
+fn exit(result: Result<(), CliError>) -> ExitCode {
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            err.report();
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn run_inspect(args: InspectArgs) -> Result<(), CliError> {
+    let json = args.json;
+    // Load rule: `--no-blocks` without `--rank` and without `--layers` is the
+    // one header-only load; every other combination needs the tensor payload
+    // for the block, rank or per-layer pass.
+    let header_only = args.no_blocks && !args.rank && !args.layers;
+
+    let opts = ReportOptions {
+        blocks: !args.no_blocks,
+        rank: args.rank,
+        layers: args.layers,
+        top: args.top,
+        jobs: args.jobs,
+        slow: args.slow,
+        metadata: args.metadata,
     };
 
-    // Read file
-    let mut f = File::open(&file)?;
-    let mut data = vec![];
-    f.read_to_end(&mut data)?;
+    let (file, meta) = load_file(&args.file, header_only, json)?;
+    let report = {
+        let _progress =
+            RankProgress::new(args.rank && !json && !args.quiet && io::stderr().is_terminal());
+        build_report(&args.file, &file, &meta, &opts).map_err(|e| inspector_error(json, e))?
+    };
 
-    // Parse metadata
-    let metadata = metadata::Metadata::new_from_buffer(data.as_slice())
-        .map_err(|e| e.to_string())
-        .ok();
+    if json {
+        let output =
+            serde_json::to_string(&report).map_err(|e| CliError::format(json, e.to_string()))?;
+        println!("{output}");
+    } else {
+        let term = Terminal::detect(args.width, args.color, args.ascii);
+        print!("{}", render(&report, &meta, &term, &opts));
+    }
+    Ok(())
+}
 
-    // Create LoRA file
-    let file = file::LoRAFile::new_from_buffer(data.as_slice(), file.to_str().unwrap(), &device);
+/// Load the file according to the header-only rule.
+///
+/// The header-only path reads just `8 + header_len` bytes and never touches the
+/// tensor payload, so a multi-gigabyte file costs only its header. The full
+/// path reads the whole buffer; `Metadata::new_from_buffer` also validates that
+/// the payload is not truncated, which is what turns a cut-short file into an
+/// error instead of a report with empty blocks.
+fn load_file(path: &Path, header_only: bool, json: bool) -> Result<(LoRAFile, Metadata), CliError> {
+    let filename = path.to_string_lossy();
+    if header_only {
+        let buffer = read_header_bytes(path, json)?;
+        let file = LoRAFile::new_from_header_buffer(&buffer, &filename)
+            .map_err(|e| inspector_error(json, e))?;
+        let meta =
+            Metadata::new_from_header_buffer(&buffer).map_err(|e| inspector_error(json, e))?;
+        Ok((file, meta))
+    } else {
+        let bytes = std::fs::read(path).map_err(|e| CliError::io(json, e))?;
+        let file = LoRAFile::new_from_buffer(&bytes, &filename, &Device::Cpu);
+        let meta = Metadata::new_from_buffer(&bytes).map_err(|e| inspector_error(json, e))?;
+        Ok((file, meta))
+    }
+}
 
-    // Get base names
-    let base_names = file.base_names();
-
-    // Setup progress bar
-    let pb = indicatif::ProgressBar::new(base_names.len() as u64);
-    pb.set_style(
-        indicatif::ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} weights ({eta})")
-            .unwrap()
-            .progress_chars("#>-")
-    );
-
-    // Calculate norms for each base name
-    let mut norms_map = HashMap::new();
-
-    // Maps to store our organized data
-    let mut blocks: HashMap<String, HashMap<String, WeightStatistics>> = HashMap::new();
-    let mut non_block_weights: HashMap<String, WeightStatistics> = HashMap::new();
-
-    for base_name in &base_names {
-        pb.set_message(format!("Processing: {}", base_name));
-
-        let scale_weight = file
-            .scale_weight(base_name)
-            .unwrap()
-            .to_dtype(candle_core::DType::F64)
-            .unwrap();
-
-        // Calculate all norms
-        let l1 = norms::l1::<f64>(&scale_weight).unwrap();
-        let l2 = norms::l2::<f64>(&scale_weight).unwrap();
-        let matrix = norms::matrix_norm::<f64>(&scale_weight).unwrap();
-        let max_val = norms::max(&scale_weight).unwrap();
-        let min_val = norms::min(&scale_weight).unwrap();
-
-        // Some norms might not be implemented yet, so we make them optional
-        let std_dev = Some(statistic::std_dev(&scale_weight)?);
-        // let median = statistic::median(&scale_weight).ok();
-
-        norms_map.insert(
-            base_name.to_string(),
-            WeightStatistics {
-                l1_norm: l1,
-                l2_norm: l2,
-                matrix_norm: matrix,
-                max: max_val,
-                min: min_val,
-                std_dev,
-                median: None,
-            },
-        );
-
-        // Organize weights into blocks or non-blocks
-        if let Some((block_key, weight_name)) = parse_block_info(base_name) {
-            blocks.entry(block_key).or_default().insert(
-                weight_name,
-                norms_map
-                    .get(base_name)
-                    .expect("To get norm map for base name")
-                    .clone(),
-            );
-        } else {
-            non_block_weights.insert(
-                base_name.to_string(),
-                norms_map.get(base_name).expect("To get norm map").clone(),
-            );
-        }
-
-        pb.inc(1);
+/// Read only the first `8 + header_len` bytes of a safetensors file.
+fn read_header_bytes(path: &Path, json: bool) -> Result<Vec<u8>, CliError> {
+    let mut file = File::open(path).map_err(|e| CliError::io(json, e))?;
+    let mut len_bytes = [0u8; HEADER_LENGTH_BYTES as usize];
+    file.read_exact(&mut len_bytes)
+        .map_err(|e| CliError::io(json, e))?;
+    let header_len = u64::from_le_bytes(len_bytes) as usize;
+    if header_len > MAX_HEADER_SIZE {
+        return Err(CliError::format(
+            json,
+            format!(
+                "safetensors header length {header_len} exceeds maximum of {MAX_HEADER_SIZE} bytes"
+            ),
+        ));
     }
 
-    pb.finish_with_message("Completed norm calculations");
+    let mut buffer = vec![0u8; HEADER_LENGTH_BYTES as usize + header_len];
+    buffer[..HEADER_LENGTH_BYTES as usize].copy_from_slice(&len_bytes);
+    file.read_exact(&mut buffer[HEADER_LENGTH_BYTES as usize..])
+        .map_err(|e| CliError::io(json, e))?;
+    Ok(buffer)
+}
 
-    // Create final block data with average L2 norms
-    let blocks_data: HashMap<String, BlockData> = blocks
-        .into_iter()
-        .map(|(block_key, weights)| {
-            let average_l2_norm = calculate_block_average_l2(&weights);
-            (
-                block_key,
-                BlockData {
-                    weights,
-                    average_l2_norm,
-                },
+/// A spinner shown on stderr while the rank pass runs, cleared when dropped.
+///
+/// It is constructed only when `--rank` is active, stderr is a TTY and neither
+/// `--json` nor `--quiet` was passed; `--json` must never put progress on
+/// stdout, and this never touches stdout at all.
+struct RankProgress(Option<indicatif::ProgressBar>);
+
+impl RankProgress {
+    fn new(enabled: bool) -> RankProgress {
+        if !enabled {
+            return RankProgress(None);
+        }
+
+        let bar = indicatif::ProgressBar::new_spinner();
+        bar.set_draw_target(indicatif::ProgressDrawTarget::stderr());
+        bar.set_style(
+            indicatif::ProgressStyle::with_template(
+                "{spinner} computing effective rank {elapsed_precise}",
             )
-        })
-        .collect();
+            .expect("progress template is valid")
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+        );
+        bar.enable_steady_tick(std::time::Duration::from_millis(120));
+        RankProgress(Some(bar))
+    }
+}
 
-    // Create output data structure
-    let output = OutputData {
-        metadata: metadata.map(|m| m.metadata).expect("No metadata"),
-        base_names,
-        norms: norms_map,
-        blocks: blocks_data.clone(),
-        non_block_weights,
+impl Drop for RankProgress {
+    fn drop(&mut self) {
+        if let Some(bar) = self.0.take() {
+            bar.finish_and_clear();
+        }
+    }
+}
+
+fn run_block_weights(file: PathBuf, output_format: &str) -> Result<(), CliError> {
+    eprintln!("warning: `block-weights` is deprecated; use `inspect FILE` instead");
+
+    let opts = ReportOptions {
+        blocks: true,
+        rank: false,
+        layers: false,
+        top: 8,
+        jobs: 0,
+        slow: false,
+        metadata: false,
     };
 
-    // Output based on format
+    let (lora, meta) = load_file(&file, false, false)?;
+    let report = build_report(&file, &lora, &meta, &opts).map_err(|e| inspector_error(false, e))?;
+
     match output_format {
         "json" => {
-            println!("{}", serde_json::to_string_pretty(&output)?);
+            let output = serde_json::to_string(&report)
+                .map_err(|e| CliError::format(false, e.to_string()))?;
+            println!("{output}");
         }
         "text" => {
-            println!("Metadata: {:?}", output.metadata);
-            println!("Base Names: {:?}", output.base_names);
-            println!("Norms:");
-            for (name, norm) in &output.norms {
-                println!("  {name}:");
-                println!("    L1 Norm: {}", norm.l1_norm);
-                println!("    L2 Norm: {}", norm.l2_norm);
-                println!("    Matrix Norm: {}", norm.matrix_norm);
-                println!("    Max: {}", norm.max);
-                println!("    Min: {}", norm.min);
-                if let Some(std) = norm.std_dev {
-                    println!("    Std Dev: {}", std);
-                }
-                if let Some(med) = norm.median {
-                    println!("    Median: {}", med);
-                }
-            }
-
-            println!("\nBlocks:");
-            for (block_name, block_data) in &output.blocks {
-                println!(
-                    "  {} (Average L2 Norm: {})",
-                    block_name, block_data.average_l2_norm
-                );
-                println!("  Weights in block: {}", block_data.weights.len());
-            }
-
-            // Find max L2 norm for scaling the ASCII bars
-            let max_l2_norm = blocks_data
-                .values()
-                .map(|block| block.average_l2_norm)
-                .fold(0.0_f64, |a, b| a.max(b));
-
-            // Sort blocks by name for better visualization
-            let mut block_names: Vec<String> = blocks_data.keys().cloned().collect();
-            block_names.sort_by(|a, b| {
-                // First sort by block type (single/double)
-                let a_parts: Vec<&str> = a.split('_').collect();
-                let b_parts: Vec<&str> = b.split('_').collect();
-
-                let a_type = a_parts[0];
-                let b_type = b_parts[0];
-
-                if a_type != b_type {
-                    return a_type.cmp(b_type);
-                }
-
-                // Then sort by block number
-                let a_num = a_parts[1].parse::<i32>().unwrap_or(0);
-                let b_num = b_parts[1].parse::<i32>().unwrap_or(0);
-                a_num.cmp(&b_num)
-            });
-
-            // Display ASCII chart
-            for block_name in block_names {
-                let block = &blocks_data[&block_name];
-                let bar = generate_ascii_bar(block.average_l2_norm, max_l2_norm, 40);
-                println!(
-                    "{:20} {} ({} weights)",
-                    block_name,
-                    bar,
-                    block.weights.len()
-                );
-            }
-
-            println!("\nNon-Block Weights:");
-            for (name, norm) in &output.non_block_weights {
-                println!("  {name}:");
-                println!("    L2 Norm: {}", norm.l2_norm);
+            let term = Terminal::detect(None, ColorChoice::Auto, false);
+            if let Some(section) = render_block_section(&report, &term, &opts) {
+                println!("{section}");
             }
         }
-        _ => {
-            eprintln!("Unsupported format: {}. Using JSON instead.", output_format);
-            println!("{}", serde_json::to_string_pretty(&output)?);
+        other => {
+            return Err(CliError::format(
+                false,
+                format!("unsupported output format `{other}` (expected `json` or `text`)"),
+            ));
         }
     }
 
     Ok(())
 }
 
-use std::io::{Seek, SeekFrom};
+fn run_compare_metadata(file1: PathBuf, file2: PathBuf) -> Result<(), CliError> {
+    let diff = compare_metadata(&metadata_from_file(file1)?, &metadata_from_file(file2)?);
 
-const HEADER_LENGTH_BYTES: u64 = 8;
+    println!("Added:");
+    for (k, v) in diff.added.iter() {
+        println!("{}", k);
+        println!("{}", v);
+    }
 
-fn metadata_from_file(file_path: PathBuf) -> Result<metadata::Metadata> {
-    let mut file = File::open(file_path)?;
-    file.seek(SeekFrom::Start(0))?;
+    println!("Removed:");
+    for (k, v) in diff.removed.iter() {
+        println!("{}", k);
+        println!("{}", v);
+    }
+
+    println!("Changed:");
+    for (k, v) in diff.changed.iter() {
+        println!("{}", k);
+        println!("old: {}", v.old);
+        println!("new: {}", v.new);
+    }
+    Ok(())
+}
+
+fn metadata_from_file(file_path: PathBuf) -> Result<Metadata, CliError> {
+    let mut file = File::open(&file_path).map_err(|e| CliError::io(false, e))?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|e| CliError::io(false, e))?;
 
     // Read the length of the header
-    let mut buf = [0; 8];
-    file.read_exact(&mut buf)?;
+    let mut buf = [0; HEADER_LENGTH_BYTES as usize];
+    file.read_exact(&mut buf)
+        .map_err(|e| CliError::io(false, e))?;
     let length_of_header = u64::from_le_bytes(buf);
 
     // Seek to the start of the header data
-    file.seek(SeekFrom::Start(HEADER_LENGTH_BYTES))?;
+    file.seek(SeekFrom::Start(HEADER_LENGTH_BYTES))
+        .map_err(|e| CliError::io(false, e))?;
 
     // Read the header data
     let mut header_data = vec![0; length_of_header as usize];
-    file.read_exact(&mut header_data)?;
+    file.read_exact(&mut header_data)
+        .map_err(|e| CliError::io(false, e))?;
 
     #[derive(Deserialize, Debug)]
     struct MD {
         __metadata__: HashMap<String, String>,
     }
 
-    let metadata = serde_json::from_slice::<MD>(header_data.as_slice())?;
+    let metadata = serde_json::from_slice::<MD>(header_data.as_slice())
+        .map_err(|e| CliError::format(false, e.to_string()))?;
 
-    Ok(metadata::Metadata {
-        metadata: Some(metadata.__metadata__.clone()),
+    Ok(Metadata {
+        metadata: Some(metadata.__metadata__),
     })
 }

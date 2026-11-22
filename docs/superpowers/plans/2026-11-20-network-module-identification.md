@@ -32,11 +32,13 @@
 ### Task 1: `NetworkFamily` and the metadata-only detection steps
 
 **Files:**
+
 - Modify: `crates/inspector/src/network.rs` (add enum after `NetworkModule`, ~line 30)
 - Modify: `crates/inspector/src/metadata.rs:99-115` (add methods beside `network_module()`)
 - Test: `crates/inspector/src/metadata.rs` (`#[cfg(test)] mod tests`, after `musubi_tuner_flux2_network_module`)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces:
   - `pub enum NetworkFamily { Kohya, MusubiTuner, Lycoris, Diffusers, Peft, Unknown }` deriving `Deserialize, Serialize, Clone, Debug, PartialEq`
@@ -170,6 +172,7 @@ Place it directly after the `NetworkModule` enum with derives `Deserialize, Seri
 `network_module_name()`: read `ss_network_module`, trim, return `None` when empty; when the value has two or more `.`-separated segments, return everything after the first (`.split_once('.')` on the remainder), otherwise the whole string.
 
 `network_family()`, first match wins:
+
 1. `ss_network_module` starting with `networks.` → `MusubiTuner` when the module is `lora_flux_2` or `lora_krea2`, else `Kohya`
 2. `ss_network_module` starting with `lycoris.` → `Lycoris`
 3. `modelspec.implementation_version` starting with `sd-scripts/` → `Kohya`
@@ -193,11 +196,13 @@ git commit -m "Add NetworkFamily and metadata-based family detection"
 ### Task 2: Key-shape fallback, display strings, and `lora_generic` typing
 
 **Files:**
+
 - Modify: `crates/inspector/src/network.rs` (`NetworkModule`: add `KohyaSSLoRAGeneric`)
 - Modify: `crates/inspector/src/metadata.rs:46-115`
 - Test: `crates/inspector/src/metadata.rs` (`mod tests`)
 
 **Interfaces:**
+
 - Consumes: `NetworkFamily`, `network_family()`, `network_module_name()` from Task 1.
 - Produces:
   - `Metadata::resolve_network_family(&self, format: &crate::weight::LoRAFormat) -> NetworkFamily`
@@ -341,9 +346,11 @@ git commit -m "Type lora_generic as LoRA and own module display strings in inspe
 ### Task 3: Worker delegation
 
 **Files:**
+
 - Modify: `crates/lora-inspector-wasm/src/worker.rs:279-294`
 
 **Interfaces:**
+
 - Consumes: `Metadata::network_module_display`, `Metadata::resolve_network_family`, `NetworkFamily::display`.
 - Produces on `LoraWorker`:
   - `network_module(&self) -> String` → `self.metadata.network_module_display(&self.file.format())`
@@ -370,12 +377,14 @@ git commit -m "Delegate network module and family reporting to the inspector cra
 ### Task 4: Family row in the UI, unit tests, and one end-to-end assertion
 
 **Files:**
+
 - Modify: `crates/lora-inspector-wasm/assets/js/worker.js:220-229, 508-510` (message routing + helper)
 - Modify: `crates/lora-inspector-wasm/assets/js/components/network/Network.jsx:9-40, 75-90`
 - Modify: `crates/lora-inspector-wasm/tests/network-components.test.jsx`
 - Modify: `crates/lora-inspector-wasm/e2e-tests/index.spec.js:33`
 
 **Interfaces:**
+
 - Consumes: wasm `network_family()` (Task 3) and the existing `network_module()`.
 - Produces: worker message `network_family` replying `{ messageType: "network_family", networkFamily }`; DOM id `#network-family`; `#network-module` text unchanged for known modules.
 
@@ -481,6 +490,7 @@ git commit -m "Show network family in the network panel"
 ### Task 5: Whole-workspace verification
 
 **Files:**
+
 - Add: `docs/superpowers/specs/2026-11-20-network-module-identification-design.md`
 - Add: `docs/superpowers/plans/2026-11-20-network-module-identification.md`
 

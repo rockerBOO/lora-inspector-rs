@@ -1,0 +1,54 @@
+---
+source: crates/lora-inspector/tests/cli.rs
+expression: pretty
+---
+[
+  {
+    "balance": 0.25,
+    "base_name": "down_blocks.0.attn.proj_in",
+    "dominance": null,
+    "eff_scale": 1.0,
+    "effective_rank": 1.0,
+    "family": "UNet",
+    "format": "LoRA",
+    "group": "Down",
+    "health": "Collapsed",
+    "index": 0,
+    "label": "IN00",
+    "nominal_rank": 4,
+    "outlier": false,
+    "top1_energy": 1.0
+  },
+  {
+    "balance": 0.25,
+    "base_name": "down_blocks.0.attn.proj_out",
+    "dominance": null,
+    "eff_scale": 1.0,
+    "effective_rank": 1.0,
+    "family": "UNet",
+    "format": "LoRA",
+    "group": "Down",
+    "health": "Collapsed",
+    "index": 0,
+    "label": "IN00",
+    "nominal_rank": 4,
+    "outlier": false,
+    "top1_energy": 1.0
+  },
+  {
+    "balance": null,
+    "base_name": "down_blocks.1.attn.proj_in",
+    "dominance": null,
+    "eff_scale": null,
+    "effective_rank": null,
+    "family": "UNet",
+    "format": "LoHa",
+    "group": "Down",
+    "health": null,
+    "index": 1,
+    "label": "IN01",
+    "nominal_rank": null,
+    "outlier": false,
+    "top1_energy": null
+  }
+]
